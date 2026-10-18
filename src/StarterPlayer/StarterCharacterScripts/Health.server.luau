@@ -1,0 +1,1 @@
+-- Remplace le script de régénération par défaut de Roblox : la régénération est gérée par CombatService.
