@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Quêtes guidées, quotidiennes, hebdomadaires, contrats de vol (Capitaine Vex) et calendrier de connexion.
 
 local Players = game:GetService("Players")

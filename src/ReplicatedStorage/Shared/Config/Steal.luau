@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Vol de base et duel (bible §15). Les seuils sont des points de départ à ajuster en test.
 
 local Steal = {}

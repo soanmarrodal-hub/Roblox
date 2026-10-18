@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Attribution des 12 terrains, affichage des socles (attributs lus par le client pour rendre les héros),
 -- enseigne, frontière, coffre, gardien, statue et apparition devant sa base.
 

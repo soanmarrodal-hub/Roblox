@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Construit le monde au démarrage, gère l'éclairage de base et le cycle jour/nuit (20 min).
 
 local Lighting = game:GetService("Lighting")

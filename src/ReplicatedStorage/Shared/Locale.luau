@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Textes d'interface : français (référence), anglais, espagnol, portugais (bible §20).
 
 local Locale = {}

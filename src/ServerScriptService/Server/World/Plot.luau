@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Terrain de joueur (60 x 60 studs) : enseigne, frontière lumineuse, socles, collecteur, coffre, gardien.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -84,7 +84,7 @@ function Plot.Build(parent: Instance, index: number, cf: CFrame): any
 	sub.Text = ""
 	sub.Parent = sg
 	local signLight = Build.Light(board, Color3.fromRGB(120, 190, 255), 14, 1.2)
-	_ = signLight
+	local _ = signLight
 	-- socles
 	local pedestals = {}
 	local pedFolder = Build.Folder(m, "Pedestals")

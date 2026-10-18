@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Boutique astrale (bible §19). Remplacez les ids 0 par vos vrais ids de Gamepass / Produits développeur
 -- (Créateur > Monétisation). Un id à 0 désactive l'achat réel ; en Studio, l'achat est simulé si TestPurchasesInStudio = true.
 

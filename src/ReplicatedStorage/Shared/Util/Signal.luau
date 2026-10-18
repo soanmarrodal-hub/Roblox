@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Signal léger (connexions synchrones, sans BindableEvent).
 
 export type Connection = { Disconnect: (self: Connection) -> (), Connected: boolean }

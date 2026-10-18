@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Construit tout le monde d'Astral Heist. Utilisable aussi en mode édition depuis la barre de commande Studio :
 --   require(game.ServerScriptService.Server.World.WorldBuilder).Build()
 
@@ -7,7 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Islands = require(Shared.Config.Islands)
-local Build = require(script.Parent.Build)
 local TerrainGen = require(script.Parent.TerrainGen)
 local Hub = require(script.Parent.Hub)
 local Bridges = require(script.Parent.Bridges)

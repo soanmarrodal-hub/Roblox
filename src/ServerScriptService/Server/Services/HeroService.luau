@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Inventaire des héros : ajout, exposition sur socle, coffre, équipe (leader + 3 assistants), gardien,
 -- niveaux, fusion d'étoiles à la Forge, fragments, purification, puissance d'équipe.
 

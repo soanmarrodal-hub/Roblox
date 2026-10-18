@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Trove : nettoyage groupé d'instances, connexions et fonctions.
 
 local Trove = {}

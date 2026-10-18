@@ -1,8 +1,6 @@
---!strict
+--!nonstrict
 -- Monuments de chaque île (bible §5 à §9), construits en pièces stylisées.
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Shared = ReplicatedStorage.Shared
 local Build = require(script.Parent.Build)
 local Common = require(script.Parent.IslandCommon)
 
@@ -40,7 +38,7 @@ local function deposits(ctx: Common.Ctx, count: number)
 		hit:SetAttribute("Kind", "Deposit")
 		hit:SetAttribute("Island", ctx.id)
 		hit:SetAttribute("Label", "Gisement d'éclats")
-		_ = i
+		local _ = i
 	end
 end
 
@@ -306,7 +304,7 @@ function Monuments.Neon(ctx: Common.Ctx)
 	local prism = Build.Crystal(tower, tcf * CFrame.new(0, 142, 0), 26, 14, rgb(255, 61, 203), true)
 	prism.Name = "Prism"
 	local pl = Build.Light(prism:FindFirstChildWhichIsA("BasePart") :: BasePart, rgb(255, 100, 230), 80, 3)
-	_ = pl
+	local _ = pl
 	ctx.info.special.PrismTower = tcf
 	-- L'Arène holographique
 	local core = ctx.island.subzones[2].offset
@@ -452,7 +450,7 @@ function Monuments.Glacier(ctx: Common.Ctx)
 		local a = rng:NextNumber() * math.pi * 2
 		local r = rng:NextNumber(80, ctx.island.radius * 0.85)
 		local c = Build.Crystal(m, Common.GroundCF(ctx, math.cos(a) * r, math.sin(a) * r, rng:NextNumber(0, 360), -1) * CFrame.Angles(rng:NextNumber(-0.3, 0.3), 0, rng:NextNumber(-0.3, 0.3)), rng:NextNumber(10, 24), rng:NextNumber(3, 6), rgb(150, 225, 255), false)
-		_ = c
+		local _ = c
 	end
 	deposits(ctx, 9)
 	Common.FloatingIslets(ctx, 8, rgb(200, 225, 245), Enum.Material.Glacier, false)

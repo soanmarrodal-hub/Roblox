@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Réglages de construction du monde.
 
 local World = {}

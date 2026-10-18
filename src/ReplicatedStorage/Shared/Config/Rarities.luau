@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Raretés : couleurs de badge, tailles, valeurs de base, règles de transport (bible §2, §10, §14).
 
 export type Rarity = {

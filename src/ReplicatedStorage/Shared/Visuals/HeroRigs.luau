@@ -1,0 +1,216 @@
+--!nonstrict
+-- Généré par tools/hero_pipeline/make_rigs.py à partir des manifestes assets/heroes/*/<Héros>.json.
+-- Pour chaque héros importé : groupes animables (MeshParts), pivots normalisés dans la boîte englobante, pièces lumineuses.
+
+return {
+	Bramble = {
+		heightStuds = 8.00,
+		triangles = 19131,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.1519, 0.5379, 0.5397) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.7880, 0.5468, 0.5153) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Head = { parent = "Body", pivot = Vector3.new(0.5509, 0.7169, 0.5717) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3935, 0.4156, 0.4888) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6049, 0.4321, 0.5533) },
+		},
+		glow = {
+		},
+	},
+	Cylla = {
+		heightStuds = 6.00,
+		triangles = 18981,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.3814, 0.5879, 0.2570) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.6152, 0.5937, 0.2577) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Head = { parent = "Body", pivot = Vector3.new(0.5115, 0.6985, 0.1571) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3978, 0.2156, 0.2321) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6057, 0.2194, 0.2203) },
+			Weapon = { parent = "ArmL", pivot = Vector3.new(0.2084, 0.4552, 0.2371) },
+			WeaponR = { parent = "ArmR", pivot = Vector3.new(0.7895, 0.4588, 0.2373) },
+		},
+		glow = {
+		},
+	},
+	Helius = {
+		heightStuds = 20.00,
+		triangles = 19687,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.3242, 0.6050, 0.3990) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.6466, 0.6270, 0.3254) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Cape = { parent = "Body", pivot = Vector3.new(0.5702, 0.3859, 0.3420) },
+			Halo = { parent = "Head", pivot = Vector3.new(0.4916, 0.8543, 0.4535) },
+			Head = { parent = "Body", pivot = Vector3.new(0.5011, 0.7604, 0.3288) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3890, 0.1033, 0.4848) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6115, 0.1156, 0.3480) },
+			Orbit_Glow = { parent = "Body", pivot = Vector3.new(0.5000, 0.6286, 0.5000) },
+			Weapon = { parent = "ArmL", pivot = Vector3.new(0.2264, 0.5226, 0.2366) },
+		},
+		glow = {
+			Orbit_Glow = Color3.fromHex("#FAD246"),
+		},
+	},
+	Leafin = {
+		heightStuds = 6.00,
+		triangles = 18970,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.3077, 0.4130, 0.3603) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.7883, 0.4256, 0.2782) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			EarL = { parent = "Head", pivot = Vector3.new(0.3244, 0.7346, 0.3214) },
+			EarR = { parent = "Head", pivot = Vector3.new(0.7365, 0.7653, 0.3229) },
+			Head = { parent = "Body", pivot = Vector3.new(0.4817, 0.4331, 0.4103) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.4298, 0.2114, 0.3761) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6675, 0.2125, 0.3611) },
+			Tail = { parent = "Body", pivot = Vector3.new(0.4110, 0.2471, 0.6417) },
+		},
+		glow = {
+		},
+	},
+	Lumora = {
+		heightStuds = 7.00,
+		triangles = 18977,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.2490, 0.4415, 0.2312) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.7222, 0.4896, 0.2600) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Head = { parent = "Body", pivot = Vector3.new(0.4945, 0.7408, 0.1712) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3755, 0.2580, 0.2492) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6295, 0.2453, 0.2626) },
+			WingL = { parent = "Body", pivot = Vector3.new(0.2368, 0.5813, 0.4914) },
+			WingR = { parent = "Body", pivot = Vector3.new(0.7626, 0.5685, 0.4771) },
+		},
+		glow = {
+		},
+	},
+	Pyrion = {
+		heightStuds = 6.00,
+		triangles = 18971,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.4889, 0.4071, 0.3127) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.7311, 0.4375, 0.3151) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Cape = { parent = "Body", pivot = Vector3.new(0.6377, 0.4963, 0.4198) },
+			EarL = { parent = "Head", pivot = Vector3.new(0.4491, 0.7374, 0.3042) },
+			EarR = { parent = "Head", pivot = Vector3.new(0.8066, 0.7477, 0.3156) },
+			Head = { parent = "Body", pivot = Vector3.new(0.6027, 0.5190, 0.2885) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.5140, 0.1327, 0.2927) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6559, 0.2955, 0.2814) },
+			Tail = { parent = "Body", pivot = Vector3.new(0.5748, 0.2709, 0.4527) },
+		},
+		glow = {
+		},
+	},
+	Rajin = {
+		heightStuds = 15.00,
+		triangles = 19678,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.2620, 0.6628, 0.3255) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.7251, 0.6883, 0.2923) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Body_Glow = { parent = "Body", pivot = Vector3.new(0.4959, 0.7485, 0.0906) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3422, 0.3356, 0.2556) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6562, 0.3266, 0.3059) },
+		},
+		glow = {
+			Body_Glow = Color3.fromHex("#FF4A3A"),
+		},
+	},
+	Solara = {
+		heightStuds = 11.00,
+		triangles = 19679,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.4293, 0.5968, 0.2437) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.7045, 0.5462, 0.4160) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Body_Glow = { parent = "Body", pivot = Vector3.new(0.5494, 0.5939, 0.5254) },
+			Cape = { parent = "Body", pivot = Vector3.new(0.6056, 0.3690, 0.4122) },
+			Halo = { parent = "Head", pivot = Vector3.new(0.5523, 0.8393, 0.3202) },
+			Head = { parent = "Body", pivot = Vector3.new(0.5418, 0.8019, 0.2114) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.5765, 0.1249, 0.2675) },
+			Weapon = { parent = "ArmL", pivot = Vector3.new(0.2749, 0.5360, 0.1234) },
+			Weapon_Glow = { parent = "Weapon", pivot = Vector3.new(0.2117, 0.8138, 0.0958) },
+		},
+		glow = {
+			Body_Glow = Color3.fromHex("#6ED6F4"),
+			Weapon_Glow = Color3.fromHex("#7FE3FF"),
+		},
+	},
+	Solmir = {
+		heightStuds = 10.00,
+		triangles = 19682,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.3239, 0.6222, 0.4796) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.8032, 0.4804, 0.4840) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Halo = { parent = "Head", pivot = Vector3.new(0.5089, 0.8461, 0.7608) },
+			Head = { parent = "Body", pivot = Vector3.new(0.4996, 0.7298, 0.4408) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3840, 0.3105, 0.5266) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6465, 0.3318, 0.5006) },
+			Orbit_Glow = { parent = "Body", pivot = Vector3.new(0.5000, 0.7462, 0.5000) },
+			Orbit_Glow2 = { parent = "Body", pivot = Vector3.new(0.5000, 0.7404, 0.5000) },
+			Orbit_Glow3 = { parent = "Body", pivot = Vector3.new(0.5000, 0.8298, 0.5000) },
+			Orbit_Glow4 = { parent = "Body", pivot = Vector3.new(0.5000, 0.8373, 0.5000) },
+		},
+		glow = {
+			Orbit_Glow = Color3.fromHex("#FFC83D"),
+			Orbit_Glow2 = Color3.fromHex("#FF9A2E"),
+			Orbit_Glow3 = Color3.fromHex("#FFD45A"),
+			Orbit_Glow4 = Color3.fromHex("#FFB13D"),
+		},
+	},
+	Thornix = {
+		heightStuds = 9.00,
+		triangles = 18990,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.1806, 0.5016, 0.4139) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.8216, 0.5014, 0.4265) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.4040, 0.4599, 0.4822) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.5394, 0.4562, 0.5867) },
+		},
+		glow = {
+		},
+	},
+	Verdantis = {
+		heightStuds = 17.50,
+		triangles = 18996,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.2304, 0.5296, 0.5271) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.7826, 0.5274, 0.5295) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Float1 = { parent = "Body", pivot = Vector3.new(0.7440, 0.7228, 0.5694) },
+			Float2 = { parent = "Body", pivot = Vector3.new(0.8285, 0.6056, 0.5701) },
+			Float3 = { parent = "Body", pivot = Vector3.new(0.1743, 0.6042, 0.5607) },
+			Float4 = { parent = "Body", pivot = Vector3.new(0.2020, 0.7444, 0.5957) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3511, 0.2505, 0.3081) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6515, 0.2747, 0.3420) },
+		},
+		glow = {
+		},
+	},
+	Zahir = {
+		heightStuds = 9.00,
+		triangles = 19769,
+		groups = {
+			ArmL = { parent = "Body", pivot = Vector3.new(0.3652, 0.5742, 0.1899) },
+			ArmR = { parent = "Body", pivot = Vector3.new(0.6707, 0.6086, 0.1933) },
+			Body = { parent = nil, pivot = Vector3.new(0.5000, 0.5000, 0.5000) },
+			Body_Glow = { parent = "Body", pivot = Vector3.new(0.5235, 0.4661, 0.0465) },
+			Cape = { parent = "Body", pivot = Vector3.new(0.3745, 0.5771, 0.1944) },
+			Halo = { parent = "Head", pivot = Vector3.new(0.5387, 0.8482, 0.1825) },
+			Head = { parent = "Body", pivot = Vector3.new(0.5352, 0.7255, 0.1601) },
+			LegL = { parent = "Body", pivot = Vector3.new(0.3880, 0.0796, 0.2357) },
+			LegR = { parent = "Body", pivot = Vector3.new(0.6525, 0.2311, 0.2040) },
+			WeaponL_Glow = { parent = "Body", pivot = Vector3.new(0.2112, 0.3662, 0.1465) },
+			WeaponR_Glow = { parent = "Body", pivot = Vector3.new(0.8847, 0.3403, 0.1128) },
+		},
+		glow = {
+			Body_Glow = Color3.fromHex("#FF8A2E"),
+			WeaponL_Glow = Color3.fromHex("#FF7A2E"),
+			WeaponR_Glow = Color3.fromHex("#FFB347"),
+		},
+	},
+}

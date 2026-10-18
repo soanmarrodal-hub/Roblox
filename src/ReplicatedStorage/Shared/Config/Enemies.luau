@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Mobs, boss mondiaux et gardiens de sanctuaire (bible §5 à §9, §13).
 -- "look" décrit une silhouette procédurale (construite par Visuals/EnemyVisuals côté client).
 

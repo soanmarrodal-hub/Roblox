@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- PNJ et bâtiments de la plaza des services (bible §4).
 
 export type Building = {

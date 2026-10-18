@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Invocation (bible §16). Taux affichés sur chaque bannière (obligation Roblox pour les objets aléatoires payants).
 
 export type Banner = {

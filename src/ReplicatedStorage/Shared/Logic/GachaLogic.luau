@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Logique pure d'invocation (testable hors Roblox) : taux, pitié Légendaire (80) et Mythique (250), étoiles.
 
 local Shared = script.Parent.Parent

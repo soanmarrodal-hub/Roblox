@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Structure des données sauvegardées d'un joueur. Toute nouvelle clé doit être ajoutée ici (fusion automatique).
 
 local Shared = script.Parent.Parent

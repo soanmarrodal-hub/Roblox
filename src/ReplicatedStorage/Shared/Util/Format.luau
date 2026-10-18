@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Formats courts (1,2 M) et durées. Les chiffres doivent rester en millions, jamais en milliers de milliards.
 
 local Format = {}

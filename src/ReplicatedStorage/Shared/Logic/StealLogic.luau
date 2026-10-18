@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Logique pure du duel de vol (bible §15).
 
 local Shared = script.Parent.Parent

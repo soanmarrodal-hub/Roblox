@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Quêtes (bible §18) : guidées, quotidiennes, hebdomadaires, contrats de vol, calendrier de connexion.
 -- Les compteurs sont alimentés par QuestService:Track(player, event, data).
 

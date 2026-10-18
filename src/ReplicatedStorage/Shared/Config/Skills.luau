@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Compétences du leader (bible §10 « Les compétences du leader ») :
 --   1. compétence de rôle (4 à 6 s), 2. compétence d'élément (10 à 12 s, couleur de l'île),
 --   3. compétence signature (chargée en frappant et en encaissant).

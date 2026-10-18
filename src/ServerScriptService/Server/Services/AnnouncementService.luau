@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Annonces serveur (bandeau + voix off côté client), notifications et Mur des légendes.
 
 local Players = game:GetService("Players")

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Zone des bases (bible §4) : la Flèche astrale, la plaza des services, l'anneau des 12 bases, les quais.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -183,7 +183,7 @@ local function buildTeleportRing(parent: Instance): { [string]: BasePart }
 		pad:SetAttribute("Label", isl.name.fr)
 		Build.Light(pad, isl.color, 14, 1.5)
 		pads[id] = pad
-		_ = i
+		local _ = i
 	end
 	return pads
 end

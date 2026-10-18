@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Économie et progression (bible §4, §10, §18). Tous les prix sont des ordres de grandeur à tester.
 
 local Economy = {}

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Combat actif mais léger (bible §13) : attaque à visée automatique, 3 compétences, esquive,
 -- assistants automatiques, zones rouges au sol 1 s avant chaque attaque ennemie, PvP limité aux 3 cas autorisés.
 
@@ -819,7 +819,7 @@ function CombatService:Start()
 			if hum and hum.Health > 0 and hum.Health < hum.MaxHealth and os.clock() - s.lastHit > 10 then
 				hum.Health = math.min(hum.MaxHealth, hum.Health + hum.MaxHealth * 0.04)
 			end
-			_ = HeroService
+			local _ = HeroService
 		end
 	end)
 end

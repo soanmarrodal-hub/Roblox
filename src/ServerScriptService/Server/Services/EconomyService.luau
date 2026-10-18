@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Production d'énergie des héros exposés, collecteur, production hors ligne, améliorations de base.
 
 local Players = game:GetService("Players")

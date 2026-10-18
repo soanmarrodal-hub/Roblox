@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Mutations (bible §17) : effet visuel permanent + multiplicateur de production.
 -- Règle de cumul : deux mutations max, les multiplicateurs s'additionnent (Doré x2 + Cosmique x5 = x7).
 

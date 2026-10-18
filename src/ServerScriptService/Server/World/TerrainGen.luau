@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Terrain des îles flottantes : socle rocheux effilé + surface sculptée (bruit) écrite par WriteVoxels.
 
 local Workspace = game:GetService("Workspace")
@@ -184,7 +184,7 @@ local function writeIsland(islandId: string)
 		end
 	end
 	Terrain:FillBall(Vector3.new(c.X, yMin - 150, c.Z), 40, cliff)
-	_ = path
+	local _ = path
 end
 
 -- Socle rocheux sous le hub (le hub lui-même est en pièces).

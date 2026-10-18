@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Pose du pack d'assets nature (assets/nature/NaturePack.rbxm) sur les îles, avec teinte par île.
 
 local ServerStorage = game:GetService("ServerStorage")

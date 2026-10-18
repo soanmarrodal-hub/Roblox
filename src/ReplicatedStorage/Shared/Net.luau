@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Registre des remotes. Le serveur les crée, le client les attend.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,11 +16,11 @@ Net.Events = {
 Net.Unreliable = { "HitFx", "SkillFx" }
 Net.Functions = { "Action" }
 
-local folder: Folder
+local folder: Folder? = nil
 
 local function getFolder(): Folder
 	if folder then
-		return folder
+		return folder :: Folder
 	end
 	if RunService:IsServer() then
 		local f = ReplicatedStorage:FindFirstChild("Remotes") :: Folder?
@@ -45,11 +45,12 @@ local function getFolder(): Folder
 			nf.Parent = ReplicatedStorage
 			f = nf
 		end
-		folder = f :: Folder
-	else
-		folder = ReplicatedStorage:WaitForChild("Remotes") :: Folder
+		folder = f
+		return f :: Folder
 	end
-	return folder
+	local remote = ReplicatedStorage:WaitForChild("Remotes") :: Folder
+	folder = remote
+	return remote
 end
 
 function Net.Event(name: string): RemoteEvent

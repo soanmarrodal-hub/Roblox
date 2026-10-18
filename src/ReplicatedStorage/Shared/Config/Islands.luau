@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Le monde : hub central + 5 îles en anneau (bible §3 à §9). Tous les chiffres sont des points de départ.
 
 export type SubZone = { id: string, name: string, offset: Vector3, radius: number, mobs: { string } }

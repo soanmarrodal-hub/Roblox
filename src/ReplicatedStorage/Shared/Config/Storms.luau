@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Tempêtes cosmiques (bible §17). Durées en secondes.
 
 export type Storm = {

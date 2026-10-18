@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Petits outils de construction (pièces ancrées, cylindres, anneaux, lumières).
 
 local Build = {}

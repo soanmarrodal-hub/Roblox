@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Les 30 héros du lancement (bible §11 et §12). Les 12 premiers ont un modèle 3D importé (assets/heroes),
 -- les 18 autres utilisent les modèles générés du dossier assets/heroes ou, à défaut, une figurine procédurale.
 

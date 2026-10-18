@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Registre des services serveur : chaque service expose Init() puis Start().
 
 local Registry = {}

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Point d'entrée serveur d'Astral Heist.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Monnaies, rang d'explorateur, portes d'île, balises astrales, téléportation et retour base.
 
 local Players = game:GetService("Players")
@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Islands = require(Shared.Config.Islands)
 local Economy = require(Shared.Config.Economy)
+local WorldCfg = require(Shared.Config.World)
 local Net = require(Shared.Net)
 local Format = require(Shared.Util.Format)
 local Registry = require(script.Parent.Parent.Registry)
@@ -82,7 +83,7 @@ function ProgressionService:Grant(player: Player, reward: { [string]: any }, rea
 	end
 	self:Mirror(player)
 	Registry.Get("DataService"):Sync(player)
-	_ = reason
+	local _ = reason
 end
 
 function ProgressionService:Balance(player: Player, currency: string): number
@@ -346,6 +347,38 @@ function ProgressionService:Start()
 				if root.Position.Y < -60 then
 					Registry.Get("CaptureService"):Drop(p, "fall")
 					self:TeleportTo(p, World:HubSpawn())
+				end
+				-- zone sûre (plaza des services), camps, sol (dunes, neige, lave)
+				local hub = Islands.HubCenter
+				local flat = Vector2.new(root.Position.X - hub.X, root.Position.Z - hub.Z).Magnitude
+				p:SetAttribute("SafeZone", loc == "Hub" and flat < WorldCfg.PlazaRadius + 2 and root.Position.Y > hub.Y - 3)
+				local camp = nil
+				if island and island ~= "Hub" then
+					local info = World:Island(island)
+					if info and info.camp and (info.camp.cframe.Position - root.Position).Magnitude < 32 then
+						camp = island
+					end
+				end
+				p:SetAttribute("InCamp", camp)
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if hum then
+					local mat = hum.FloorMaterial
+					local ts = if mat == Enum.Material.Sand then 0.9 elseif mat == Enum.Material.Snow then 0.88 else 1
+					if p:GetAttribute("TerrainSpeed") ~= ts then
+						p:SetAttribute("TerrainSpeed", ts)
+						Registry.Get("CombatService"):UpdateSpeed(p)
+					end
+					if mat == Enum.Material.CrackedLava then
+						-- la lave renvoie au dernier point sûr et fait lâcher tout héros porté
+						Registry.Get("CaptureService"):Drop(p, "lava")
+						hum.Health -= hum.MaxHealth * 0.15
+						local safe = s.lastSafe
+						if safe then
+							self:TeleportTo(p, CFrame.new(safe + Vector3.new(0, 4, 0)))
+						end
+					elseif mat ~= Enum.Material.Air then
+						s.lastSafe = root.Position
+					end
 				end
 			end
 		end

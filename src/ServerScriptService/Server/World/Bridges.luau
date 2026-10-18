@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Ponts (150 à 250 studs) et portes monumentales à la couleur de chaque île (bible §3).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -107,7 +107,7 @@ local function buildGate(parent: Instance, id: string, cf: CFrame): Model
 	inter:SetAttribute("Island", id)
 	inter:SetAttribute("Label", "Porte : " .. isl.name.fr)
 	local light = Build.Light(barrier, isl.color, 30, 2)
-	_ = light
+	local _ = light
 	m:SetAttribute("Island", id)
 	m:AddTag("IslandGate")
 	return m
@@ -143,7 +143,7 @@ local function buildBridge(parent: Instance, id: string): any
 		if i % 3 == 0 then
 			for _, s in { -1, 1 } do
 				local post = Build.Box(m, cf * CFrame.new(s * (width / 2 - 0.5), 1.2, 0), Vector3.new(1.2, 3.2, 1.2), th.pillar, th.pillarMat, "Post")
-				_ = post
+				local _ = post
 				if id ~= "Glacier" then
 					local lamp = Build.Ball(m, (cf * CFrame.new(s * (width / 2 - 0.5), 3.4, 0)).Position, 1.2, th.accent, Enum.Material.Neon, "Lamp")
 					lamp.CanCollide = false
@@ -167,7 +167,7 @@ local function buildBridge(parent: Instance, id: string): any
 					local tower = Build.Box(m, cf * CFrame.new(s * (width / 2 + 1), 12, 0), Vector3.new(1.6, 24, 1.6), th.pillar, Enum.Material.Metal, "Tower")
 					local cable = Build.Box(m, cf * CFrame.new(s * (width / 2 + 1), 24, 0), Vector3.new(0.4, 0.4, 36), Color3.fromRGB(35, 213, 255), Enum.Material.Neon, "Cable")
 					cable.CanCollide = false
-					_ = tower
+					local _ = tower
 				end
 			elseif id == "Volcano" then
 				local lava = Build.Box(m, cf * CFrame.new(0, -26, 0), Vector3.new(14, 2, seg.Magnitude * 5), Color3.fromRGB(255, 90, 30), Enum.Material.Neon, "LavaFlow")

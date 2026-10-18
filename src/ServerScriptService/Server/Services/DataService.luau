@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Sauvegarde des joueurs : DataStore avec verrou de session, sauvegarde auto, fusion des nouvelles clés.
 -- En Studio sans accès aux API, les données restent en mémoire (avertissement dans la sortie).
 

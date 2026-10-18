@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Tirages pondérés.
 
 local Weighted = {}

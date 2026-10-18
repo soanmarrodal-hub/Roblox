@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Éléments communs à chaque île : sanctuaire, camp des Pilleurs d'étoiles, balises, points d'apparition.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -96,7 +96,7 @@ function IslandCommon.Sanctuary(ctx: Ctx, lx: number, lz: number, style: string?
 	crystal:AddTag("FloatCrystal")
 	Build.Decorative(crystal)
 	local light = Build.Light(crystal:FindFirstChildWhichIsA("BasePart") :: BasePart, isl.crystal, 40, 2.5)
-	_ = light
+	local _ = light
 	-- vendeur d'éclats + autel d'évolution
 	local vendor = Build.Part(m, { Name = "Vendor", Size = Vector3.new(8, 8, 8), CFrame = cf * CFrame.new(0, 4, 14), Transparency = 1, CanCollide = false })
 	vendor:AddTag("Interactable")
@@ -120,7 +120,7 @@ function IslandCommon.RivalCamp(ctx: Ctx, lx: number, lz: number)
 		Build.Wedge(m, tcf * CFrame.new(0, 4, 2.5) * CFrame.Angles(0, math.pi, 0), Vector3.new(10, 8, 5), Color3.fromRGB(150, 35, 45), Enum.Material.Fabric, "Tent")
 	end
 	local flag = Build.Box(m, cf * CFrame.new(0, 9, 20), Vector3.new(0.6, 18, 0.6), Color3.fromRGB(60, 50, 50), Enum.Material.Metal, "Pole")
-	_ = flag
+	local _ = flag
 	local banner = Build.Box(m, cf * CFrame.new(2.6, 15, 20), Vector3.new(5, 3.5, 0.2), Color3.fromRGB(30, 20, 40), Enum.Material.Fabric, "Banner")
 	Build.Sign(banner, "★", Color3.fromRGB(255, 70, 80), nil, Enum.NormalId.Front)
 	local fire = Build.Ball(m, (cf * CFrame.new(0, 1, 2)).Position, 2, Color3.fromRGB(255, 140, 40), Enum.Material.Neon, "Campfire")

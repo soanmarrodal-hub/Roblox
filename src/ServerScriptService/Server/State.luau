@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- État de session non sauvegardé de chaque joueur (combat, transport, duel…).
 
 local Players = game:GetService("Players")
@@ -26,6 +26,7 @@ export type PlayerState = {
 	stormJoined: boolean,
 	reviveBuff: number,
 	lastAttack: number,
+	lastSafe: Vector3?,
 }
 
 local State = {}

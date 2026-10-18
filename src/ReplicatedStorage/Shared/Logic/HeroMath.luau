@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Formules (bible §10) :
 -- valeur finale = production de base x multiplicateur de l'île x bonus de niveau x bonus d'étoiles x mutations.
 

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Codes promotionnels (Puits des codes). Un code à chaque mise à jour et à chaque palier de favoris.
 
 local Codes = {

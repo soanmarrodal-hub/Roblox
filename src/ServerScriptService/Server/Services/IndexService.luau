@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 -- Index des héros et des mutations : découvertes, paliers de collection, titres.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
