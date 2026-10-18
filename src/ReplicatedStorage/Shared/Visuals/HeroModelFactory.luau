@@ -55,7 +55,7 @@ end
 
 local function proceduralPivot(part: BasePart, group: string): Vector3
 	local cf, s = part.CFrame, part.Size
-	if part.Shape == Enum.PartType.Cylinder then
+	if part:IsA("Part") and part.Shape == Enum.PartType.Cylinder then
 		s = Vector3.new(s.Y, s.X, s.Z)
 	end
 	if group == "Head" or group == "EarL" or group == "EarR" then
@@ -75,7 +75,8 @@ end
 -- Construit un modèle prêt à animer. height : hauteur souhaitée en studs.
 function HeroModelFactory.Create(heroId: string, height: number?): Rig
 	local def = Heroes.Get(heroId)
-	local src = folder() and folder():FindFirstChild(heroId)
+	local f = folder()
+	local src = f and f:FindFirstChild(heroId)
 	local model: Model
 	local procedural = false
 	if src then

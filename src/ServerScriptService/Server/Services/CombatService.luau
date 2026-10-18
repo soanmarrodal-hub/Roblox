@@ -97,6 +97,9 @@ function CombatService:Register(def: { [string]: any }): Entity
 	anchor:SetAttribute("Level", e.level)
 	anchor:SetAttribute("Scale", def.scale or 1)
 	anchor:SetAttribute("State", def.state or "Idle")
+	if def.ai and def.ai.hover then
+		anchor:SetAttribute("Hover", def.ai.hover)
+	end
 	if def.mut then
 		anchor:SetAttribute("Mut", def.mut)
 	end
@@ -212,7 +215,7 @@ end
 function CombatService:ApplyPlayerStatus(player: Player, status: string, duration: number)
 	local s = State.Get(player)
 	s.status[status] = math.max(s.status[status] or 0, os.clock() + duration)
-	player:SetAttribute("Status_" .. status, os.clock() + duration)
+	player:SetAttribute("Status_" .. status, Workspace:GetServerTimeNow() + duration)
 	self:UpdateSpeed(player)
 	task.delay(duration + 0.05, function()
 		if player.Parent then
@@ -536,7 +539,7 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 				s.shield = (hum and hum.MaxHealth or 100) * (eff.amount or 0.2)
 				s.shieldUntil = os.clock() + (eff.duration or 4)
 				p:SetAttribute("Shield", s.shield)
-				p:SetAttribute("ShieldUntil", s.shieldUntil)
+				p:SetAttribute("ShieldEnds", Workspace:GetServerTimeNow() + (eff.duration or 4))
 			end
 		elseif kind == "status" then
 			local shape = eff.shape or "circle"
@@ -545,7 +548,7 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 					local resist = if e.kind == "Boss" then 0.35 else 1
 					e.status[eff.status] = os.clock() + (eff.duration or 1) * resist
 					e.anchor:SetAttribute("Status", eff.status)
-					e.anchor:SetAttribute("StatusUntil", e.status[eff.status])
+					e.anchor:SetAttribute("StatusUntil", Workspace:GetServerTimeNow() + (eff.duration or 1) * resist)
 				end
 			end
 			for _, other in Players:GetPlayers() do
@@ -587,7 +590,7 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 				else
 					s.buffs[eff.stat] = { amount = eff.amount or 0.2, untilTime = os.clock() + (eff.duration or 5) }
 				end
-				p:SetAttribute("Buff_" .. eff.stat, os.clock() + (eff.duration or 5))
+				p:SetAttribute("Buff_" .. eff.stat, Workspace:GetServerTimeNow() + (eff.duration or 5))
 			end
 		elseif kind == "delay" then
 			task.delay(eff.t or 1, function()
@@ -631,7 +634,7 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 		elseif kind == "resetCooldowns" then
 			for _, p in nearbyPlayers(o, eff.radius or 20) do
 				table.clear(State.Get(p).cooldowns)
-				p:SetAttribute("CooldownReset", os.clock())
+				p:SetAttribute("CooldownReset", Workspace:GetServerTimeNow())
 			end
 		end
 	end
@@ -727,7 +730,7 @@ function CombatService:UseSkill(player: Player, slot: number, dir: Vector3, lock
 		s.charge = 0
 		player:SetAttribute("Charge", 0)
 	end
-	player:SetAttribute("CD" .. slot, os.clock() + skill.cooldown)
+	player:SetAttribute("CD" .. slot, Workspace:GetServerTimeNow() + skill.cooldown)
 	local target, targetPlayer = aimTarget(player, dir, lockedId, 60)
 	local aim = Vector3.new(dir.X, 0, dir.Z)
 	local tpos: Vector3? = nil

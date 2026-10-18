@@ -106,7 +106,7 @@ function SpawnService:Down(e: any, killer: Player?)
 	e.ai.owner = killer
 	e.ai.instabilityStart = math.clamp(fight / 60 * 30, 0, 35)
 	Combat:SetState(e, "Downed")
-	e.anchor:SetAttribute("DownUntil", e.ai.downUntil)
+	e.anchor:SetAttribute("DownUntil", workspace:GetServerTimeNow() + (e.ai.downUntil - os.clock()))
 	e.anchor:SetAttribute("OwnerId", killer and killer.UserId or 0)
 	e.anchor:AddTag("Interactable")
 	e.anchor:SetAttribute("Kind", "Downed")

@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Economy = require(Shared.Config.Economy)
+local Islands = require(Shared.Config.Islands)
 local Quests = require(Shared.Config.Quests)
 local Shop = require(Shared.Config.Shop)
 local HeroMath = require(Shared.Logic.HeroMath)
@@ -95,18 +96,18 @@ function EconomyService:BuyUpgrade(player: Player, id: string): (boolean, string
 	if currency == "Shards" then
 		-- statue : éclats de l'île la plus haute débloquée
 		local best = "Ether"
-		for island, sh in Prog.ShardOf do
+		for _, island in Islands.Order do
 			if d.gates[island] then
-				best = sh
+				best = Prog.ShardOf[island]
 			end
 		end
 		currency = "Shards:" .. best
 	end
 	if u.shards then
 		local sh = "Ether"
-		for island, s in Prog.ShardOf do
+		for _, island in Islands.Order do
 			if d.gates[island] then
-				sh = s
+				sh = Prog.ShardOf[island]
 			end
 		end
 		if Prog:Balance(player, "Shards:" .. sh) < u.shards * (tier + 1) then

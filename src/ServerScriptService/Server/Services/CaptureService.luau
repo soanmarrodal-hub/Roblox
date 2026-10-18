@@ -143,11 +143,12 @@ function CaptureService:SpawnDropped(c: any, pos: Vector3)
 		end,
 	})
 	Motion.Place(e.anchor, pos, def.size * 2.5)
+	e.anchor:SetAttribute("Hover", def.size * 2.5)
 	e.ai = { downed = true, downUntil = os.clock() + r.groundTime, def = def, dropped = c, instabilityStart = c.instability * 0.7 }
 	e.anchor:AddTag("Interactable")
 	e.anchor:SetAttribute("Kind", "Downed")
 	e.anchor:SetAttribute("Label", def.name)
-	e.anchor:SetAttribute("DownUntil", e.ai.downUntil)
+	e.anchor:SetAttribute("DownUntil", workspace:GetServerTimeNow() + (e.ai.downUntil - os.clock()))
 	local returnDelay = if c.source == "Steal" then Steal.InterceptReturnDelay else r.groundTime
 	task.delay(returnDelay, function()
 		if e.anchor.Parent and not e.taken then

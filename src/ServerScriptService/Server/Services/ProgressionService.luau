@@ -3,6 +3,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage.Shared
 local Islands = require(Shared.Config.Islands)
@@ -219,6 +220,19 @@ end
 function ProgressionService:TeleportTo(player: Player, cf: CFrame)
 	local char = player.Character
 	if char then
+		-- StreamingEnabled : charger la zone d'arrivée chez le client avant d'y déplacer le personnage
+		-- (en tâche séparée pour ne pas bloquer les boucles appelantes)
+		if Workspace.StreamingEnabled and (char:GetPivot().Position - cf.Position).Magnitude > 200 then
+			task.spawn(function()
+				pcall(function()
+					player:RequestStreamAroundAsync(cf.Position, 3)
+				end)
+				if player.Character == char then
+					char:PivotTo(cf)
+				end
+			end)
+			return
+		end
 		char:PivotTo(cf)
 	end
 end

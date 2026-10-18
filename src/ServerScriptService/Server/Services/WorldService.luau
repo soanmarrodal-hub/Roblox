@@ -82,16 +82,12 @@ function WorldService:Init()
 end
 
 function WorldService:Start()
-	-- cycle jour/nuit (le client applique les variations locales d'île)
+	-- cycle jour/nuit
 	local dayLen = Economy.DayLengthMinutes * 60
 	local start = os.clock()
 	while true do
+		-- seule l'heure est publiée : chaque client règle Lighting.ClockTime (île, tempête, interpolation)
 		local t = ((os.clock() - start) / dayLen) % 1
-		if not Workspace:GetAttribute("StormClock") then
-			Lighting.ClockTime = (t * 24 + 9) % 24
-		else
-			Lighting.ClockTime = Workspace:GetAttribute("StormClock") :: number
-		end
 		Workspace:SetAttribute("DayClock", (t * 24 + 9) % 24)
 		task.wait(1)
 	end

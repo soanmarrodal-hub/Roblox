@@ -45,7 +45,7 @@ local function push(t: Trade)
 				theirs = describe(t.offers[other], other),
 				readyMe = (t.ready[p] or 0) > 0,
 				readyThem = (t.ready[other] or 0) > 0,
-				lockUntil = t.changedAt + LOCK_AFTER_CHANGE,
+				lockLeft = math.max(0, t.changedAt + LOCK_AFTER_CHANGE - os.clock()),
 			})
 		end
 	end

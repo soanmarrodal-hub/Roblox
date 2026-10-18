@@ -96,7 +96,7 @@ function EnemyService:AttackPattern(e: any, target: Player, kind: string, opts: 
 		end
 	end
 	e.anchor:SetAttribute("Attack", kind)
-	e.anchor:SetAttribute("AttackAt", os.clock())
+	e.anchor:SetAttribute("AttackAt", workspace:GetServerTimeNow())
 end
 
 local function rewardContributors(e: any, def: any)
