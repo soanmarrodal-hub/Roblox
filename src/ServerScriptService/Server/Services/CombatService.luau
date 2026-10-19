@@ -774,7 +774,7 @@ function CombatService:Init()
 	folder.Name = "Entities"
 	folder.Parent = Workspace
 	local function vec(v: any): Vector3
-		if typeof(v) == "Vector3" and v.Magnitude == v.Magnitude then
+		if typeof(v) == "Vector3" and v.Magnitude == v.Magnitude and v.Magnitude < 1e4 then
 			return v
 		end
 		return Vector3.new(0, 0, -1)
@@ -783,10 +783,11 @@ function CombatService:Init()
 		self:Attack(p, vec(dir), if typeof(locked) == "number" then locked else nil)
 	end)
 	Net.Event("Skill").OnServerEvent:Connect(function(p, slot, dir, locked)
-		if typeof(slot) ~= "number" or slot < 1 or slot > 3 then
+		-- comparaison stricte : rejette aussi NaN et les valeurs fractionnaires
+		if slot ~= 1 and slot ~= 2 and slot ~= 3 then
 			return
 		end
-		self:UseSkill(p, math.floor(slot), vec(dir), if typeof(locked) == "number" then locked else nil)
+		self:UseSkill(p, slot, vec(dir), if typeof(locked) == "number" then locked else nil)
 	end)
 	Net.Event("Dodge").OnServerEvent:Connect(function(p, dir)
 		self:Dodge(p, vec(dir))

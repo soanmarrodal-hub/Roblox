@@ -158,13 +158,14 @@ function EconomyService:Start()
 			if d then
 				local prod = self:Production(p)
 				local cap = self:Capacity(p, prod)
+				-- le plafond arrête le remplissage mais ne vide jamais le collecteur (gain hors ligne)
 				if p:GetAttribute("Pass_AutoCollect") then
 					local direct = prod * Shop.AutoCollectShare
 					d.energy += direct
-					d.collector = math.min(cap, d.collector + prod - direct)
+					d.collector = math.max(d.collector, math.min(cap, d.collector + prod - direct))
 					p:SetAttribute("Energy", math.floor(d.energy))
 				else
-					d.collector = math.min(cap, d.collector + prod)
+					d.collector = math.max(d.collector, math.min(cap, d.collector + prod))
 				end
 				p:SetAttribute("Production", prod)
 				p:SetAttribute("Collector", math.floor(d.collector))

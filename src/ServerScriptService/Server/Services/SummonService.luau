@@ -118,8 +118,12 @@ function SummonService:StarChoice(player: Player, bannerId: string, heroId: stri
 	if pity.stars < Banners.StarsForChoice then
 		return false, Banners.StarsForChoice .. " étoiles requises"
 	end
+	local Hero = Registry.Get("HeroService")
+	if Hero:Count(player) >= Hero:Capacity(player) then
+		return false, "Inventaire plein"
+	end
 	pity.stars -= Banners.StarsForChoice
-	Registry.Get("HeroService"):AddHero(player, heroId, { source = "Stars" })
+	Hero:AddHero(player, heroId, { source = "Stars" })
 	Net.Event("SummonResult"):FireClient(player, { banner = bannerId, results = { { heroId = heroId, rarity = def.rarity } }, pity = pity })
 	return true, nil
 end

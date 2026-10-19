@@ -35,6 +35,7 @@ local states: { [Player]: PlayerState } = {}
 function State.Get(player: Player): PlayerState
 	local s = states[player]
 	if not s then
+		local gone = player.Parent == nil
 		s = {
 			plot = nil,
 			carrying = nil,
@@ -59,7 +60,10 @@ function State.Get(player: Player): PlayerState
 			reviveBuff = 0,
 			lastAttack = 0,
 		}
-		states[player] = s
+		-- un joueur déjà parti reçoit un état jetable : pas de fuite après PlayerRemoving
+		if not gone then
+			states[player] = s
+		end
 	end
 	return s
 end
@@ -78,8 +82,11 @@ function State.HasStatus(player: Player, status: string): boolean
 	return (s.status[status] or 0) > os.clock()
 end
 
+-- Différé : les autres gestionnaires de PlayerRemoving (base, duel, transport) lisent encore l'état.
 Players.PlayerRemoving:Connect(function(p)
-	states[p] = nil
+	task.defer(function()
+		states[p] = nil
+	end)
 end)
 
 return State

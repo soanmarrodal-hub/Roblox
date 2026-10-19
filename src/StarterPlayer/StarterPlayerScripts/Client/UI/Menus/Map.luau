@@ -124,6 +124,12 @@ function Page.Build(body: Frame, ctx: any)
 		if not m then
 			m = Kit.Label(dynamic, { Text = text, Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5), Color = color, Font = Theme.Font.Title, ZIndex = 6 })
 			marks[key] = m
+		else
+			-- couleur mise à jour à chaque tick (un joueur peut se mettre à porter un héros)
+			local lbl = m :: TextLabel
+			lbl.Text = text
+			lbl.TextColor3 = color
+			lbl.Size = UDim2.fromOffset(size, size)
 		end
 		return m :: GuiObject
 	end

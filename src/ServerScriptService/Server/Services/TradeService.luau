@@ -105,7 +105,7 @@ function TradeService:SetOffer(p: Player, uids: { string }): (boolean, string?)
 	local clean = {}
 	for _, uid in uids do
 		local h = d and d.heroes[uid]
-		if typeof(uid) == "string" and h and not h.locked and not Hero:IsBusy(d, uid) and #clean < 6 then
+		if typeof(uid) == "string" and h and not h.locked and not Hero:IsBusy(d, uid) and not table.find(clean, uid) and #clean < 6 then
 			table.insert(clean, uid)
 		end
 	end
@@ -148,23 +148,36 @@ function TradeService:Execute(t: Trade)
 		return
 	end
 	local Hero = Registry.Get("HeroService")
-	-- revalidation complète
+	-- revalidation complète (héros présents, libres, sans doublon)
 	for _, pair in { { t.a, da }, { t.b, db } } do
+		local seen = {}
 		for _, uid in t.offers[pair[1]] do
 			local h = pair[2].heroes[uid]
-			if not h or h.locked or Hero:IsBusy(pair[2], uid) then
+			if not h or h.locked or Hero:IsBusy(pair[2], uid) or seen[uid] then
 				close(t, "Échange annulé : une offre n'est plus valide")
 				return
 			end
+			seen[uid] = true
 		end
 	end
+	-- place dans l'inventaire de chacun après l'échange
+	local na, nb = #t.offers[t.a], #t.offers[t.b]
+	if Hero:Count(t.a) - na + nb > Hero:Capacity(t.a) or Hero:Count(t.b) - nb + na > Hero:Capacity(t.b) then
+		close(t, "Échange annulé : inventaire plein")
+		return
+	end
+	-- copies d'abord, retraits ensuite, ajouts enfin : rien n'est appliqué à moitié
 	local moveA, moveB = {}, {}
 	for _, uid in t.offers[t.a] do
 		table.insert(moveA, table.clone(da.heroes[uid]))
-		Hero:RemoveHero(t.a, uid)
 	end
 	for _, uid in t.offers[t.b] do
 		table.insert(moveB, table.clone(db.heroes[uid]))
+	end
+	for _, uid in t.offers[t.a] do
+		Hero:RemoveHero(t.a, uid)
+	end
+	for _, uid in t.offers[t.b] do
 		Hero:RemoveHero(t.b, uid)
 	end
 	for _, h in moveA do

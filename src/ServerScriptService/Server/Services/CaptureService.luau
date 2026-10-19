@@ -87,6 +87,11 @@ function CaptureService:StartCarry(player: Player, info: { [string]: any })
 		onDrop = info.onDrop,
 		onSuccess = info.onSuccess,
 	}
+	-- tous ceux qui ont porté ce héros volé : jamais de prime d'interception pour eux
+	if info.origin then
+		info.origin.carriers = info.origin.carriers or {}
+		info.origin.carriers[player] = true
+	end
 	setCarryAttrs(player, s.carrying)
 	Registry.Get("ProgressionService"):CancelCast(player)
 	Registry.Get("CombatService"):UpdateSpeed(player)
@@ -145,12 +150,12 @@ function CaptureService:SpawnDropped(c: any, pos: Vector3)
 	})
 	Motion.Place(e.anchor, pos, def.size * 2.5)
 	e.anchor:SetAttribute("Hover", def.size * 2.5)
-	e.ai = { downed = true, downUntil = os.clock() + r.groundTime, def = def, dropped = c, instabilityStart = c.instability * 0.7 }
+	local returnDelay = if c.source == "Steal" then Steal.InterceptReturnDelay else r.groundTime
+	e.ai = { downed = true, downUntil = os.clock() + returnDelay, def = def, dropped = c, instabilityStart = c.instability * 0.7 }
 	e.anchor:AddTag("Interactable")
 	e.anchor:SetAttribute("Kind", "Downed")
 	e.anchor:SetAttribute("Label", def.name)
-	e.anchor:SetAttribute("DownUntil", workspace:GetServerTimeNow() + (e.ai.downUntil - os.clock()))
-	local returnDelay = if c.source == "Steal" then Steal.InterceptReturnDelay else r.groundTime
+	e.anchor:SetAttribute("DownUntil", workspace:GetServerTimeNow() + returnDelay)
 	task.delay(returnDelay, function()
 		if e.anchor.Parent and not e.taken then
 			Combat:Remove(e, 0.5)
@@ -216,8 +221,10 @@ function CaptureService:OnCarrierHit(player: Player, attacker: Player?)
 	player:SetAttribute("CarryHits", c.hits)
 	if c.hits >= c.hitsToDrop then
 		self:Drop(player, "hits")
-		if attacker and c.source == "Steal" then
-			-- interception : prime d'éclats et points « Justicier »
+		local o = c.origin
+		if attacker and c.source == "Steal" and o and not o.intercepted and not (o.carriers and o.carriers[attacker]) then
+			-- interception : prime d'éclats et points « Justicier » (une seule fois par vol)
+			o.intercepted = true
 			Registry.Get("StealService"):OnIntercept(attacker, player)
 		end
 	end
@@ -229,6 +236,10 @@ local function succeed(player: Player, c: any)
 	local uid
 	if c.onSuccess then
 		uid = c.onSuccess(player)
+		if uid == false then
+			-- vol annulé (victime partie, héros disparu) : aucun crédit de capture
+			return
+		end
 	else
 		local mut = if c.mut and c.mut ~= "" then string.split(c.mut, ",") else nil
 		uid = HeroService:AddHero(player, c.heroId, { mut = mut, lvl = c.lvl, stars = c.stars, source = c.source })

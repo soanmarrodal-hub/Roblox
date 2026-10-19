@@ -97,9 +97,12 @@ function Page.Build(body: Frame, ctx: any)
 			Kit.Label(sec, { Text = isl.symbol .. " " .. isl.name.fr, Size = UDim2.new(1, 0, 0, 24), AlignX = Enum.TextXAlignment.Left, Font = Theme.Font.Title, Color = isl.color:Lerp(Color3.new(1, 1, 1), 0.3) })
 			local row = Kit.new("Frame", { Size = UDim2.new(1, 0, 0, 156), Position = UDim2.fromOffset(0, 28), BackgroundTransparency = 1, Parent = sec })
 			Kit.List(row, true, 6)
-			for j, h in Heroes.ByIsland(islId) do
+			local list = Heroes.ByIsland(islId)
+			-- largeur relative : les 6 héros de l'île tiennent sur la ligne, même sur tablette
+			local w = 1 / math.max(6, #list)
+			for j, h in list do
 				local known = d.index.heroes[h.id] == true
-				Kit.HeroCard(row, h.id, nil, { LayoutOrder = j, Discovered = known, Selected = selected == h.id, Size = UDim2.fromOffset(100, 150), OnClick = function()
+				Kit.HeroCard(row, h.id, nil, { LayoutOrder = j, Discovered = known, Selected = selected == h.id, Size = UDim2.new(w, -5, 0, 150), OnClick = function()
 					show(h.id, known)
 				end })
 			end

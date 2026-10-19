@@ -73,6 +73,8 @@ function EnemyService:AttackPattern(e: any, target: Player, kind: string, opts: 
 					e.hp = 0
 					e.anchor:SetAttribute("HP", 0)
 					e.dead = true
+					-- autodestruction : aucune récompense de victoire
+					table.clear(e.contributors)
 					if e.onDeath then
 						e.onDeath(e, nil)
 					end

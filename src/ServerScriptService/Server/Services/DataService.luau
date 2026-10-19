@@ -20,11 +20,12 @@ local LOCK_EXPIRE = 1800
 local DataService = {}
 DataService.Loaded = Signal.new() -- (player, data)
 DataService.Releasing = Signal.new() -- (player, data)
-DataService.Profiles = {} :: { [Player]: { data: any, key: string, dirty: boolean, loadedAt: number } }
+DataService.Profiles = {} :: { [Player]: { data: any, key: string, dirty: boolean, loadedAt: number, releasing: boolean? } }
 
 local store: DataStore? = nil
 local useStore = true
 local syncQueued: { [Player]: boolean } = {}
+local loading: { [Player]: boolean } = {}
 
 local function keyFor(userId: number): string
 	return "p_" .. userId
@@ -40,9 +41,7 @@ function DataService:Init()
 		useStore = false
 		warn("[DataService] DataStore indisponible (activez « Studio Access to API Services ») : données en mémoire.")
 	end
-	Players.PlayerAdded:Connect(function(p)
-		self:_load(p)
-	end)
+	-- Le chargement des joueurs démarre dans Start, une fois que tous les services ont branché Loaded.
 	Players.PlayerRemoving:Connect(function(p)
 		self:_release(p)
 	end)
@@ -61,6 +60,9 @@ function DataService:Init()
 end
 
 function DataService:Start()
+	Players.PlayerAdded:Connect(function(p)
+		self:_load(p)
+	end)
 	for _, p in Players:GetPlayers() do
 		task.spawn(function()
 			self:_load(p)
@@ -70,6 +72,9 @@ function DataService:Start()
 		while true do
 			task.wait(AUTOSAVE)
 			for p, prof in self.Profiles do
+				if prof.releasing then
+					continue
+				end
 				task.spawn(function()
 					self:_save(p, prof, false)
 				end)
@@ -79,9 +84,18 @@ function DataService:Start()
 end
 
 function DataService:_load(player: Player)
-	if self.Profiles[player] then
+	if self.Profiles[player] or loading[player] then
 		return
 	end
+	loading[player] = true
+	local ok, err = pcall(self._doLoad, self, player)
+	loading[player] = nil
+	if not ok then
+		warn("[DataService] Chargement interrompu pour " .. player.Name .. " : " .. tostring(err))
+	end
+end
+
+function DataService:_doLoad(player: Player)
 	local key = keyFor(player.UserId)
 	local data: any = nil
 	if useStore and store then
@@ -115,6 +129,18 @@ function DataService:_load(player: Player)
 		end
 	end
 	if not player.Parent then
+		-- parti pendant le chargement : on rend le verrou pris par UpdateAsync
+		if useStore and store and data ~= nil then
+			pcall(function()
+				(store :: DataStore):UpdateAsync(key, function(old: any)
+					if old and old.lock and old.lock.job == game.JobId then
+						old.lock = nil
+						return old
+					end
+					return nil
+				end)
+			end)
+		end
 		return
 	end
 	if data == nil then
@@ -135,35 +161,62 @@ function DataService:_load(player: Player)
 	self:Sync(player)
 end
 
-function DataService:_save(player: Player, prof: any, release: boolean)
+-- Renvoie (requête aboutie, données écrites) ; (true, true) s'il n'y a pas de DataStore.
+function DataService:_save(player: Player, prof: any, release: boolean): (boolean, boolean)
 	if not (useStore and store) then
-		return
+		return true, true
 	end
 	local data = prof.data
+	local written = false
 	local ok, err = pcall(function()
 		(store :: DataStore):UpdateAsync(prof.key, function(old: any)
+			if not release and prof.releasing then
+				-- une sauvegarde auto encore en vol ne doit pas reposer le verrou après la libération
+				return nil
+			end
 			if old and old.lock and old.lock.job ~= game.JobId and os.time() - (old.lock.t or 0) < LOCK_EXPIRE then
 				-- Une autre session a repris la main : on n'écrase pas.
 				return nil
 			end
+			written = true
 			return { data = data, lock = if release then nil else { job = game.JobId, t = os.time() } }
 		end)
 	end)
 	if not ok then
 		warn("[DataService] Échec de sauvegarde pour " .. player.Name .. " : " .. tostring(err))
 	end
+	return ok, ok and written
+end
+
+-- Sauvegarde immédiate (achats Robux) ; renvoie true si elle a réussi.
+function DataService:SaveNow(player: Player): boolean
+	local prof = self.Profiles[player]
+	if not prof or prof.releasing then
+		return false
+	end
+	local _, written = self:_save(player, prof, false)
+	return written
 end
 
 function DataService:_release(player: Player)
 	local prof = self.Profiles[player]
-	if not prof then
+	if not prof or prof.releasing then
 		return
 	end
+	prof.releasing = true
 	prof.data.stats.lastLogout = os.time()
 	prof.data.stats.playtime += os.time() - prof.loadedAt
 	prof.loadedAt = os.time()
 	self.Releasing:Fire(player, prof.data)
-	self:_save(player, prof, true)
+	-- plusieurs essais (dans le budget de 30 s de BindToClose) avant d'abandonner
+	for attempt = 1, 4 do
+		if self:_save(player, prof, true) then
+			break
+		end
+		if attempt < 4 then
+			task.wait(attempt * 2)
+		end
+	end
 	self.Profiles[player] = nil
 	syncQueued[player] = nil
 end

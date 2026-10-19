@@ -64,6 +64,7 @@ function SpawnService:SpawnWild(heroId: string, pos: Vector3, opts: { [string]: 
 		mut = o.mut,
 		ai = { home = pos, nextAttack = os.clock() + 2, nextSig = os.clock() + 8, wanderAt = 0, wanderTo = pos, hover = hover, firstHit = nil, despawnAt = os.clock() + (o.despawn or 240), def = def },
 		onHurt = function(ent: any)
+			ent.ai.lastHurt = os.clock()
 			if not ent.ai.firstHit then
 				ent.ai.firstHit = os.clock()
 				Combat:SetState(ent, "Combat")
@@ -144,9 +145,14 @@ local function tickWild(self: any, e: any, dt: number)
 		return
 	end
 	local def = ai.def
-	local target, dist = Motion.NearestPlayer(e.anchor.Position, if ai.firstHit then 70 else 30, function(p)
-		return State.Buff(p, "stealth") <= 0
-	end)
+	-- laisse : trop loin de chez lui, il abandonne la poursuite et rentre
+	local leashed = (e.anchor.Position - ai.home).Magnitude > 90
+	local target, dist = nil, math.huge
+	if not leashed then
+		target, dist = Motion.NearestPlayer(e.anchor.Position, if ai.firstHit then 70 else 30, function(p)
+			return State.Buff(p, "stealth") <= 0
+		end)
+	end
 	local speed = 12 * (if Combat:HasStatus(e, "slow") then 0.5 else 1)
 	if target then
 		local troot = Combat.RootOf(target)
@@ -177,7 +183,13 @@ local function tickWild(self: any, e: any, dt: number)
 			end
 		end
 	else
-		if os.clock() > ai.wanderAt then
+		-- 30 s sans être touché : le combat est oublié (le héros peut de nouveau disparaître)
+		if ai.firstHit and os.clock() - (ai.lastHurt or ai.firstHit) > 30 then
+			ai.firstHit = nil
+		end
+		if leashed then
+			ai.wanderTo = ai.home
+		elseif os.clock() > ai.wanderAt then
 			ai.wanderAt = os.clock() + 4 + math.random() * 4
 			local a = math.random() * math.pi * 2
 			ai.wanderTo = ai.home + Vector3.new(math.cos(a), 0, math.sin(a)) * math.random() * 22

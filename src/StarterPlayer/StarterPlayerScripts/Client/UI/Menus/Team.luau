@@ -102,7 +102,8 @@ function Team.Build(body: Frame, ctx: any)
 		for i, uid in sortedUids(d, state.sort) do
 			local h = d.heroes[uid]
 			local use = C.Data.HeroUse(uid)
-			local tag = if use == "Displayed" then "🏛" elseif use == "Leader" then "👑" elseif use == "Assist" then "⚔" elseif use == "Guardian" then "🛡" elseif use == "Vault" then "🔐" else nil
+			-- priorité d'affichage : équipe avant socle (un héros peut cumuler les deux)
+			local tag = if d.team.leader == uid then "👑" elseif table.find(d.team.assists, uid) then "⚔" elseif d.guardian == uid then "🛡" elseif use == "Displayed" then "🏛" elseif use == "Vault" then "🔐" else nil
 			Kit.HeroCard(scroll, h.id, h, {
 				LayoutOrder = i,
 				Selected = state.selected == uid,
@@ -111,6 +112,8 @@ function Team.Build(body: Frame, ctx: any)
 					if state.pickSlot and use ~= "Displayed" then
 						local slot = state.pickSlot
 						state.pickSlot = nil
+						ctx.args.slot = nil
+						sheet.ctx.slot = nil
 						C.Data.Action("Display", { uid = uid, slot = slot })
 						select(uid)
 						selectTab("Base")

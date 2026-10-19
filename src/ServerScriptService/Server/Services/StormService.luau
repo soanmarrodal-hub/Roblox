@@ -146,12 +146,15 @@ function StormService:RunStorm(stormId: string, isGreat: boolean)
 	task.wait(Storms.FalloutTime)
 	great = false
 	current = nil
+	-- retour au calme (indispensable après une tempête de test lancée en parallèle de la boucle)
+	setAttrs("Calm", Workspace:GetAttribute("NextStormAt") or now(), nil)
 end
 
 local function isGreatTime(): boolean
 	local t = os.date("!*t")
 	local sched = Storms.GreatSchedule
-	if table.find(sched.days, t.wday) and table.find(sched.hoursUTC, t.hour) and t.min == 0 then
+	-- fenêtre de 10 min (plus longue qu'une tempête normale) : jamais sautée si une tempête est en cours à l'heure pile
+	if table.find(sched.days, t.wday) and table.find(sched.hoursUTC, t.hour) and t.min < 10 then
 		return true
 	end
 	return false
@@ -173,7 +176,7 @@ function StormService:Start()
 		while now() < nextAt or state ~= "Calm" do
 			task.wait(5)
 			local hour = os.date("!*t").hour
-			if isGreatTime() and lastGreatHour ~= hour then
+			if state == "Calm" and isGreatTime() and lastGreatHour ~= hour then
 				lastGreatHour = hour
 				greatNow = true
 				break

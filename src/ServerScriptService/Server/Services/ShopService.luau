@@ -190,26 +190,42 @@ function ShopService:Init()
 		if not player then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
-		local d = Registry.Get("DataService"):WaitFor(player, 10)
+		local DS = Registry.Get("DataService")
+		local d = DS:WaitFor(player, 10)
 		if not d then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+		-- l'achat n'est confirmé à Roblox qu'une fois livré ET sauvegardé
+		local function confirm()
+			if DS:SaveNow(player) then
+				return Enum.ProductPurchaseDecision.PurchaseGranted
+			end
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		local rid = tostring(info.PurchaseId)
 		if d.purchases[rid] then
-			return Enum.ProductPurchaseDecision.PurchaseGranted
+			return confirm()
 		end
 		local key = productById[info.ProductId]
 		if not key then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
-		local ok = pcall(function()
-			self:Grant(player, key)
-		end)
-		if not ok then
+		local ok, granted = pcall(self.Grant, self, player, key)
+		local prod = Shop.Products[key]
+		if ok and not granted and prod.once and (d.products[key] or 0) > 0 then
+			-- produit unique acheté deux fois (deux invites ouvertes) : gemmes et cristaux livrés quand même
+			ok = pcall(function()
+				Registry.Get("ProgressionService"):Grant(player, { gems = prod.grant.gems, crystals = prod.grant.crystals }, "purchase")
+				Registry.Get("AnnouncementService"):Notify(player, prod.name .. " déjà possédé : gemmes et cristaux crédités.", "Info")
+				DS:Sync(player)
+			end)
+			granted = ok
+		end
+		if not ok or not granted then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		d.purchases[rid] = true
-		return Enum.ProductPurchaseDecision.PurchaseGranted
+		return confirm()
 	end
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
 		if purchased and passById[passId] then

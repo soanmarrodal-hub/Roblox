@@ -346,6 +346,18 @@ local function buildMinimap(root: Frame)
 				b = Kit.Label(layer, { Name = key, Text = text, Size = UDim2.fromOffset(sz, sz), AnchorPoint = Vector2.new(0.5, 0.5), Color = color, ZIndex = 4, Font = Theme.Font.Title })
 			end
 			blips[key] = b
+		else
+			-- style mis à jour à chaque tick (porteur repéré, île déverrouillée…)
+			b.Size = UDim2.fromOffset(sz, sz)
+			if b:IsA("TextLabel") then
+				b.Text = text
+				b.TextColor3 = color
+			else
+				local lbl = b:FindFirstChildWhichIsA("TextLabel")
+				if lbl then
+					lbl.Text = text
+				end
+			end
 		end
 		return b :: GuiObject
 	end

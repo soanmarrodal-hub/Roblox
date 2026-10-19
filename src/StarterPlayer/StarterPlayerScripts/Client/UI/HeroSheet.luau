@@ -81,8 +81,35 @@ function HeroSheet:Set(uid: string?)
 	local maxL = r.maxLevel
 	local prod = HeroMath.Production(h)
 	local power = HeroMath.Power(h)
-	local use, slot = C.Data.HeroUse(uid :: string)
-	local useText = if use == "Displayed" then "Exposé (socle " .. tostring(slot) .. ")" elseif use == "Vault" then "Au coffre" elseif use == "Leader" then "Leader" elseif use == "Assist" then "Assistant" elseif use == "Guardian" then "Gardien de la base" else "Libre"
+	-- un héros peut cumuler plusieurs rôles (exposé ET leader, par exemple) : chacun est calculé à part
+	local slot
+	for s, u in d.displayed do
+		if u == uid then
+			slot = tonumber(s)
+			break
+		end
+	end
+	local isLeader = d.team.leader == uid
+	local isAssist = table.find(d.team.assists, uid) ~= nil
+	local isGuardian = d.guardian == uid
+	local inVault = table.find(d.vault, uid) ~= nil
+	local roles = {}
+	if isLeader then
+		table.insert(roles, "Leader")
+	end
+	if isAssist then
+		table.insert(roles, "Assistant")
+	end
+	if isGuardian then
+		table.insert(roles, "Gardien de la base")
+	end
+	if slot then
+		table.insert(roles, "Exposé (socle " .. tostring(slot) .. ")")
+	end
+	if inVault then
+		table.insert(roles, "Au coffre")
+	end
+	local useText = if #roles > 0 then table.concat(roles, " · ") else "Libre"
 	self.stats.Text = string.format(
 		"%s <b>%d / %d</b>    ⚡ <b>%s/s</b>    ⚔ <b>%s</b>\n%s",
 		Locale.t("level"), h.lvl, maxL, Format.Short(prod), Format.Short(power), "<font color=\"#9ad8ff\">" .. useText .. "</font>" .. (if h.locked then "  🔒" else "")
@@ -95,13 +122,24 @@ function HeroSheet:Set(uid: string?)
 		o += 1
 		return o
 	end
-	if use == "Displayed" then
+	if slot then
 		actionButton(self, "Retirer du socle", Theme.Color.ButtonGray, nexto(), function()
 			C.Data.Action("Undisplay", { slot = slot })
 		end)
-	elseif use ~= "Vault" then
+	elseif not inVault then
 		actionButton(self, Locale.t("display"), Theme.Color.ButtonGreen, nexto(), function()
+			-- socle mémorisé (choisi juste avant dans l'onglet Base) : utilisé une seule fois
 			local target = self.ctx.slot
+			self.ctx.slot = nil
+			-- socle mémorisé déjà occupé : on préfère un socle libre (sinon on remplace, c'est un échange voulu)
+			if target and d.displayed[tostring(target)] then
+				for i = 1, C.Data.PedestalCount() do
+					if not d.displayed[tostring(i)] then
+						target = i
+						break
+					end
+				end
+			end
 			if not target then
 				for i = 1, C.Data.PedestalCount() do
 					if not d.displayed[tostring(i)] then
@@ -117,21 +155,21 @@ function HeroSheet:Set(uid: string?)
 			C.Data.Action("Display", { uid = uid, slot = target })
 		end)
 	end
-	if use ~= "Leader" then
+	if not isLeader then
 		actionButton(self, "👑 " .. Locale.t("leader"), Theme.Color.ButtonGold, nexto(), function()
 			C.Data.Action("Leader", { uid = uid })
 		end)
 	end
-	if use == "Assist" then
+	if isAssist then
 		actionButton(self, "Retirer assistant", Theme.Color.ButtonGray, nexto(), function()
 			C.Data.Action("Assist", { uid = uid, on = false })
 		end)
-	elseif use ~= "Leader" then
+	elseif not isLeader then
 		actionButton(self, "Assistant", Theme.Color.Button, nexto(), function()
 			C.Data.Action("Assist", { uid = uid, on = true })
 		end)
 	end
-	if use == "Guardian" then
+	if isGuardian then
 		actionButton(self, "Retirer gardien", Theme.Color.ButtonGray, nexto(), function()
 			C.Data.Action("Guardian", {})
 		end)
@@ -140,7 +178,7 @@ function HeroSheet:Set(uid: string?)
 			C.Data.Action("Guardian", { uid = uid })
 		end)
 	end
-	if use == "Vault" then
+	if inVault then
 		actionButton(self, "Sortir du coffre", Theme.Color.ButtonGray, nexto(), function()
 			C.Data.Action("Vault", { uid = uid, on = false })
 		end)

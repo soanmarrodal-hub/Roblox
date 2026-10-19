@@ -238,8 +238,8 @@ H.Settings = function(p, a)
 		d.settings.shake = v
 	elseif key == "quality" and (v == "Low" or v == "Medium" or v == "High") then
 		d.settings.quality = v
-	elseif (key == "music" or key == "sfx") and typeof(v) == "number" then
-		d.settings[key] = math.clamp(v, 0, 1)
+	elseif (key == "music" or key == "sfx") and num(v) then
+		d.settings[key] = math.clamp(num(v) :: number, 0, 1)
 	elseif key == "border" and typeof(v) == "string" and string.match(v, "^#%x%x%x%x%x%x$") then
 		d.settings.border = v
 		Registry.Get("BaseService"):Refresh(p)

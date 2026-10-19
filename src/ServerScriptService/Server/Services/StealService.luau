@@ -298,6 +298,18 @@ function StealService:EndDuel(duel: any, outcome: string)
 				tier = "Silver" -- plafond de perte : un héros par période de 4 h
 			end
 		end
+		if tier == "Gold" and victim then
+			-- un autre vol en Or est déjà en route sur cette base : il compte comme la perte de la période
+			local plot = Registry.Get("BaseService"):PlotOf(victim)
+			if plot then
+				for _, ped in plot.pedestals do
+					if ped ~= duel.pedestal and ped:GetAttribute("InTransit") then
+						tier = "Silver"
+						break
+					end
+				end
+			end
+		end
 	end
 	local payload = { active = false, outcome = outcome, tier = tier, heroId = duel.hero.id }
 	if attacker.Parent then
@@ -307,6 +319,12 @@ function StealService:EndDuel(duel: any, outcome: string)
 		Net.Event("DuelState"):FireClient(duel.defender, payload)
 	end
 	if not tier then
+		if outcome == "victimLeft" then
+			if attacker.Parent then
+				notify(attacker, "La victime a quitté le serveur : duel annulé.", "Warning")
+			end
+			return
+		end
 		-- échec : 2 min d'attente sur cette base, bonus temporaire au héros défenseur
 		if duel.plotIndex then
 			State.Get(attacker).failedBases[duel.plotIndex] = os.clock() + Steal.FailCooldown
@@ -416,7 +434,7 @@ function StealService:Reward(duel: any, tier: string)
 end
 
 -- Course de retour réussie : le héros change de propriétaire (niveau, étoiles et mutations conservés).
-function StealService:Transfer(thief: Player, duel: any): string?
+function StealService:Transfer(thief: Player, duel: any): (string | false)?
 	local victim: Player? = duel.victim
 	local Hero = Registry.Get("HeroService")
 	local h = duel.hero
@@ -433,7 +451,7 @@ function StealService:Transfer(thief: Player, duel: any): string?
 			-- la victime a quitté le serveur ou le héros n'existe plus : on annule pour éviter toute duplication
 			returnToPedestal(duel)
 			notify(thief, "Le héros s'est dissipé (son propriétaire est parti).", "Warning")
-			return nil
+			return false
 		end
 		duel.pedestal:SetAttribute("InTransit", nil)
 		Registry.Get("BaseService"):Refresh(victim)
@@ -544,7 +562,14 @@ function StealService:Init()
 	Players.PlayerRemoving:Connect(function(p)
 		local s = State.Get(p)
 		if s.duel then
-			self:EndDuel(s.duel, "left")
+			-- l'attaquant part : échec ; la victime qui défendait part : duel annulé
+			self:EndDuel(s.duel, if s.duel.attacker == p then "left" else "victimLeft")
+		end
+		-- duels en cours contre la base de ce joueur : annulés sans pénalité pour l'attaquant
+		for _, d in table.clone(duels) do
+			if d.victim == p and not d.ended then
+				self:EndDuel(d, "victimLeft")
+			end
 		end
 		-- le voleur quitte en portant un héros volé : il retourne sur son socle
 		local carried = s.carrying

@@ -9,6 +9,8 @@ local EntityMotion = {}
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Exclude
 params.IgnoreWater = true
+-- ignore les volumes d'interaction invisibles (balises, vendeurs, dépôts…)
+params.RespectCanCollide = true
 
 local function refreshFilter()
 	local list: { Instance } = {}
