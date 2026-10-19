@@ -42,6 +42,7 @@ local RANGE = {
 	Menu = 14,
 	Rift = 14,
 	Pedestal = 9,
+	MagmaCrystal = 10,
 }
 
 local function root(): BasePart?
@@ -156,6 +157,10 @@ local function describe(inst: Instance): (string?, Color3?, (() -> ())?, string?
 		return "Miner le gisement", Theme.Color.ButtonGold, function()
 			send("Deposit", inst)
 		end
+	elseif kind == "MagmaCrystal" then
+		return "Ramasser le cristal", Theme.Color.ButtonGold, function()
+			send("MagmaCrystal", inst)
+		end
 	elseif kind == "EtherTree" or kind == "Terminal" or kind == "Menhir" or kind == "TreasureRoom" or kind == "Rift" then
 		return label or kind, Theme.Color.Crystal, function()
 			send(kind, inst)
@@ -240,9 +245,10 @@ function Interact.Start()
 	secondary, secondaryLabel = Kit.Button(hudRoot, {
 		Name = "ContextSecondary",
 		Text = "",
-		Size = UDim2.fromOffset(150, 48),
-		Position = UDim2.new(0.5, 128, 1, -50),
-		AnchorPoint = Vector2.new(0, 1),
+		-- au-dessus du bouton principal : loin de la croix de combat (esquive, compétence 1)
+		Size = UDim2.fromOffset(190, 50),
+		Position = UDim2.new(0.5, 0, 1, -112),
+		AnchorPoint = Vector2.new(0.5, 1),
 		Color = Theme.Color.ButtonGold,
 		Radius = 999,
 		Visible = false,

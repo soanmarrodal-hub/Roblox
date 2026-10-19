@@ -46,10 +46,10 @@ function EnemyService:AttackPattern(e: any, target: Player, kind: string, opts: 
 	local ground = Vector3.new(tpos.X, tpos.Y - 2.5, tpos.Z)
 	local selfGround = Vector3.new(pos.X, pos.Y - (o.hover or 2.5), pos.Z)
 	if kind == "Melee" then
-		Combat:Telegraph({ shape = "circle", origin = selfGround + dir * 4, radius = o.radius or 7, damage = dmg, source = e, onlyPlayer = only })
+		Combat:Telegraph({ shape = "circle", origin = selfGround + dir * 4, radius = o.radius or 7, damage = dmg, source = e, onlyPlayer = only, status = o.status, statusTime = o.statusTime })
 	elseif kind == "Charge" then
 		local len = o.length or 24
-		Combat:Telegraph({ shape = "line", origin = selfGround, dir = dir, length = len, width = 7, damage = dmg * 1.3, source = e, onlyPlayer = only,
+		Combat:Telegraph({ shape = "line", origin = selfGround, dir = dir, length = len, width = 7, damage = dmg * 1.3, source = e, onlyPlayer = only, status = o.status, statusTime = o.statusTime,
 			onImpact = function()
 				if not e.dead then
 					Motion.StepToward(e.anchor, pos + dir * len, 999, 1, o.hover or 2.5, 0)
@@ -142,6 +142,11 @@ function EnemyService:SpawnMob(zone: Zone, mobId: string, pos: Vector3): any
 		onDeath = function(ent: any)
 			Combat:SetState(ent, "Dead")
 			rewardContributors(ent, def)
+			if def.deathBlast then
+				-- explosion à la mort : zone rouge au sol (sans source, l'entité est déjà morte)
+				local p0 = ent.anchor.Position
+				Combat:Telegraph({ shape = "circle", origin = Vector3.new(p0.X, p0.Y - hover, p0.Z), radius = 9, damage = ent.damage * 1.8 })
+			end
 			Combat:Remove(ent, 1.2)
 			local i = table.find(zone.alive, ent)
 			if i then
@@ -196,7 +201,7 @@ local function tickMob(self: any, e: any, dt: number)
 		if os.clock() >= ai.nextAttack and dist <= def.attackRange + 2 then
 			ai.nextAttack = os.clock() + 2.4 + math.random() * 0.8
 			Combat:SetState(e, "Attack")
-			self:AttackPattern(e, target, def.attack, { hover = ai.hover, length = def.attackRange })
+			self:AttackPattern(e, target, def.attack, { hover = ai.hover, length = def.attackRange, status = def.status, statusTime = def.statusTime })
 		end
 	else
 		if os.clock() > ai.wanderAt then

@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Islands = require(Shared.Config.Islands)
 local WorldCfg = require(Shared.Config.World)
+local Format = require(Shared.Util.Format)
 local Build = require(script.Parent.Build)
 
 local Bridges = {}
@@ -98,8 +99,13 @@ local function buildGate(parent: Instance, id: string, cf: CFrame): Model
 	t.TextScaled = true
 	t.TextColor3 = isl.color:Lerp(Color3.new(1, 1, 1), 0.4)
 	t.TextStrokeTransparency = 0.2
-	t.Text = isl.symbol .. " " .. isl.name.fr
+	-- porte fermée : symbole et coût en éclats bien visibles depuis le hub (objectif) ; le client
+	-- remplace le texte par le nom de l'île quand le joueur l'a ouverte
+	local prev = Islands.Previous(id)
+	t.Text = if prev then isl.symbol .. " " .. Format.Short(isl.gateCost) .. " " .. Islands.Get(prev).shardName.fr .. " · Rang " .. isl.rankRequired else isl.symbol .. " " .. isl.name.fr
 	t.Parent = sg
+	signPart:AddTag("GateSign")
+	signPart:SetAttribute("Island", id)
 	-- point d'interaction (achat de la porte)
 	local inter = Build.Part(m, { Name = "Interact", Size = Vector3.new(w, 10, 10), CFrame = cf * CFrame.new(0, 5, 6), Transparency = 1, CanCollide = false })
 	inter:AddTag("Interactable")

@@ -232,7 +232,10 @@ function SpawnService:TrySchedule()
 		if def.obtain.kind == "Capture" and def.obtain.interval then
 			local interval = def.obtain.interval / (if Storm:IsActive() then Storms.Effects.wildSpawnMultiplier else 1)
 			if not schedule[id] then
-				schedule[id] = now + math.min(interval, 30) * (0.3 + math.random() * 0.7)
+				-- premier passage : Communs et Rares vite ; Épiques et plus à leur rythme normal
+				-- (sinon chaque nouveau serveur offrirait un Légendaire en 30 s : saut de serveur)
+				local first = if Rarities.AtLeast(def.rarity, "Epic") then interval else math.min(interval, 30)
+				schedule[id] = now + first * (0.3 + math.random() * 0.7)
 			end
 			if now >= schedule[id] and not alive[id] then
 				schedule[id] = now + interval
@@ -243,6 +246,11 @@ function SpawnService:TrySchedule()
 					local rare = Rarities.AtLeast(def.rarity, "Epic")
 					if rare or anyPlayerNear(pos, 320) then
 						local mut = stormMutation()
+						-- coupure de courant : les héros qui apparaissent dans le quartier éteint
+						-- ont une chance de mutation « Néon » plus élevée (bible §7)
+						if not mut and def.island == "Neon" and Registry.Get("IslandEventService"):BlackoutZone() == (def.obtain.subzone or "Entry") and math.random() < 0.25 then
+							mut = "Neon"
+						end
 						self:SpawnWild(id, pos, { mut = mut, despawn = if rare then 420 else 240 })
 					end
 				end

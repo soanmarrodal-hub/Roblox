@@ -24,6 +24,7 @@ Data.Toast = Signal.new()
 -- Échange en cours (TradeState) et son signal de mise à jour
 Data.trade = nil :: any
 Data.TradeChanged = Signal.new()
+Data.TradeRequested = Signal.new() -- un joueur propose un échange (pastille du menu)
 
 function Data.Init()
 	Net.Event("DataSync").OnClientEvent:Connect(function(d)

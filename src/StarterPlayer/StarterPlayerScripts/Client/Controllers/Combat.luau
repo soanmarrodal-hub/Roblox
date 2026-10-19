@@ -362,10 +362,11 @@ local function buildPad()
 	Kit.Corner(chargeRing, 999)
 	local ringStroke = Kit.new("UIStroke", { Color = Theme.Color.Gold, Thickness = 4, Transparency = 0, Parent = chargeRing })
 	Kit.new("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(0.501, 1), NumberSequenceKeypoint.new(1, 1) }), Rotation = 90, Parent = ringStroke })
-	local dodge = skillButton(pad, "Dodge", at(-322, -52), 58, Color3.fromRGB(90, 200, 230), Combat.Dodge)
+	-- esquive au-dessus de la compétence 1 : ne chevauche plus le bouton contextuel (tablettes 4:3)
+	local dodge = skillButton(pad, "Dodge", at(-306, -160), 66, Color3.fromRGB(90, 200, 230), Combat.Dodge)
 	;(dodge:FindFirstChild("Icon") :: TextLabel).Text = Theme.Icon.Dodge
 	keyHint(dodge, "Q")
-	local jump = skillButton(pad, "Jump", at(-30, -200), 54, Color3.fromRGB(110, 120, 160), Combat.Jump)
+	local jump = skillButton(pad, "Jump", at(-30, -190), 62, Color3.fromRGB(110, 120, 160), Combat.Jump)
 	;(jump:FindFirstChild("Icon") :: TextLabel).Text = "⤒"
 	if not UserInputService.TouchEnabled then
 		jump.Visible = false

@@ -66,6 +66,9 @@ end
 
 function Menus.Open(name: string, args: { [string]: any }?)
 	name = ALIASES[name] or name
+	if name == "Trade" and C.HUD then
+		C.HUD.SetBadge("Trade", false)
+	end
 	local mod = Pages:FindFirstChild(name)
 	if not mod then
 		C.HUD.Toast("Bientôt disponible : " .. name, "Info")

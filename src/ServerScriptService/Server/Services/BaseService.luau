@@ -92,7 +92,10 @@ local function clearPlot(index: number)
 			rim.Transparency = 1
 		end
 	end
-	plot.vault:SetAttribute("HeroId", nil)
+	for _, ped in plot.vaults or { plot.vault } do
+		ped:SetAttribute("HeroId", nil)
+		ped:SetAttribute("Mut", nil)
+	end
 	plot.guardian:SetAttribute("HeroId", nil)
 	plot.statue:SetAttribute("HeroId", nil)
 	plot.collector:SetAttribute("Fill", 0)
@@ -172,10 +175,13 @@ function BaseService:Refresh(player: Player)
 			ped:SetAttribute("Owner", if unlocked then player.UserId else nil)
 		end
 	end
-	local vaultUid = d.vault[1]
-	local vh = vaultUid and d.heroes[vaultUid]
-	plot.vault:SetAttribute("HeroId", vh and vh.id or nil)
-	plot.vault:SetAttribute("Mut", vh and table.concat(vh.mut or {}, ",") or nil)
+	-- chaque héros au coffre reste visible sous sa cloche (pilier « collection visible »)
+	for i, ped in plot.vaults or { plot.vault } do
+		local vaultUid = d.vault[i]
+		local vh = vaultUid and d.heroes[vaultUid]
+		ped:SetAttribute("HeroId", vh and vh.id or nil)
+		ped:SetAttribute("Mut", vh and table.concat(vh.mut or {}, ",") or nil)
+	end
 	local gh = d.guardian and d.heroes[d.guardian]
 	plot.guardian:SetAttribute("HeroId", gh and gh.id or nil)
 	local fav = (d.upgrades.Statue or 0) > 0 and d.team.leader and d.heroes[d.team.leader]

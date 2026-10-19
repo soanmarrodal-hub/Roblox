@@ -19,6 +19,7 @@ local Islands = require(Shared.Config.Islands)
 local Economy = require(Shared.Config.Economy)
 local Storms = require(Shared.Config.Storms)
 local Rarities = require(Shared.Config.Rarities)
+local Heroes = require(Shared.Config.Heroes)
 local Theme = require(script.Parent.Theme)
 local Kit = require(script.Parent.Kit)
 
@@ -40,6 +41,29 @@ local castBar: Frame
 local castSet: (number, string?) -> ()
 local castStart = 0
 local menuColumn: Frame
+
+-- ============================================================================ Porteurs masqués
+-- Tempête de sable (Désert) : icône d'un porteur invisible au-delà de 50 studs.
+-- Blizzard (Glacier) : icônes masquées, sauf dans le faisceau du Phare boréal.
+function HUD.CarrierConcealed(pos: Vector3, viewer: Vector3?): boolean
+	local loc = Islands.Locate(pos)
+	if loc == "Desert" and Workspace:GetAttribute("IslEvt_Desert") then
+		return viewer == nil or (viewer - pos).Magnitude > 50
+	end
+	if loc == "Glacier" and Workspace:GetAttribute("IslEvt_Glacier") then
+		for _, lamp in CollectionService:GetTagged("Lighthouse") do
+			if lamp:IsA("BasePart") then
+				local to = Vector3.new(pos.X - lamp.Position.X, 0, pos.Z - lamp.Position.Z)
+				local look = Vector3.new(lamp.CFrame.LookVector.X, 0, lamp.CFrame.LookVector.Z)
+				if to.Magnitude < 520 and to.Magnitude > 0.1 and look.Magnitude > 0.1 and to.Unit:Dot(look.Unit) > math.cos(math.rad(16)) then
+					return false
+				end
+			end
+		end
+		return true
+	end
+	return false
+end
 
 -- ============================================================================ Mise à l'échelle
 local function computeScale(): number
@@ -115,6 +139,7 @@ local BANNER = {
 	Info = { color = Theme.Color.Accent, icon = "ℹ" },
 	Chest = { color = Theme.Color.Gold, icon = "🎁" },
 	Mythic = { color = Rarities.Get("Mythic").color, icon = "♛" },
+	Event = { color = Color3.fromRGB(255, 170, 60), icon = "⚠" },
 }
 local bannerQueue = {}
 local bannerBusy = false
@@ -131,7 +156,12 @@ local function showNextBanner()
 		local g = Kit.new("UIGradient", { Color = Rarities.SecretGradient, Parent = f:FindFirstChildOfClass("UIStroke") })
 		local _ = g
 	end
-	Kit.Label(f, { Text = style.icon, Size = UDim2.fromOffset(40, 40), Position = UDim2.new(0, 10, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Font = Theme.Font.Title, Color = style.color })
+	if p.heroId and Heroes.List[p.heroId] and (p.kind == "Legendary" or p.kind == "GoldSteal" or p.kind == "Secret" or p.kind == "Mythic") then
+		-- annonce rare : portrait du héros à la place de l'icône
+		Kit.Portrait(f, p.heroId, { Size = UDim2.fromOffset(44, 44), Position = UDim2.new(0, 8, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5) })
+	else
+		Kit.Label(f, { Text = style.icon, Size = UDim2.fromOffset(40, 40), Position = UDim2.new(0, 10, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Font = Theme.Font.Title, Color = style.color })
+	end
 	Kit.Label(f, { Text = p.text, Size = UDim2.new(1, -66, 0.8, 0), Position = UDim2.new(0, 56, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), AlignX = Enum.TextXAlignment.Left, Font = Theme.Font.Body, Wrapped = true, MaxSize = 22 })
 	Kit.Tween(f, 0.4, { Position = UDim2.fromScale(0.5, 0) }, Enum.EasingStyle.Back)
 	if C and C.Sound then
@@ -209,13 +239,21 @@ local function buildTopLeft(root: Frame)
 	local nameLabel = Kit.Label(rankRow, { Text = player.DisplayName, Size = UDim2.new(0, 180, 0, 20), Position = UDim2.fromOffset(54, 2), AlignX = Enum.TextXAlignment.Left, Font = Theme.Font.Title, MaxSize = 20 })
 	local _, xpSet = Kit.Bar(rankRow, { Size = UDim2.fromOffset(180, 14), Position = UDim2.fromOffset(54, 26), Color = Theme.Color.Gold })
 	-- devises
-	local list = Kit.new("Frame", { Name = "Currencies", Size = UDim2.fromOffset(200, 170), Position = UDim2.fromOffset(0, 54), BackgroundTransparency = 1, Parent = f })
+	-- pile compacte (finit vers y = 190) : la colonne de menus commence juste en dessous
+	local list = Kit.new("Frame", { Name = "Currencies", Size = UDim2.fromOffset(240, 130), Position = UDim2.fromOffset(0, 54), BackgroundTransparency = 1, Parent = f })
 	Kit.List(list, false, 5)
 	local _, energy = Kit.Currency(list, Theme.Icon.Energy, Theme.Color.Energy, { LayoutOrder = 1, Size = UDim2.fromOffset(176, 34) })
 	local prod = Kit.Label(list, { Text = "", Size = UDim2.fromOffset(176, 14), LayoutOrder = 2, Color = Theme.Color.Energy, Font = Theme.Font.Body, AlignX = Enum.TextXAlignment.Left })
-	local _, gems = Kit.Currency(list, Theme.Icon.Gems, Theme.Color.Gems, { LayoutOrder = 3, Size = UDim2.fromOffset(150, 32) })
-	local _, crystals = Kit.Currency(list, Theme.Icon.Crystals, Theme.Color.Crystal, { LayoutOrder = 4, Size = UDim2.fromOffset(110, 30) })
-	local shardFrame, shards = Kit.Currency(list, Theme.Icon.Shards, Theme.ShardColor.Ether, { LayoutOrder = 5, Size = UDim2.fromOffset(150, 30) })
+	local shardFrame, shards = Kit.Currency(list, Theme.Icon.Shards, Theme.ShardColor.Ether, { LayoutOrder = 3, Size = UDim2.fromOffset(150, 30) })
+	local row = Kit.new("Frame", { Name = "GemsRow", Size = UDim2.fromOffset(240, 30), LayoutOrder = 4, BackgroundTransparency = 1, Parent = list })
+	Kit.List(row, true, 6)
+	local _, gems = Kit.Currency(row, Theme.Icon.Gems, Theme.Color.Gems, { LayoutOrder = 1, Size = UDim2.fromOffset(104, 30) })
+	Kit.Button(row, { Name = "GemsPlus", Text = "+", Size = UDim2.fromOffset(30, 30), LayoutOrder = 2, Color = Theme.Color.ButtonGreen, Radius = 999, MaxSize = 22, OnClick = function()
+		if C and C.Menus then
+			C.Menus.Open("Shop")
+		end
+	end })
+	local _, crystals = Kit.Currency(row, Theme.Icon.Crystals, Theme.Color.Crystal, { LayoutOrder = 3, Size = UDim2.fromOffset(84, 30) })
 	local lastEnergy = 0
 	local function refresh()
 		local rank = player:GetAttribute("Rank") or 1
@@ -436,8 +474,12 @@ local function buildMinimap(root: Frame)
 					local key = "P" .. p.UserId
 					seen[key] = true
 					local carrying = p:GetAttribute("Carrying") ~= nil
-					local b = blip(key, "●", if carrying then Theme.Color.Warning else Color3.fromRGB(200, 220, 255), if carrying then 16 else 10)
-					place(b, r.Position, origin, rot, false)
+					if carrying and HUD.CarrierConcealed(r.Position, origin) then
+						seen[key] = nil
+					else
+						local b = blip(key, "●", if carrying then Theme.Color.Warning else Color3.fromRGB(200, 220, 255), if carrying then 16 else 10)
+						place(b, r.Position, origin, rot, false)
+					end
 				end
 			end
 		end
@@ -469,22 +511,38 @@ local function buildMinimap(root: Frame)
 			C.Menus.Open("Map")
 		end
 	end)
+	-- bouton « carte complète » explicite, à gauche de la mini-carte
+	Kit.RoundButton(root, {
+		Name = "MapButton",
+		Icon = Theme.Icon.Map,
+		Size = UDim2.fromOffset(48, 48),
+		Position = UDim2.new(1, -12 - size - 6, 0, 10 + size - 24),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Color = Color3.fromRGB(70, 170, 90),
+		OnClick = function()
+			if C and C.Menus then
+				C.Menus.Toggle("Map")
+			end
+		end,
+	})
 end
 
 local MENU_BUTTONS = {
 	{ id = "Team", icon = Theme.Icon.Team, key = "team", color = Color3.fromRGB(60, 140, 255) },
 	{ id = "Summon", icon = Theme.Icon.Summon, key = "summon", color = Color3.fromRGB(170, 90, 255) },
-	{ id = "Quests", icon = Theme.Icon.Quests, key = "quests", color = Color3.fromRGB(240, 170, 40) },
 	{ id = "Index", icon = Theme.Icon.Index, key = "index", color = Color3.fromRGB(60, 190, 170) },
+	{ id = "Quests", icon = Theme.Icon.Quests, key = "quests", color = Color3.fromRGB(240, 170, 40) },
 	{ id = "Shop", icon = Theme.Icon.Shop, key = "shop", color = Color3.fromRGB(255, 90, 160) },
+	{ id = "Trade", icon = Theme.Icon.Trade, key = "trade", color = Color3.fromRGB(60, 200, 150) },
 	{ id = "Forge", icon = Theme.Icon.Forge, key = "forge", color = Color3.fromRGB(230, 110, 60) },
-	{ id = "Map", icon = Theme.Icon.Map, key = "map", color = Color3.fromRGB(70, 170, 90) },
 	{ id = "Settings", icon = Theme.Icon.Settings, key = "settings", color = Color3.fromRGB(110, 120, 150) },
 }
+-- (la carte complète s'ouvre depuis la mini-carte, en haut à droite, comme le prévoit la bible)
 
 local function buildMenuColumn(root: Frame)
-	menuColumn = Kit.new("Frame", { Name = "Menus", Size = UDim2.fromOffset(124, 250), Position = UDim2.new(0, 10, 0.5, 30), AnchorPoint = Vector2.new(0, 0.5), BackgroundTransparency = 1, Parent = root })
-	Kit.Grid(menuColumn, UDim2.fromOffset(56, 56), 8)
+	-- sous la pile des devises (y 196) ; boutons de 62 : environ 44 points sur téléphone
+	menuColumn = Kit.new("Frame", { Name = "Menus", Size = UDim2.fromOffset(132, 272), Position = UDim2.fromOffset(10, 196), BackgroundTransparency = 1, Parent = root })
+	Kit.Grid(menuColumn, UDim2.fromOffset(62, 62), 8)
 	for i, m in MENU_BUTTONS do
 		local b = Kit.RoundButton(menuColumn, {
 			Name = m.id,
@@ -553,12 +611,23 @@ local function buildBottomCenter(root: Frame)
 			shieldUpd()
 		end
 	end)
+	-- jauge de chaleur (Volcan) : visible seulement quand elle monte
+	local heatFrame, heatSet = Kit.Bar(root, { Name = "Heat", Size = UDim2.fromOffset(120, 20), Position = UDim2.new(0.5, 150, 1, -12), AnchorPoint = Vector2.new(0, 1), Color = Color3.fromRGB(255, 110, 40) })
+	heatFrame.Visible = false
+	local function refreshHeat()
+		local h = player:GetAttribute("Heat")
+		heatFrame.Visible = h ~= nil
+		if h then
+			heatSet(h / 100, "🔥 " .. h .. " %")
+		end
+	end
+	player:GetAttributeChangedSignal("Heat"):Connect(refreshHeat)
 	-- bouton contextuel
 	contextButton, contextLabel = Kit.Button(root, {
 		Name = "Context",
 		Text = "",
-		Size = UDim2.fromOffset(230, 58),
-		Position = UDim2.new(0.5, 0, 1, -44),
+		Size = UDim2.fromOffset(230, 64),
+		Position = UDim2.new(0.5, 0, 1, -40),
 		AnchorPoint = Vector2.new(0.5, 1),
 		Color = Theme.Color.ButtonGreen,
 		Radius = 999,
@@ -574,8 +643,8 @@ local function buildBottomCenter(root: Frame)
 		Name = "ReturnBase",
 		Icon = Theme.Icon.Base,
 		Caption = Locale.t("returnBase"),
-		Size = UDim2.fromOffset(54, 54),
-		Position = UDim2.new(0.5, -186, 1, -34),
+		Size = UDim2.fromOffset(64, 64),
+		Position = UDim2.new(0.5, -192, 1, -40),
 		Color = Color3.fromRGB(70, 110, 200),
 		OnClick = function()
 			Net.Event("ReturnBase"):FireServer()
@@ -670,6 +739,9 @@ function HUD.Init(controllers)
 	hideDefaultJump()
 	Net.Event("Notify").OnClientEvent:Connect(function(p)
 		HUD.Toast(p.text, p.kind)
+		if p.kind == "Trade" and C and C.Data and C.Data.TradeRequested then
+			C.Data.TradeRequested:Fire()
+		end
 	end)
 	Net.Event("Announce").OnClientEvent:Connect(function(p)
 		HUD.Announce(p)

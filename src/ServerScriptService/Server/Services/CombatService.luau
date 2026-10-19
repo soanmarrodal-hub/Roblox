@@ -309,6 +309,17 @@ function CombatService:DamageEntity(e: Entity, amount: number, player: Player?, 
 		return
 	end
 	local dmg = math.max(1, amount)
+	-- bouclier frontal (méca de sécurité) : dégâts réduits pour un attaquant placé devant
+	local shield = e.ai and e.ai.def and e.ai.def.frontShield
+	if shield and player then
+		local root = CombatService.RootOf(player)
+		if root then
+			local to = Vector3.new(root.Position.X - e.anchor.Position.X, 0, root.Position.Z - e.anchor.Position.Z)
+			if to.Magnitude > 0.1 and to.Unit:Dot(e.anchor.CFrame.LookVector) > 0.3 then
+				dmg = math.max(1, dmg * (1 - shield))
+			end
+		end
+	end
 	e.hp = math.max(0, e.hp - dmg)
 	if player then
 		e.contributors[player] = (e.contributors[player] or 0) + dmg
@@ -398,7 +409,8 @@ function CombatService:Telegraph(t: { [string]: any })
 		if t.source and t.source.dead then
 			return
 		end
-		local targets = if t.onlyPlayer then { t.onlyPlayer } else Players:GetPlayers()
+		-- noDamage : seul l'avertissement est affiché, l'appelant gère l'impact (météores)
+		local targets = if t.noDamage then {} elseif t.onlyPlayer then { t.onlyPlayer } else Players:GetPlayers()
 		for _, p in targets do
 			local r = rootOf(p)
 			if r and inShape(payload.shape, payload.origin, payload.dir, r.Position, payload, 1.5) then

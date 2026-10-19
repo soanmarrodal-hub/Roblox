@@ -24,20 +24,24 @@ local guardians: { [string]: any } = {}
 local PATTERNS = {
 	[1] = { "Slam", "Barrage" },
 	[2] = { "Slam", "Barrage", "Cone" },
-	[3] = { "Ring", "Barrage", "Cone", "Charge" },
+	[3] = { "Slam", "Ring", "Barrage", "Cone", "Charge" },
 }
 
-local function rewardBoss(e: any, def: any, isGuardian: boolean, slept: boolean?)
+local function rewardBoss(e: any, bossDef: any, isGuardian: boolean, slept: boolean?)
 	local Prog = Registry.Get("ProgressionService")
 	local Ann = Registry.Get("AnnouncementService")
+	-- un Éclat de tempête garde l'apparence du boss mais rapporte comme le boss de la Forêt
+	local def = e.ai.rewardDef or bossDef
 	local total = 0
 	for _, v in e.contributors do
 		total += v
 	end
 	for p, v in e.contributors do
 		if p.Parent then
-			local share = v / math.max(total, 1)
-			local mult = math.clamp(share * 2, 0.15, 1)
+			-- boss vaincu : part des dégâts entre participants ; boss qui se rendort : part des PV max
+			-- réellement infligée (un seul coup ne rapporte presque rien)
+			local share = if slept then v / math.max(e.maxHp, 1) else v / math.max(total, 1)
+			local mult = if slept then math.clamp(share * 2, 0, 1) else math.clamp(share * 2, 0.15, 1)
 			local reward = {
 				energy = def.reward.energy * mult,
 				shards = math.max(5, math.floor(def.reward.shards * mult)),
@@ -57,19 +61,19 @@ local function rewardBoss(e: any, def: any, isGuardian: boolean, slept: boolean?
 				if d then
 					d.stats.bossFights += 1
 				end
-				-- Ignar pendant une Éruption : 0,05 % de chance d'obtenir Magnarok
-				if def.id == "Ignar" and Registry.Get("StormService"):Current() == "Eruption" and math.random() < 0.0005 then
+				-- Ignar vaincu pendant une Éruption : 0,05 % de chance d'obtenir Magnarok
+				if not slept and def.id == "Ignar" and Registry.Get("StormService"):Current() == "Eruption" and math.random() < 0.0005 then
 					Registry.Get("HeroService"):AddHero(p, "Magnarok", { source = "Ignar" })
 					Ann:Announce("Secret", p.DisplayName .. " obtient MAGNAROK sur la dépouille d'Ignar !", { heroId = "Magnarok", rarity = "Secret" })
 				end
 			end
-			Net.Event("BossState"):FireClient(p, { ended = true, slept = slept == true, name = def.name, share = share, chest = share >= Enemies.BossChestThreshold })
+			Net.Event("BossState"):FireClient(p, { ended = true, slept = slept == true, name = e.name, share = share, chest = share >= Enemies.BossChestThreshold })
 		end
 	end
 	if slept then
-		Ann:Announce("Boss", def.name .. " se rendort avec la fin de la tempête. Les participants sont récompensés.", {})
+		Ann:Announce("Boss", e.name .. " se rendort avec la fin de la tempête. Les participants sont récompensés.", {})
 	elseif not isGuardian then
-		Ann:Announce("Boss", def.name .. " est vaincu ! Récompenses distribuées.", {})
+		Ann:Announce("Boss", e.name .. " est vaincu ! Récompenses distribuées.", {})
 	end
 end
 
@@ -81,16 +85,20 @@ function BossService:SpawnBoss(bossId: string, cf: CFrame, scale: number?, mod: 
 	local def = Enemies.Bosses[bossId]
 	local Combat = Registry.Get("CombatService")
 	local s = scale or 1
+	local shard = s < 1
 	local hpMult = (1 + 0.5 * (participants() - 1)) * s * (mod or 1)
 	local isl = Islands.Get(def.island)
+	-- Éclat de tempête : statistiques et récompenses calées sur le palier de la Forêt (joueurs débutants)
+	local statDef = if shard then Enemies.Bosses[Islands.Get("Forest").boss] else def
+	local statIsl = if shard then Islands.Get("Forest") else isl
 	local e
 	e = Combat:Register({
 		kind = "Boss",
 		ref = bossId,
-		name = if s < 1 then "Éclat de tempête : " .. def.name else def.name,
-		hp = def.hp * hpMult,
-		damage = def.damage * isl.multiplier ^ 0.85 * (mod or 1) * math.max(s, 0.4),
-		level = 10 + isl.index * 10,
+		name = if shard then "Éclat de tempête : " .. def.name else def.name,
+		hp = statDef.hp * hpMult,
+		damage = statDef.damage * statIsl.multiplier ^ 0.85 * (mod or 1) * math.max(s, 0.4),
+		level = 10 + statIsl.index * 10,
 		island = def.island,
 		scale = def.look.size / 8 * math.max(s, 0.5),
 		radius = def.look.size * 0.35 * math.max(s, 0.5),
@@ -104,7 +112,7 @@ function BossService:SpawnBoss(bossId: string, cf: CFrame, scale: number?, mod: 
 				table.remove(bosses, i)
 			end
 		end,
-		ai = { home = cf.Position, nextAttack = os.clock() + 4, phase = 1, hover = def.look.size * 0.45 * math.max(s, 0.5), def = def },
+		ai = { home = cf.Position, nextAttack = os.clock() + 4, phase = 1, hover = def.look.size * 0.45 * math.max(s, 0.5), def = def, rewardDef = if shard then statDef else nil },
 	})
 	e.anchor:SetAttribute("Phase", 1)
 	e.anchor:SetAttribute("MapIcon", true)
@@ -213,6 +221,10 @@ function BossService:SpawnGuardian(islandId: string)
 			end)
 		end,
 		ai = { home = info.guardianSpawn.Position, nextAttack = os.clock() + 3, phase = 1, hover = def.look.size * 0.45, def = def, guardian = true },
+		-- gardien : passif tant qu'on ne l'attaque pas (le sanctuaire sert aussi de point de téléportation)
+		onHurt = function(ent: any)
+			ent.ai.lastHurt = os.clock()
+		end,
 	})
 	Motion.Place(e.anchor, info.guardianSpawn.Position, e.ai.hover)
 	guardians[islandId] = e
@@ -233,9 +245,12 @@ local function tickBoss(e: any, dt: number)
 		e.anchor:SetAttribute("Phase", phase)
 		Registry.Get("AnnouncementService"):AnnounceIsland(e.island, "Boss", e.name .. " entre en phase " .. phase .. " !", {})
 	end
-	local target, dist = Motion.NearestPlayer(e.anchor.Position, 90, function(p)
-		return State.Buff(p, "stealth") <= 0
-	end)
+	local target, dist = nil, math.huge
+	if not ai.guardian or os.clock() - (ai.lastHurt or -math.huge) < 20 then
+		target, dist = Motion.NearestPlayer(e.anchor.Position, 90, function(p)
+			return State.Buff(p, "stealth") <= 0
+		end)
+	end
 	if not target then
 		Motion.StepToward(e.anchor, ai.home, 6, dt, ai.hover, 2)
 		Combat:SetState(e, "Idle")
@@ -260,7 +275,9 @@ local function tickBoss(e: any, dt: number)
 		local kind = list[math.random(1, #list)]
 		ai.nextAttack = os.clock() + (if ai.guardian then 3 else 3.2 - phase * 0.5)
 		Combat:SetState(e, "Attack")
-		Enemy:AttackPattern(e, target, kind, { hover = ai.hover, radius = if kind == "Slam" then e.radius + 10 else 8, spread = 20, count = 3 + phase * 2, length = 40, angle = 90 })
+		-- rayon par attaque : le cône et l'onde doivent atteindre les joueurs à distance de mêlée du boss
+		local radius = if kind == "Slam" then e.radius + 10 elseif kind == "Cone" then e.radius + 18 elseif kind == "Ring" then e.radius + 24 else 8
+		Enemy:AttackPattern(e, target, kind, { hover = ai.hover, radius = radius, spread = 20, count = 3 + phase * 2, length = 40, angle = 90 })
 	end
 end
 

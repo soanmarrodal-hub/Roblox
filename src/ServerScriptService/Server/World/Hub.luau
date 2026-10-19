@@ -216,6 +216,13 @@ local function buildServices(parent: Instance): { [string]: CFrame }
 	for _, b in NPCs.Buildings do
 		if b.id == "Fountain" then
 			spots[b.id] = CFrame.lookAt(polar(0, 52, PLAZA_Y + 10), Vector3.new(C.X, PLAZA_Y + 10, C.Z))
+			-- point d'interaction d'Astra : tout le bassin de la fontaine (premier héros, tutoriel guidé)
+			local fm = Build.Model(parent, "FountainInteract")
+			local inter = Build.Part(fm, { Name = "Interact", Size = Vector3.new(28, 8, 28), CFrame = CFrame.new(polar(0, 52, PLAZA_Y + 4)), Transparency = 1, CanCollide = false })
+			inter:AddTag("Interactable")
+			inter:SetAttribute("Kind", "Menu")
+			inter:SetAttribute("Menu", b.menu or "Astra")
+			inter:SetAttribute("Label", b.name)
 			continue
 		end
 		local pos = polar(b.angle, 80, PLAZA_Y)
@@ -385,13 +392,18 @@ local function buildClock(parent: Instance): BasePart
 end
 
 -- Quais : remparts bas, jardins suspendus, cascades qui tombent dans le vide.
-local function buildQuays(parent: Instance, alleyAngles: { number })
+local function buildQuays(parent: Instance)
 	local R = Islands.HubRadius
 	local seg = 72
+	-- remparts ouverts seulement face aux ponts : les allées sans pont restent fermées (pas de chute)
+	local bridgeAngles = {}
+	for _, id in Islands.Order do
+		table.insert(bridgeAngles, Islands.Get(id).angle)
+	end
 	for i = 0, seg - 1 do
 		local a = (i + 0.5) / seg * 360
 		local blocked = false
-		for _, aa in alleyAngles do
+		for _, aa in bridgeAngles do
 			local d = math.abs(((a - aa + 180) % 360) - 180)
 			if d < 4.5 then
 				blocked = true
@@ -466,13 +478,13 @@ end
 function Hub.Build(parent: Instance): any
 	local m = Build.Model(parent, "Hub")
 	buildDisk(m)
-	local alleys = buildAlleys(m)
+	buildAlleys(m)
 	local spire = buildSpire(m)
 	local pads = buildTeleportRing(m)
 	local fountain = buildFountain(m)
 	local spots = buildServices(m)
 	local clock = buildClock(m)
-	buildQuays(m, alleys)
+	buildQuays(m)
 	buildSky(parent)
 	-- 12 terrains
 	local plots = {}

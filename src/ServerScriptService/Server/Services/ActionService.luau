@@ -21,7 +21,7 @@ local ActionService = {}
 local rate: { [Player]: { t: number, n: number } } = {}
 local depositCd: { [string]: number } = {}
 local menhirSeq: { [Player]: number } = {}
-local treasureDay: { [Player]: number } = {}
+local menhirDone: { [Player]: number } = {} -- index de la tempête où le coffre a été ouvert
 
 local function data(p: Player): any
 	return Registry.Get("DataService"):Get(p)
@@ -318,7 +318,7 @@ H.DebugGrant = function(p)
 end
 
 -- ============================================================================ Bouton contextuel
-local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true }
+local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true }
 
 local function interact(p: Player, kind: string, target: Instance?, extra: any)
 	local Ann = Registry.Get("AnnouncementService")
@@ -403,8 +403,13 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 	elseif kind == "Menhir" then
 		if target and near(p, target, 14) then
 			local order = (target:GetAttribute("Order") :: number?) or 0
-			if not Registry.Get("StormService"):IsActive() then
+			local Storm = Registry.Get("StormService")
+			if not Storm:IsActive() then
 				Ann:Notify(p, "Les runes ne s'éveillent que pendant une tempête.", "Info")
+				return
+			end
+			if menhirDone[p] == Storm:StormIndex() then
+				Ann:Notify(p, "Le coffre du Cercle est déjà ouvert pour cette tempête.", "Info")
 				return
 			end
 			local expected = (menhirSeq[p] or 0) + 1
@@ -413,6 +418,7 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 				Ann:Notify(p, "Menhir " .. order .. "/7 activé", "Info")
 				if expected >= 7 then
 					menhirSeq[p] = 0
+					menhirDone[p] = Storm:StormIndex()
 					Registry.Get("ProgressionService"):Grant(p, { gems = 40, crystals = 1, shards = 60, island = "Forest" }, "menhir")
 					Ann:Announce("Chest", p.DisplayName .. " a révélé le coffre caché du Cercle des Menhirs !")
 				end
@@ -423,14 +429,19 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 		end
 	elseif kind == "TreasureRoom" then
 		if target and near(p, target, 14) then
+			local d = data(p)
 			local today = math.floor(os.time() / 86400)
-			if treasureDay[p] == today then
+			if not d or d.stats.treasureDay == today then
 				Ann:Notify(p, "La salle des trésors est vide pour aujourd'hui.", "Info")
 				return
 			end
-			treasureDay[p] = today
+			d.stats.treasureDay = today
 			Registry.Get("ProgressionService"):Grant(p, { gems = 15, shards = 40, island = "Desert" }, "treasure")
 			Ann:Notify(p, "Tu résous l'énigme de la Pyramide : trésor obtenu !", "Success")
+		end
+	elseif kind == "MagmaCrystal" then
+		if target and near(p, target, 10) then
+			Registry.Get("IslandEventService"):PickCrystal(p, target :: BasePart)
 		end
 	elseif kind == "Rift" then
 		Ann:Notify(p, "Les Failles s'ouvriront à la saison prochaine…", "Info")
@@ -475,7 +486,7 @@ function ActionService:Init()
 	Players.PlayerRemoving:Connect(function(p)
 		rate[p] = nil
 		menhirSeq[p] = nil
-		treasureDay[p] = nil
+		menhirDone[p] = nil
 	end)
 end
 

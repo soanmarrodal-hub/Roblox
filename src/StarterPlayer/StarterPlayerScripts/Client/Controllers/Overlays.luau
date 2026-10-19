@@ -12,6 +12,7 @@ local Net = require(Shared.Net)
 local Heroes = require(Shared.Config.Heroes)
 local Rarities = require(Shared.Config.Rarities)
 local Steal = require(Shared.Config.Steal)
+local Storms = require(Shared.Config.Storms)
 local Format = require(Shared.Util.Format)
 local Locale = require(Shared.Locale)
 
@@ -30,6 +31,7 @@ local carryName: TextLabel
 local carryInfo: TextLabel
 local carrySet: (number, string?) -> ()
 local carryBase: Vector3? = nil
+local edgeStroke: UIStroke -- liseré d'écran : rouge (instabilité > 75 %) ou teinte de la tempête
 local guide: { beam: Beam?, a0: Attachment?, a1: Attachment?, marker: BillboardGui? } = {}
 
 local function clearGuide()
@@ -231,6 +233,8 @@ end
 -- ============================================================================ Construction
 local function build()
 	local root = C.HUD.root
+	local edge = Kit.new("Frame", { Name = "ScreenEdge", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0, Parent = root })
+	edgeStroke = Kit.new("UIStroke", { Color = Color3.new(1, 0.2, 0.2), Thickness = 16, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = edge })
 	-- transport
 	carryPanel = Kit.Panel(root, { Name = "Carry", Size = UDim2.fromOffset(330, 78), Position = UDim2.new(0.5, 0, 0, 128), AnchorPoint = Vector2.new(0.5, 0), Color = Color3.fromRGB(40, 30, 10), StrokeColor = Theme.Color.Gold, Visible = false })
 	carryName = Kit.Label(carryPanel, { Text = "", Size = UDim2.new(1, -16, 0, 24), Position = UDim2.fromOffset(8, 4), Font = Theme.Font.Title })
@@ -254,14 +258,14 @@ local function build()
 	duelTierText = Kit.Label(duelPanel, { Text = "", Size = UDim2.new(0.5, 0, 0, 20), Position = UDim2.fromOffset(10, 58), AlignX = Enum.TextXAlignment.Left, Font = Theme.Font.Body })
 	local _, hpSet = Kit.Bar(duelPanel, { Size = UDim2.new(1, -20, 0, 16), Position = UDim2.fromOffset(10, 82), Color = Color3.fromRGB(255, 80, 80), Smooth = true })
 	duelHpSet = hpSet
-	Kit.Button(duelPanel, { Text = Locale.t("abandon"), Size = UDim2.fromOffset(120, 32), Position = UDim2.new(1, -10, 0, 56), AnchorPoint = Vector2.new(1, 0), Color = Theme.Color.ButtonGray, MaxSize = 18, OnClick = function()
+	Kit.Button(duelPanel, { Text = Locale.t("abandon"), Size = UDim2.fromOffset(140, 48), Position = UDim2.new(1, -10, 1, 6), AnchorPoint = Vector2.new(1, 0), Color = Theme.Color.ButtonGray, MaxSize = 20, OnClick = function()
 		C.Data.Action("Abandon", {}, true)
 	end })
 	-- alerte
-	alertPanel = Kit.Panel(root, { Name = "StealAlert", Size = UDim2.fromOffset(440, 96), Position = UDim2.new(0.5, 0, 0.3, 0), AnchorPoint = Vector2.new(0.5, 0.5), Color = Color3.fromRGB(80, 10, 20), StrokeColor = Theme.Color.Error, StrokeThickness = 3, Visible = false, ZIndex = 20 })
+	alertPanel = Kit.Panel(root, { Name = "StealAlert", Size = UDim2.fromOffset(440, 116), Position = UDim2.new(0.5, 0, 0.3, 0), AnchorPoint = Vector2.new(0.5, 0.5), Color = Color3.fromRGB(80, 10, 20), StrokeColor = Theme.Color.Error, StrokeThickness = 3, Visible = false, ZIndex = 20 })
 	alertText = Kit.Label(alertPanel, { Text = "", Size = UDim2.new(1, -20, 0, 40), Position = UDim2.fromOffset(10, 6), Font = Theme.Font.Title, Wrapped = true, ZIndex = 21 })
 	alertTimer = Kit.Label(alertPanel, { Text = "", Size = UDim2.fromOffset(80, 30), Position = UDim2.new(0, 14, 1, -8), AnchorPoint = Vector2.new(0, 1), Font = Theme.Font.Title, Color = Theme.Color.Gold, ZIndex = 21 })
-	Kit.Button(alertPanel, { Text = "🛡 " .. Locale.t("defend"), Size = UDim2.fromOffset(200, 42), Position = UDim2.new(1, -12, 1, -8), AnchorPoint = Vector2.new(1, 1), Color = Theme.Color.ButtonGreen, ZIndex = 21, OnClick = function()
+	Kit.Button(alertPanel, { Text = "🛡 " .. Locale.t("defend"), Size = UDim2.fromOffset(220, 60), Position = UDim2.new(1, -12, 1, -8), AnchorPoint = Vector2.new(1, 1), Color = Theme.Color.ButtonGreen, ZIndex = 21, OnClick = function()
 		local ok = C.Data.Action("Defend", {})
 		if ok then
 			alertPanel.Visible = false
@@ -270,6 +274,23 @@ local function build()
 end
 
 local function step()
+	-- liseré d'écran
+	if edgeStroke then
+		local alpha, color = 1, Color3.fromRGB(255, 40, 40)
+		if carryPanel.Visible then
+			local inst = player:GetAttribute("Instability") or 0
+			if inst > 75 then
+				alpha = 1 - math.clamp((inst - 75) / 25, 0, 1) * 0.75 + math.sin(os.clock() * 8) * 0.05
+			end
+		end
+		local stormId = Workspace:GetAttribute("StormType")
+		if alpha >= 1 and Workspace:GetAttribute("StormState") == "Active" and stormId and Storms.List[stormId] then
+			color = Storms.List[stormId].sky.horizon
+			alpha = 0.55
+		end
+		edgeStroke.Color = color
+		edgeStroke.Transparency = math.clamp(alpha, 0, 1)
+	end
 	-- transport
 	if carryPanel.Visible then
 		local inst = player:GetAttribute("Instability") or 0

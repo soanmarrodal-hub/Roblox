@@ -54,7 +54,12 @@ function CaptureService:Harvest(player: Player, e: any): boolean
 	end
 	local def = e.ai.def
 	local reward = Economy.HarvestReward(Rarities.Index(def.rarity), Islands.Get(def.island).multiplier)
-	Registry.Get("ProgressionService"):Grant(player, { energy = reward.energy, shards = reward.shards, island = def.island, fragments = { [def.id] = reward.fragments }, xp = Economy.Xp.Harvest }, "harvest")
+	local shards = reward.shards
+	if def.island == "Desert" and Registry.Get("IslandEventService"):IsActive("Desert") then
+		-- héros solaire récolté pendant la tempête de sable : un peu plus d'Éclats (bible §6)
+		shards = math.ceil(shards * 1.5)
+	end
+	Registry.Get("ProgressionService"):Grant(player, { energy = reward.energy, shards = shards, island = def.island, fragments = { [def.id] = reward.fragments }, xp = Economy.Xp.Harvest }, "harvest")
 	local d = data(player)
 	if d then
 		d.stats.harvests += 1

@@ -26,6 +26,7 @@ local ORDER = {
 	"CaptureService",
 	"StealService",
 	"StormService",
+	"IslandEventService",
 	"BossService",
 	"SummonService",
 	"ShopService",

@@ -69,13 +69,30 @@ for _, entry in ORDER do
 	end
 end
 
--- Pastille des quêtes à réclamer
+-- Pastilles rouges : quêtes à réclamer, palier d'Index à réclamer, demande d'échange en attente
 local questsPage = UI:WaitForChild("Menus"):WaitForChild("Quests")
 local QuestsMenu = require(questsPage)
+local QuestsCfg = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Quests)
 C.Data.Changed:Connect(function(d)
 	if d and C.HUD then
 		local ok, n = pcall(QuestsMenu.Pending, d)
 		C.HUD.SetBadge("Quests", ok and n > 0)
+		local count = 0
+		for _ in d.index.heroes do
+			count += 1
+		end
+		local claimable = false
+		for i, m in QuestsCfg.IndexMilestones do
+			if count >= m.count and not (d.index.milestones[tostring(i)] or d.index.milestones[i]) then
+				claimable = true
+			end
+		end
+		C.HUD.SetBadge("Index", claimable)
+	end
+end)
+C.Data.TradeRequested:Connect(function()
+	if C.HUD and (not C.Menus or C.Menus.Current() ~= "Trade") then
+		C.HUD.SetBadge("Trade", true)
 	end
 end)
 

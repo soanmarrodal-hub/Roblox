@@ -23,6 +23,10 @@ export type Enemy = {
 	packSize: number,
 	reward: { energy: number, shards: number },
 	look: Look,
+	status: string?, -- effet de l'attaque sur le joueur ("slow" | "freeze")
+	statusTime: number?,
+	frontShield: number?, -- réduction des dégâts reçus de face (0-1)
+	deathBlast: boolean?, -- explose à sa mort (zone rouge au sol)
 }
 
 local E: { [string]: Enemy } = {}
@@ -41,7 +45,7 @@ add({ id = "SanglierEcorce", name = "Sanglier d'écorce", island = "Forest", lev
 -- Désert
 add({ id = "SerpentDunes", name = "Serpent des dunes", island = "Desert", level = 4, hp = 200, damage = 14, speed = 12, attack = "Ambush", attackRange = 10, aggroRange = 40, packSize = 2,
 	reward = { energy = 30, shards = 2 }, look = { body = "Serpent", size = 5, colors = { rgb(214, 170, 90), rgb(160, 110, 50), rgb(255, 210, 120) } } })
-add({ id = "ScorpionBronze", name = "Scorpion de bronze", island = "Desert", level = 5, hp = 300, damage = 18, speed = 13, attack = "Melee", attackRange = 8, aggroRange = 42, packSize = 2,
+add({ id = "ScorpionBronze", name = "Scorpion de bronze", island = "Desert", level = 5, hp = 300, damage = 18, speed = 13, attack = "Melee", attackRange = 8, aggroRange = 42, packSize = 2, status = "slow", statusTime = 2,
 	reward = { energy = 45, shards = 3 }, look = { body = "Insect", size = 4.5, colors = { rgb(176, 120, 60), rgb(120, 80, 40), rgb(255, 180, 60) }, glow = rgb(255, 170, 40) } })
 add({ id = "GolemGres", name = "Golem de grès", island = "Desert", level = 6, hp = 700, damage = 26, speed = 8, attack = "Slam", attackRange = 14, aggroRange = 44, packSize = 1,
 	reward = { energy = 90, shards = 8 }, look = { body = "Golem", size = 9, colors = { rgb(214, 160, 100), rgb(180, 120, 70), rgb(255, 200, 80) }, glow = rgb(255, 190, 60) } })
@@ -50,17 +54,17 @@ add({ id = "RatCircuit", name = "Rat-circuit", island = "Neon", level = 7, hp = 
 	reward = { energy = 35, shards = 2 }, look = { body = "Quadruped", size = 2.6, colors = { rgb(60, 50, 80), rgb(140, 140, 160), rgb(35, 213, 255) }, glow = rgb(35, 213, 255) } })
 add({ id = "DroneSentinelle", name = "Drone sentinelle", island = "Neon", level = 8, hp = 360, damage = 22, speed = 14, attack = "Laser", attackRange = 40, aggroRange = 56, packSize = 2,
 	reward = { energy = 60, shards = 4 }, look = { body = "Drone", size = 4, colors = { rgb(40, 30, 60), rgb(200, 200, 220), rgb(255, 61, 203) }, glow = rgb(255, 50, 80) } })
-add({ id = "MecaSecurite", name = "Méca de sécurité", island = "Neon", level = 9, hp = 900, damage = 30, speed = 10, attack = "Charge", attackRange = 24, aggroRange = 50, packSize = 1,
+add({ id = "MecaSecurite", name = "Méca de sécurité", island = "Neon", level = 9, hp = 900, damage = 30, speed = 10, attack = "Charge", attackRange = 24, aggroRange = 50, packSize = 1, frontShield = 0.7,
 	reward = { energy = 120, shards = 9 }, look = { body = "Robot", size = 9, colors = { rgb(70, 50, 120), rgb(30, 25, 40), rgb(35, 213, 255) }, glow = rgb(255, 61, 203) } })
 -- Glacier
-add({ id = "LoupBlizzard", name = "Loup de blizzard", island = "Glacier", level = 10, hp = 420, damage = 24, speed = 17, attack = "Melee", attackRange = 7, aggroRange = 48, packSize = 3,
+add({ id = "LoupBlizzard", name = "Loup de blizzard", island = "Glacier", level = 10, hp = 420, damage = 24, speed = 17, attack = "Melee", attackRange = 7, aggroRange = 48, packSize = 3, status = "freeze", statusTime = 0.8,
 	reward = { energy = 70, shards = 3 }, look = { body = "Quadruped", size = 4.2, colors = { rgb(235, 245, 255), rgb(150, 200, 235), rgb(90, 140, 190) }, glow = rgb(140, 230, 255) } })
 add({ id = "OursCristal", name = "Ours de cristal", island = "Glacier", level = 11, hp = 1000, damage = 34, speed = 11, attack = "Slam", attackRange = 14, aggroRange = 46, packSize = 1,
 	reward = { energy = 140, shards = 8 }, look = { body = "Golem", size = 8, colors = { rgb(225, 240, 255), rgb(120, 190, 240), rgb(80, 120, 170) }, glow = rgb(140, 230, 255) } })
 add({ id = "MammouthGivre", name = "Mammouth de givre", island = "Glacier", level = 12, hp = 1800, damage = 40, speed = 8, attack = "Charge", attackRange = 26, aggroRange = 50, packSize = 1,
 	reward = { energy = 260, shards = 16 }, look = { body = "Quadruped", size = 11, colors = { rgb(200, 215, 230), rgb(120, 140, 160), rgb(160, 240, 255) }, glow = rgb(160, 240, 255) } })
 -- Volcan
-add({ id = "ScarabeeLave", name = "Scarabée de lave", island = "Volcano", level = 13, hp = 700, damage = 34, speed = 13, attack = "Explode", attackRange = 9, aggroRange = 42, packSize = 3,
+add({ id = "ScarabeeLave", name = "Scarabée de lave", island = "Volcano", level = 13, hp = 700, damage = 34, speed = 13, attack = "Melee", attackRange = 7, aggroRange = 42, packSize = 3, deathBlast = true,
 	reward = { energy = 120, shards = 4 }, look = { body = "Insect", size = 3.6, colors = { rgb(40, 32, 30), rgb(70, 55, 50), rgb(255, 100, 30) }, glow = rgb(255, 110, 30) } })
 add({ id = "MolosseBraise", name = "Molosse de braise", island = "Volcano", level = 14, hp = 1100, damage = 40, speed = 18, attack = "Melee", attackRange = 7, aggroRange = 50, packSize = 3,
 	reward = { energy = 170, shards = 6 }, look = { body = "Quadruped", size = 4.6, colors = { rgb(50, 30, 25), rgb(255, 110, 40), rgb(255, 210, 80) }, glow = rgb(255, 120, 30) } })

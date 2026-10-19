@@ -128,15 +128,20 @@ function Plot.Build(parent: Instance, index: number, cf: CFrame): any
 	sphere:SetAttribute("Kind", "Collect")
 	sphere:SetAttribute("PlotIndex", index)
 	sphere:SetAttribute("Fill", 0)
-	-- coffre : socle protégé par une cloche de verre
-	local vaultCF = cf * CFrame.new(-20, 0, -20)
-	local vaultPed = Build.Cylinder(m, (vaultCF * CFrame.new(0, 1, 0)).Position, 2, 8, GOLD, Enum.Material.Metal, "VaultBase")
-	vaultPed:SetAttribute("TopY", vaultCF.Position.Y + 2)
-	vaultPed:AddTag("VaultPedestal")
-	vaultPed:SetAttribute("PlotIndex", index)
-	local bell = Build.Ball(m, (vaultCF * CFrame.new(0, 2, 0)).Position, 9, Color3.fromRGB(210, 240, 255), Enum.Material.Glass, "VaultBell")
-	bell.Transparency = 0.75
-	bell.CanCollide = false
+	-- coffre : trois socles protégés par une cloche de verre (emplacements 2 et 3 débloqués aux paliers 5 et 10)
+	local vaults = {}
+	for slot = 1, 3 do
+		local vaultCF = cf * CFrame.new(-26 + (slot - 1) * 8, 0, -20)
+		local vaultPed = Build.Cylinder(m, (vaultCF * CFrame.new(0, 1, 0)).Position, 2, 6.5, GOLD, Enum.Material.Metal, if slot == 1 then "VaultBase" else "VaultBase" .. slot)
+		vaultPed:SetAttribute("TopY", vaultCF.Position.Y + 2)
+		vaultPed:SetAttribute("VaultSlot", slot)
+		vaultPed:AddTag("VaultPedestal")
+		vaultPed:SetAttribute("PlotIndex", index)
+		local bell = Build.Ball(m, (vaultCF * CFrame.new(0, 2, 0)).Position, 7.5, Color3.fromRGB(210, 240, 255), Enum.Material.Glass, "VaultBell" .. slot)
+		bell.Transparency = 0.75
+		bell.CanCollide = false
+		vaults[slot] = vaultPed
+	end
 	-- gardien et statue de prestige
 	local guardianSpot = Build.Box(m, cf * CFrame.new(0, 0.2, -size / 2 + 9), Vector3.new(6, 0.4, 6), GOLD, Enum.Material.Metal, "GuardianSpot")
 	guardianSpot:SetAttribute("PlotIndex", index)
@@ -162,7 +167,8 @@ function Plot.Build(parent: Instance, index: number, cf: CFrame): any
 		pedestals = pedestals,
 		collector = sphere,
 		collectorFill = fill,
-		vault = vaultPed,
+		vault = vaults[1],
+		vaults = vaults,
 		guardian = guardianSpot,
 		statue = statueSpot,
 		spawn = spawnCF,

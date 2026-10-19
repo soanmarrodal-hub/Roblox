@@ -374,16 +374,22 @@ function ProgressionService:Start()
 					p:SetAttribute("Island", island or (if loc then loc else "Void"))
 					Registry.Get("HeroService"):RefreshPower(p)
 				end
-				if island and island ~= "Hub" and not d.gates[island] then
+				-- île verrouillée : renvoi seulement une fois la porte franchie (la porte et son bouton
+				-- d'achat sont dans la zone « île » de Locate, à radius*0.86 + 6 du centre)
+				local c = island and island ~= "Hub" and Islands.Center(island)
+				local pastGate = c and Vector2.new(root.Position.X - c.X, root.Position.Z - c.Z).Magnitude < Islands.Get(island).radius * 0.86 - 4
+				if pastGate and not d.gates[island] then
 					local start = World:WaitReady().bridges[island]
 					local back = start and start.from or World:HubSpawn().Position
 					self:TeleportTo(p, CFrame.new(back + Vector3.new(0, 5, 0)))
 					Registry.Get("AnnouncementService"):Notify(p, "Cette île est encore verrouillée.", "Error")
 				end
-				-- chute dans le vide : retour au hub (le héros porté tombe)
-				if root.Position.Y < -60 then
+				-- chute dans le vide ou dans l'océan sous les îles (eau de Y -12 à 0) : le héros porté tombe,
+				-- retour au dernier point sûr (ou au hub)
+				if root.Position.Y < Islands.SeaLevel + 20 then
 					Registry.Get("CaptureService"):Drop(p, "fall")
-					self:TeleportTo(p, World:HubSpawn())
+					local safe = State.Get(p).lastSafe
+					self:TeleportTo(p, if safe then CFrame.new(safe + Vector3.new(0, 4, 0)) else World:HubSpawn())
 				end
 				-- zone sûre (plaza des services), camps, sol (dunes, neige, lave)
 				local hub = Islands.HubCenter
@@ -417,7 +423,7 @@ function ProgressionService:Start()
 						if safe then
 							self:TeleportTo(p, CFrame.new(safe + Vector3.new(0, 4, 0)))
 						end
-					elseif mat ~= Enum.Material.Air then
+					elseif mat ~= Enum.Material.Air and mat ~= Enum.Material.Water and root.Position.Y > Islands.SeaLevel + 20 then
 						s.lastSafe = root.Position
 					end
 				end

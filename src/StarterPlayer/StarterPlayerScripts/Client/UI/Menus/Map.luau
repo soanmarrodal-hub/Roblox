@@ -145,6 +145,10 @@ function Page.Build(body: Frame, ctx: any)
 			local r = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 			if r then
 				local key = "P" .. p.UserId
+				local mine = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if p ~= player and p:GetAttribute("Carrying") and ctx.C.HUD.CarrierConcealed(r.Position, mine and mine.Position) then
+					continue -- tempête de sable / blizzard : porteur caché
+				end
 				seen[key] = true
 				local m = mark(key, if p == player then "▲" else "●", if p == player then Theme.Color.Gold elseif p:GetAttribute("Carrying") then Theme.Color.Warning else Color3.fromRGB(220, 230, 255), if p == player then 26 else 14)
 				m.Position = toMap(r.Position)

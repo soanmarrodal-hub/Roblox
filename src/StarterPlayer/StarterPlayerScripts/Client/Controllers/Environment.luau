@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Islands = require(Shared.Config.Islands)
+local Locale = require(Shared.Locale)
 local Storms = require(Shared.Config.Storms)
 local Economy = require(Shared.Config.Economy)
 local Format = require(Shared.Util.Format)
@@ -101,6 +102,46 @@ local function blendStorm(look: Look): Look
 	}
 end
 
+-- Événements d'île (IslandEventService) : tempête de sable, blizzard, coupure de courant du quartier
+local function blendIslandEvent(look: Look, zone: string?): Look
+	if not zone or not Workspace:GetAttribute("IslEvt_" .. zone) then
+		return look
+	end
+	local out = table.clone(look) :: any
+	if zone == "Desert" then
+		out.atmosphereColor = look.atmosphereColor:Lerp(Color3.fromRGB(222, 182, 112), 0.85)
+		out.decay = look.decay:Lerp(Color3.fromRGB(200, 150, 80), 0.7)
+		out.density = math.max(look.density, 0.62)
+		out.haze = math.max(look.haze, 3)
+		out.tint = look.tint:Lerp(Color3.fromRGB(255, 225, 170), 0.6)
+	elseif zone == "Glacier" then
+		out.atmosphereColor = Color3.fromRGB(236, 244, 255)
+		out.decay = Color3.fromRGB(210, 225, 245)
+		out.density = math.max(look.density, 0.78)
+		out.haze = math.max(look.haze, 2.6)
+		out.tint = look.tint:Lerp(Color3.fromRGB(225, 238, 255), 0.6)
+	elseif zone == "Neon" then
+		local sub = Workspace:GetAttribute("IslEvtZone_Neon")
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local def = sub and Islands.Get("Neon").subzones
+		if root and def then
+			for _, z in def do
+				if z.id == sub then
+					local c = Islands.SubZoneCenter("Neon", z.id)
+					if Vector3.new(root.Position.X - c.X, 0, root.Position.Z - c.Z).Magnitude < z.radius + 20 then
+						out.ambient = look.ambient:Lerp(Color3.new(0, 0, 0), 0.85)
+						out.outdoor = look.outdoor:Lerp(Color3.new(0, 0, 0), 0.85)
+						out.tint = look.tint:Lerp(Color3.fromRGB(90, 90, 140), 0.7)
+						out.bloom = look.bloom * 0.4
+					end
+				end
+			end
+		end
+	end
+	return out
+end
+
 local function lerpLook(a: Look, b: Look, k: number): Look
 	local out = {}
 	for key, v in a do
@@ -145,7 +186,7 @@ Environment.IsNight = isNight
 local function updateLighting(dt: number)
 	local zone = player:GetAttribute("Island")
 	local base, forcedClock = lookFor(zone)
-	local target = blendStorm(base)
+	local target = blendIslandEvent(blendStorm(base), zone)
 	current = if current then lerpLook(current :: Look, target, math.min(1, dt * 1.2)) else target
 	local look = current :: Look
 	-- ciel prismatique (un Secret vient d'être invoqué)
@@ -230,7 +271,7 @@ local function refreshStormParticles()
 end
 
 -- ============================================================================ Objets animés
-type Anim = { kind: string, inst: Instance, base: CFrame, phase: number, data: any }
+type Anim = { kind: string, inst: Instance, base: CFrame, phase: number, data: any, color: Color3?, mix: number?, clock: number? }
 local anims: { [Instance]: Anim } = {}
 
 local function pivotOf(inst: Instance): CFrame
@@ -313,6 +354,25 @@ local function stepAnim(a: Anim, t: number, dt: number)
 		if inst:IsA("BasePart") then
 			inst.Transparency = 0.15 + (math.sin(t * 2 + a.phase) + 1) * 0.12
 		end
+	elseif k == "Spire" then
+		-- Flèche astrale : pulsation lente au calme, rapide et violette quand une tempête approche
+		if inst:IsA("BasePart") then
+			local st = Workspace:GetAttribute("StormState")
+			local storm = st == "Announce" or st == "Active"
+			local base = a.color or inst.Color
+			a.color = base
+			local mix = (a.mix or 0) + ((if storm then 1 else 0) - (a.mix or 0)) * math.min(1, dt * 1.5)
+			a.mix = mix
+			local clock = (a.clock or 0) + dt * (1.2 + 4.8 * mix)
+			a.clock = clock
+			inst.Transparency = 0.15 + (math.sin(clock + a.phase) + 1) * 0.12
+			local tint = base:Lerp(Color3.fromRGB(170, 80, 255), mix)
+			inst.Color = tint
+			local light = inst:FindFirstChildWhichIsA("PointLight")
+			if light then
+				light.Color = tint
+			end
+		end
 	elseif k == "Prism" then
 		if inst:IsA("BasePart") then
 			inst.Color = Color3.fromHSV((t * 0.08 + a.phase) % 1, 0.6, 0.9)
@@ -340,7 +400,7 @@ local ANIM_TAGS = {
 	Monorail = "Monorail",
 	GhostHammer = "GhostHammer",
 	Lighthouse = "Lighthouse",
-	SpireCore = "Pulse",
+	SpireCore = "Spire",
 	PyramidBeam = "Pulse",
 	MagmaHeart = "Pulse",
 	EtherTreeHeart = "Pulse",
@@ -408,6 +468,21 @@ local function refreshBarriers()
 			local open = id and player:GetAttribute("Gate_" .. id)
 			b.CanCollide = not open
 			b.Transparency = if open then 0.85 else 0.35
+		end
+	end
+	-- panneau : coût tant que la porte est fermée pour ce joueur, nom de l'île une fois ouverte
+	for _, sign in CollectionService:GetTagged("GateSign") do
+		local id = sign:GetAttribute("Island")
+		local label = sign:FindFirstChild("Text", true)
+		if id and Islands.List[id] and label and label:IsA("TextLabel") then
+			local isl = Islands.Get(id)
+			if player:GetAttribute("Gate_" .. id) then
+				label.Text = isl.symbol .. " " .. (isl.name[Locale.Current] or isl.name.fr)
+			elseif not label:GetAttribute("Cost") then
+				label:SetAttribute("Cost", label.Text)
+			else
+				label.Text = label:GetAttribute("Cost")
+			end
 		end
 	end
 end
@@ -560,6 +635,7 @@ function Environment.Start()
 	onStorm()
 	CollectionService:GetInstanceAddedSignal("MenhirRune"):Connect(refreshRunes)
 	CollectionService:GetInstanceAddedSignal("GateBarrier"):Connect(refreshBarriers)
+	CollectionService:GetInstanceAddedSignal("GateSign"):Connect(refreshBarriers)
 	CollectionService:GetInstanceAddedSignal("Beacon"):Connect(refreshBeacons)
 	CollectionService:GetInstanceAddedSignal("NightLight"):Connect(function()
 		nightState = nil

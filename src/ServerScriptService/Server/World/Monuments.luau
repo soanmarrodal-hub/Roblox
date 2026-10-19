@@ -539,13 +539,15 @@ function Monuments.Volcano(ctx: Common.Ctx)
 	altar:SetAttribute("Menu", "Summon")
 	altar:SetAttribute("Island", ctx.id)
 	altar:SetAttribute("Label", "Autel du magma")
-	-- Rivières de lave franchies par des ponts d'obsidienne
-	for k = 0, 2 do
-		local cf = Common.GroundCF(ctx, -150 + k * 150, 80 - k * 40, 20 + k * 40, -0.4)
+	-- Rivières de lave franchies par des ponts d'obsidienne. Positions choisies à l'écart du camp,
+	-- du sanctuaire, des balises, de la forge et du temple (au moins 20 à 56 studs de marge).
+	for _, r in { { -150, 80, 20 }, { -60, 150, 70 }, { 190, 130, 100 } } do
+		local cf = Common.GroundCF(ctx, r[1], r[2], r[3], -0.4)
 		local river = Build.Box(m, cf, Vector3.new(14, 1, 120), lava, Enum.Material.Neon, "LavaRiver")
 		river.CanCollide = false
 		river:AddTag("LavaZone")
-		Build.Box(m, cf * CFrame.new(0, 2, 0) * CFrame.Angles(0, math.rad(90), 0), Vector3.new(20, 1.2, 8), rgb(20, 16, 24), Enum.Material.Glass, "ObsidianBridge")
+		-- le pont enjambe toute la largeur (14) avec 3 studs de marge de chaque côté
+		Build.Box(m, cf * CFrame.new(0, 2, 0), Vector3.new(20, 1.2, 8), rgb(20, 16, 24), Enum.Material.Glass, "ObsidianBridge")
 	end
 	-- La Porte des Failles : arche noire, portail violet visible de toute l'île
 	local pcf = Common.GroundCF(ctx, summit.X + 40, summit.Z - 130, 0, -1)

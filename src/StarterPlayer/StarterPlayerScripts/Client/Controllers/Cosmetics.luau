@@ -1,5 +1,6 @@
 --!nonstrict
--- Cosmétiques des joueurs (aura et traînée achetées en gemmes) et halo du titre d'Index.
+-- Cosmétiques des joueurs (aura et traînée achetées en gemmes) et plaque au-dessus de l'avatar
+-- (pseudo, titre d'Index, rang d'explorateur — bible §20).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -68,10 +69,67 @@ local function apply(p: Player)
 	end
 end
 
+-- Plaque : pseudo, puis « titre · Rang N » (le nom Roblox par défaut est masqué)
+local function plate(p: Player)
+	local char = p.Character
+	local head = char and (char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")) :: BasePart?
+	if not char or not head then
+		return
+	end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	end
+	local bb = head:FindFirstChild("AstralPlate") :: BillboardGui?
+	if not bb then
+		local g = Instance.new("BillboardGui")
+		g.Name = "AstralPlate"
+		g.Size = UDim2.fromOffset(220, 48)
+		g.StudsOffset = Vector3.new(0, 2.8, 0)
+		g.MaxDistance = 90
+		g.LightInfluence = 0
+		g.Adornee = head
+		local name = Instance.new("TextLabel")
+		name.Name = "PlayerName"
+		name.Size = UDim2.fromScale(1, 0.55)
+		name.BackgroundTransparency = 1
+		name.Font = Enum.Font.LuckiestGuy
+		name.TextScaled = true
+		name.TextColor3 = Color3.new(1, 1, 1)
+		name.TextStrokeTransparency = 0.3
+		name.Parent = g
+		local sub = Instance.new("TextLabel")
+		sub.Name = "Sub"
+		sub.Size = UDim2.fromScale(1, 0.42)
+		sub.Position = UDim2.fromScale(0, 0.56)
+		sub.BackgroundTransparency = 1
+		sub.Font = Enum.Font.FredokaOne
+		sub.TextScaled = true
+		sub.TextColor3 = Color3.fromRGB(255, 220, 120)
+		sub.TextStrokeTransparency = 0.4
+		sub.Parent = g
+		g.Parent = head
+		bb = g
+	end
+	local g = bb :: BillboardGui
+	local title = p:GetAttribute("Title")
+	local rank = p:GetAttribute("Rank") or 1
+	;(g:FindFirstChild("PlayerName") :: TextLabel).Text = p.DisplayName
+	;(g:FindFirstChild("Sub") :: TextLabel).Text = (if title and title ~= "" then title .. " · " else "") .. "Rang " .. tostring(rank)
+end
+
 local function watch(p: Player)
 	p.CharacterAdded:Connect(function(char)
 		char:WaitForChild("HumanoidRootPart", 10)
+		char:WaitForChild("Head", 5)
 		apply(p)
+		plate(p)
+	end)
+	p:GetAttributeChangedSignal("Title"):Connect(function()
+		plate(p)
+	end)
+	p:GetAttributeChangedSignal("Rank"):Connect(function()
+		plate(p)
 	end)
 	p:GetAttributeChangedSignal("Aura"):Connect(function()
 		apply(p)
@@ -81,6 +139,7 @@ local function watch(p: Player)
 	end)
 	if p.Character then
 		task.spawn(apply, p)
+		task.spawn(plate, p)
 	end
 end
 
@@ -91,6 +150,21 @@ function Cosmetics.Start()
 		watch(p)
 	end
 	Players.PlayerAdded:Connect(watch)
+	-- StreamingEnabled : un avatar qui revient dans le rayon de streaming est recréé sans
+	-- CharacterAdded ; on repose plaque, aura et traînée quand la plaque a disparu
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			for _, p in Players:GetPlayers() do
+				local char = p.Character
+				local head = char and (char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart"))
+				if head and not head:FindFirstChild("AstralPlate") then
+					apply(p)
+					plate(p)
+				end
+			end
+		end
+	end)
 end
 
 return Cosmetics

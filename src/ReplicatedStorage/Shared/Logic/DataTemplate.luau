@@ -51,6 +51,7 @@ function DataTemplate.New(): { [string]: any }
 			firstJoin = 0,
 			lastLogout = 0,
 			lastLoss = 0,
+			treasureDay = 0, -- dernier jour (UTC) où la salle des trésors a été pillée
 		},
 		settings = { lang = "fr", shake = true, quality = "High", music = 0.6, sfx = 0.8, border = "#5BC8FF" },
 		cosmetics = { owned = {} :: { [string]: boolean }, aura = "", trail = "", floor = "", pedestal = "" },
