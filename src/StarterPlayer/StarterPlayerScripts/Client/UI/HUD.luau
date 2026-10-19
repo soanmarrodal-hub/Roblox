@@ -174,8 +174,9 @@ function HUD.SetContext(label: string?, color: Color3?, cb: (() -> ())?)
 		contextButton.Visible = false
 		return
 	end
-	local changed = contextLabel.Text ~= label or not contextButton.Visible
-	contextLabel.Text = if HUD.touch then label else label .. "  [E]"
+	local text = if HUD.touch then label else label .. "  [E]"
+	local changed = contextLabel.Text ~= text or not contextButton.Visible
+	contextLabel.Text = text
 	contextButton.BackgroundColor3 = color or Theme.Color.ButtonGreen
 	local g = contextButton:FindFirstChildOfClass("UIGradient")
 	if g then

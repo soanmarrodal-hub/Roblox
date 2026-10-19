@@ -147,6 +147,9 @@ function ShopService:Buy(player: Player, kind: string, key: string): (boolean, s
 			return false, "Cosmétique inconnu"
 		end
 		if not d.cosmetics.owned[key] then
+			if (c.gems or 0) <= 0 then
+				return false, "Disponible uniquement dans un pack"
+			end
 			if not Registry.Get("ProgressionService"):Spend(player, "Gems", c.gems) then
 				return false, c.gems .. " gemmes requises"
 			end

@@ -41,7 +41,7 @@ Shop.Cosmetics = {
 	PedestalLava = { name = "Socles de lave", kind = "Pedestal", gems = 300, material = "CrackedLava" },
 	PedestalNeon = { name = "Socles néon", kind = "Pedestal", gems = 300, material = "Neon" },
 }
-Shop.CosmeticOrder = { "AuraEther", "AuraSolar", "TrailNeon", "TrailFrost", "FloorMarble", "FloorCrystal", "PedestalLava", "PedestalNeon" }
+Shop.CosmeticOrder = { "AuraStarter", "AuraEther", "AuraSolar", "TrailNeon", "TrailFrost", "FloorMarble", "FloorCrystal", "PedestalLava", "PedestalNeon" }
 
 Shop.ServerBoostMutationBonus = 0.5 -- +50 % de chance de mutation à la prochaine tempête
 Shop.PurificationPrismGems = 120

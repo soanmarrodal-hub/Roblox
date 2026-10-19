@@ -32,7 +32,7 @@ local chargeRing: Frame
 local lastAttack = 0
 local lastDodge = 0
 local ATTACK_CD = Skills.Get("BasicAttack").cooldown
-local DODGE_CD = 1.2
+local DODGE_CD = Skills.DodgeCooldown
 local lockedId: number? = nil
 local lockMarker: BillboardGui
 local shakeAmount = 0

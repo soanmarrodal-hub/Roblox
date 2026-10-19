@@ -99,7 +99,10 @@ function Page.Build(body: Frame, ctx: any)
 				end })
 			end
 		end
-		local confirm = Kit.Button(body, { Text = if t.readyMe then "En attente…" else "Confirmer", Size = UDim2.fromOffset(150, 52), Position = UDim2.new(1, -170, 1, -60), AnchorPoint = Vector2.new(1, 0), Color = Theme.Color.ButtonGreen, OnClick = function()
+		local stageMe, stageThem = t.stageMe or (if t.readyMe then 1 else 0), t.stageThem or (if t.readyThem then 1 else 0)
+		local canPress = stageMe == 0 or (stageMe == 1 and stageThem >= 1)
+		local confirmText = if stageMe == 0 then "Prêt" elseif stageMe == 1 and stageThem >= 1 then "Valider l'échange" else "En attente…"
+		local confirm = Kit.Button(body, { Text = confirmText, Size = UDim2.fromOffset(150, 52), Position = UDim2.new(1, -170, 1, -60), AnchorPoint = Vector2.new(1, 0), Color = Theme.Color.ButtonGreen, OnClick = function()
 			C.Data.Action("TradeConfirm", {})
 		end })
 		Kit.Button(body, { Text = "Annuler", Size = UDim2.fromOffset(150, 52), Position = UDim2.new(1, 0, 1, -60), AnchorPoint = Vector2.new(1, 0), Color = Theme.Color.ButtonRed, OnClick = function()
@@ -115,8 +118,8 @@ function Page.Build(body: Frame, ctx: any)
 					lockLabel.Text = string.format("Vérifie bien l'offre… %.0f s", math.ceil(left))
 					Kit.SetEnabled(confirm, false)
 				else
-					lockLabel.Text = "Les deux joueurs doivent confirmer"
-					Kit.SetEnabled(confirm, not t.readyMe)
+					lockLabel.Text = if stageMe == 1 and stageThem >= 1 then "Dernière étape : validez tous les deux" else "Les deux joueurs doivent se déclarer prêts"
+					Kit.SetEnabled(confirm, canPress)
 				end
 				task.wait(0.25)
 			end

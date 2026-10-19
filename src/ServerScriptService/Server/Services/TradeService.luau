@@ -45,6 +45,8 @@ local function push(t: Trade)
 				theirs = describe(t.offers[other], other),
 				readyMe = (t.ready[p] or 0) > 0,
 				readyThem = (t.ready[other] or 0) > 0,
+				stageMe = t.ready[p] or 0,
+				stageThem = t.ready[other] or 0,
 				lockLeft = math.max(0, t.changedAt + LOCK_AFTER_CHANGE - os.clock()),
 			})
 		end
@@ -122,9 +124,17 @@ function TradeService:Confirm(p: Player): (boolean, string?)
 	if os.clock() < t.changedAt + LOCK_AFTER_CHANGE then
 		return false, "Patiente 3 s après un changement d'offre"
 	end
-	t.ready[p] = (t.ready[p] or 0) + 1
+	-- double confirmation : 1) « prêt » des deux côtés, 2) validation finale des deux côtés
+	local other = if p == t.a then t.b else t.a
+	local mine = t.ready[p] or 0
+	if mine >= 2 then
+		return true, nil
+	end
+	if mine == 1 and (t.ready[other] or 0) < 1 then
+		return false, "En attente de l'autre joueur"
+	end
+	t.ready[p] = mine + 1
 	push(t)
-	-- double confirmation des deux côtés
 	if (t.ready[t.a] or 0) >= 2 and (t.ready[t.b] or 0) >= 2 then
 		self:Execute(t)
 	end

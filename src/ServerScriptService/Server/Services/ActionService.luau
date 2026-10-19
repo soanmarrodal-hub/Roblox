@@ -318,8 +318,17 @@ H.DebugGrant = function(p)
 end
 
 -- ============================================================================ Bouton contextuel
+local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true }
+
 local function interact(p: Player, kind: string, target: Instance?, extra: any)
 	local Ann = Registry.Get("AnnouncementService")
+	-- anti-triche : l'action doit correspondre au type de l'élément visé
+	if WORLD_KINDS[kind] and (not target or target:GetAttribute("Kind") ~= kind) then
+		return
+	end
+	if (kind == "Harvest" or kind == "Capture") and (not target or not target:HasTag("Entity")) then
+		return
+	end
 	if kind == "Collect" then
 		if target and near(p, target, 16) and target:GetAttribute("PlotIndex") == State.Get(p).plot then
 			Registry.Get("EconomyService"):Collect(p)

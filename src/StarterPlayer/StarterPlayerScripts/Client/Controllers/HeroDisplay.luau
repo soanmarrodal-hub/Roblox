@@ -347,8 +347,35 @@ local function heightFor(heroId: string, cap: number?): number
 end
 
 -- Socles (bases et camps)
+-- Pièces déjà surveillées : avec StreamingEnabled une pièce peut sortir puis revenir (le signal d'étiquette se
+-- redéclenche) ; on ne s'abonne qu'une fois et on se désabonne quand elle quitte le Workspace.
+local watched: { [Instance]: { RBXScriptConnection } } = {}
+
+local function beginWatch(inst: Instance): { RBXScriptConnection }?
+	if watched[inst] then
+		return nil
+	end
+	local list = {}
+	watched[inst] = list
+	return list
+end
+
+local function endWatch(inst: Instance)
+	local list = watched[inst]
+	if list then
+		watched[inst] = nil
+		for _, c in list do
+			c:Disconnect()
+		end
+	end
+end
+
 local function watchPedestal(part: Instance, kind: string)
 	if not part:IsA("BasePart") then
+		return
+	end
+	local conns = beginWatch(part)
+	if not conns then
 		return
 	end
 	local key = kind .. ":" .. part:GetFullName()
@@ -372,7 +399,7 @@ local function watchPedestal(part: Instance, kind: string)
 			s.plateUpdate()
 		end
 	end
-	part.AttributeChanged:Connect(function(name)
+	table.insert(conns, part.AttributeChanged:Connect(function(name)
 		if name == "HeroId" or name == "Mut" or name == "Dueling" or name == "InTransit" then
 			refresh()
 		elseif name == "Stars" or name == "Lvl" or name == "Prod" then
@@ -381,17 +408,22 @@ local function watchPedestal(part: Instance, kind: string)
 				s.plateUpdate()
 			end
 		end
-	end)
-	part.AncestryChanged:Connect(function()
+	end))
+	table.insert(conns, part.AncestryChanged:Connect(function()
 		if not part:IsDescendantOf(Workspace) then
 			removeSlot(key)
+			endWatch(part)
 		end
-	end)
+	end))
 	refresh()
 end
 
 local function watchSpot(part: Instance, kind: string, cap: number)
 	if not part:IsA("BasePart") then
+		return
+	end
+	local conns = beginWatch(part)
+	if not conns then
 		return
 	end
 	local key = kind .. ":" .. part:GetFullName()
@@ -410,19 +442,20 @@ local function watchSpot(part: Instance, kind: string, cap: number)
 		local extra = if kind == "Statue" then { tostring(part:GetAttribute("Tier") or 1) } else parseMut(part:GetAttribute("Mut"))
 		setSlot(key, kind, part, heroId, if kind == "Statue" then {} else extra, h, 0)
 	end
-	part.AttributeChanged:Connect(function(name)
+	table.insert(conns, part.AttributeChanged:Connect(function(name)
 		if name == "HeroId" or name == "Mut" or name == "Tier" then
 			if kind == "Statue" then
 				removeSlot(key)
 			end
 			refresh()
 		end
-	end)
-	part.AncestryChanged:Connect(function()
+	end))
+	table.insert(conns, part.AncestryChanged:Connect(function()
 		if not part:IsDescendantOf(Workspace) then
 			removeSlot(key)
+			endWatch(part)
 		end
-	end)
+	end))
 	refresh()
 end
 
@@ -438,13 +471,17 @@ local function watchEntity(anchor: Instance)
 	if not HERO_KINDS[kind] or not ref or not Heroes.List[ref] then
 		return
 	end
+	local conns = beginWatch(anchor)
+	if not conns then
+		return
+	end
 	local key = "Entity:" .. tostring(anchor:GetAttribute("EntityId"))
 	local function refresh()
 		local scale = anchor:GetAttribute("Scale") or Heroes.Get(ref).size
 		setSlot(key, "Entity", anchor, ref, parseMut(anchor:GetAttribute("Mut")), scale * 5, 3)
 	end
 	refresh()
-	anchor.AttributeChanged:Connect(function(name)
+	table.insert(conns, anchor.AttributeChanged:Connect(function(name)
 		local s = slots[key]
 		if name == "Mut" then
 			refresh()
@@ -458,12 +495,13 @@ local function watchEntity(anchor: Instance)
 		elseif (name == "HP" or name == "Kind" or name == "DownUntil") and s and s.plateUpdate then
 			s.plateUpdate()
 		end
-	end)
-	anchor.AncestryChanged:Connect(function()
+	end))
+	table.insert(conns, anchor.AncestryChanged:Connect(function()
 		if not anchor:IsDescendantOf(Workspace) then
 			removeSlot(key)
+			endWatch(anchor)
 		end
-	end)
+	end))
 end
 
 -- Leaders et héros portés de chaque joueur

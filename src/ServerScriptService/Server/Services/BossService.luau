@@ -27,7 +27,7 @@ local PATTERNS = {
 	[3] = { "Ring", "Barrage", "Cone", "Charge" },
 }
 
-local function rewardBoss(e: any, def: any, isGuardian: boolean)
+local function rewardBoss(e: any, def: any, isGuardian: boolean, slept: boolean?)
 	local Prog = Registry.Get("ProgressionService")
 	local Ann = Registry.Get("AnnouncementService")
 	local total = 0
@@ -63,10 +63,12 @@ local function rewardBoss(e: any, def: any, isGuardian: boolean)
 					Ann:Announce("Secret", p.DisplayName .. " obtient MAGNAROK sur la dépouille d'Ignar !", { heroId = "Magnarok", rarity = "Secret" })
 				end
 			end
-			Net.Event("BossState"):FireClient(p, { ended = true, name = def.name, share = share, chest = share >= Enemies.BossChestThreshold })
+			Net.Event("BossState"):FireClient(p, { ended = true, slept = slept == true, name = def.name, share = share, chest = share >= Enemies.BossChestThreshold })
 		end
 	end
-	if not isGuardian then
+	if slept then
+		Ann:Announce("Boss", def.name .. " se rendort avec la fin de la tempête. Les participants sont récompensés.", {})
+	elseif not isGuardian then
 		Ann:Announce("Boss", def.name .. " est vaincu ! Récompenses distribuées.", {})
 	end
 end
@@ -172,7 +174,7 @@ function BossService:StormEnded()
 			-- le boss retourne au sommeil : récompense partielle pour les participants
 			Combat:SetState(e, "Sleep")
 			if next(e.contributors) then
-				rewardBoss(e, e.ai.def, false)
+				rewardBoss(e, e.ai.def, false, true)
 			end
 			Combat:Remove(e, 2)
 		end

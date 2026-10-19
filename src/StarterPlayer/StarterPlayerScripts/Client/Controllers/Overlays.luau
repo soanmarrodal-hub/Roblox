@@ -180,6 +180,8 @@ local function onDuel(p)
 				resultBanner("VOL " .. string.upper(tierDef and tierDef.name or p.tier) .. " !", tierDef and tierDef.color or Theme.Color.Gold, sub)
 			end
 			C.Sound.Play("Fanfare")
+		elseif p.outcome == "defenderDown" then
+			resultBanner("DÉFENSE INTERROMPUE", Theme.Color.Error, "Tu es tombé : le duel continue sans toi")
 		elseif st and st.defending then
 			resultBanner("DÉFENSE RÉUSSIE !", Theme.Color.Success, "Le voleur a échoué")
 		else

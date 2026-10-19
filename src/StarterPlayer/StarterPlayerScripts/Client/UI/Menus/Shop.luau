@@ -81,6 +81,9 @@ function Page.Build(body: Frame, ctx: any)
 			for i, key in Shop.CosmeticOrder do
 				local c = Shop.Cosmetics[key]
 				local owned = d.cosmetics.owned[key] == true
+				if (c.gems or 0) <= 0 and not owned then
+					continue
+				end
 				local equipped = d.cosmetics[string.lower(c.kind)] == key
 				local kindName = ({ Aura = "Aura", Trail = "Traînée", Floor = "Sol de base", Pedestal = "Socles" })[c.kind] or c.kind
 				local text = if equipped then "Retirer" elseif owned then "Équiper" else "💎 " .. c.gems

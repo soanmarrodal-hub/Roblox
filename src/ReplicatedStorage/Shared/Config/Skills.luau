@@ -116,6 +116,7 @@ local Skills = {}
 Skills.List = S
 Skills.ElementByIsland = { Forest = "ElemForest", Desert = "ElemDesert", Neon = "ElemNeon", Glacier = "ElemGlacier", Volcano = "ElemVolcano" }
 Skills.SignatureChargePerHit = 6
+Skills.DodgeCooldown = 2 -- secondes (serveur et client)
 Skills.SignatureChargePerHurt = 4
 
 function Skills.Get(id: string): Skill

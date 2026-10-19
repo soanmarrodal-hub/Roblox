@@ -108,6 +108,11 @@ function StealService:StartDuel(attacker: Player, pedestal: BasePart): (boolean,
 		if not heroId then
 			return false, "Ce socle est vide"
 		end
+		for _, d in duels do
+			if d.camp == campId and d.slot == slot and not d.ended then
+				return false, "Ce héros est déjà en duel"
+			end
+		end
 		local def = Heroes.Get(heroId)
 		heroInst = { id = heroId, lvl = 1 + (Rarities.Index(def.rarity) - 1) * 2, stars = 0, mut = {} }
 	else
@@ -475,6 +480,7 @@ function StealService:OnPlayerDied(player: Player)
 	if d and d.attacker == player then
 		self:EndDuel(d, "dead")
 	elseif d and d.defender == player then
+		Net.Event("DuelState"):FireClient(player, { active = false, outcome = "defenderDown", heroId = d.hero.id })
 		d.defender = nil
 		s.duel = nil
 		player:SetAttribute("InDuel", nil)
@@ -539,6 +545,12 @@ function StealService:Init()
 		local s = State.Get(p)
 		if s.duel then
 			self:EndDuel(s.duel, "left")
+		end
+		-- le voleur quitte en portant un héros volé : il retourne sur son socle
+		local carried = s.carrying
+		if carried and carried.onDrop then
+			s.carrying = nil
+			pcall(carried.onDrop, "left")
 		end
 		-- la victime quitte : les vols en cours sur sa base sont annulés
 		for _, other in Players:GetPlayers() do

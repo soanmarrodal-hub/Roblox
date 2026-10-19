@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage.Shared
 local Islands = require(Shared.Config.Islands)
@@ -329,6 +330,28 @@ function ProgressionService:Init()
 	end)
 end
 
+-- Rivières de lave (pièces non collidables étiquetées LavaZone) : le joueur est « dans » la lave s'il est dans leur volume.
+local function inLavaZone(pos: Vector3): boolean
+	for _, z in CollectionService:GetTagged("LavaZone") do
+		if z:IsA("BasePart") then
+			local lp = z.CFrame:PointToObjectSpace(pos)
+			if math.abs(lp.X) <= z.Size.X / 2 and math.abs(lp.Z) <= z.Size.Z / 2 and lp.Y <= z.Size.Y / 2 + 3.5 and lp.Y >= -z.Size.Y / 2 - 2 then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- Les socles « de lave » (cosmétique) ont le matériau CrackedLava mais ne brûlent pas.
+local lavaRay = RaycastParams.new()
+lavaRay.FilterType = Enum.RaycastFilterType.Exclude
+local function standingOnPedestal(char: Model, root: BasePart): boolean
+	lavaRay.FilterDescendantsInstances = { char }
+	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -8, 0), lavaRay)
+	return hit ~= nil and (hit.Instance:HasTag("Pedestal") or hit.Instance:HasTag("CampPedestal"))
+end
+
 -- Contrôle d'accès aux îles (anti-triche) et localisation des joueurs.
 function ProgressionService:Start()
 	local World = Registry.Get("WorldService")
@@ -382,7 +405,11 @@ function ProgressionService:Start()
 						p:SetAttribute("TerrainSpeed", ts)
 						Registry.Get("CombatService"):UpdateSpeed(p)
 					end
-					if mat == Enum.Material.CrackedLava then
+					local inLava = inLavaZone(root.Position) or (mat == Enum.Material.CrackedLava and not standingOnPedestal(char, root))
+					if p:GetAttribute("InLava") ~= inLava then
+						p:SetAttribute("InLava", inLava)
+					end
+					if inLava then
 						-- la lave renvoie au dernier point sûr et fait lâcher tout héros porté
 						Registry.Get("CaptureService"):Drop(p, "lava")
 						hum.Health -= hum.MaxHealth * 0.15

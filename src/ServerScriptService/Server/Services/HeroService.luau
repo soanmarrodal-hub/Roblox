@@ -94,7 +94,9 @@ function HeroService:AddHero(player: Player, heroId: string, opts: { [string]: a
 	if not d.team.leader then
 		d.team.leader = uid
 	end
-	self:AutoPlace(player, uid)
+	if o.source ~= "Astra" then
+		self:AutoPlace(player, uid)
+	end
 	self:RefreshPower(player)
 	sync(player)
 	return uid
@@ -249,6 +251,7 @@ function HeroService:SetLeader(player: Player, uid: string): (boolean, string?)
 	end
 	d.team.leader = uid
 	State.Get(player).charge = 0
+	player:SetAttribute("Charge", 0)
 	self:RefreshPower(player)
 	Registry.Get("BaseService"):Refresh(player)
 	sync(player)

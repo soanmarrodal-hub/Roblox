@@ -83,7 +83,7 @@ local function clearPlot(index: number)
 	plot.model:SetAttribute("Owner", nil)
 	plot.model:SetAttribute("OwnerName", nil)
 	for _, ped in plot.pedestals do
-		for _, k in { "HeroId", "Uid", "Stars", "Mut", "Lvl", "Prod", "Rarity", "Owner", "InTransit" } do
+		for _, k in { "HeroId", "Uid", "Stars", "Mut", "Lvl", "Prod", "Rarity", "Owner", "InTransit", "Dueling" } do
 			ped:SetAttribute(k, nil)
 		end
 		ped.Transparency = 1

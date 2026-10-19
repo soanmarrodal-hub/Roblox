@@ -193,7 +193,7 @@ local function update()
 		current = nil
 		C.HUD.SetContext(nil)
 		setSecondary(nil)
-		highlight.Adornee = nil
+		highlight.Enabled = false
 		return
 	end
 	local best, bestD = nil, math.huge
@@ -215,7 +215,7 @@ local function update()
 	if not best then
 		C.HUD.SetContext(nil)
 		setSecondary(nil)
-		highlight.Adornee = nil
+		highlight.Enabled = false
 		return
 	end
 	local label, color, cb, label2, cb2 = describe(best)
@@ -224,6 +224,7 @@ local function update()
 	local kind = best:GetAttribute("Kind")
 	local showHl = best:HasTag("Pedestal") or kind == "Collect" or kind == "Beacon" or kind == "Steal" or kind == "Deposit" or kind == "Menhir" or kind == "Terminal"
 	highlight.Adornee = if showHl then best else nil
+	highlight.Enabled = showHl
 end
 
 function Interact.Current(): Instance?
@@ -257,7 +258,12 @@ function Interact.Start()
 	highlight.OutlineColor = Color3.fromRGB(255, 240, 160)
 	highlight.OutlineTransparency = 0.1
 	highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-	highlight.Parent = Workspace
+	highlight.Enabled = false
+	-- dans un dossier (pas un Model) : sans Adornee, la surbrillance ne s'applique à rien
+	local fxFolder = Instance.new("Folder")
+	fxFolder.Name = "InteractFX"
+	fxFolder.Parent = Workspace
+	highlight.Parent = fxFolder
 	game:GetService("ContextActionService"):BindAction("AstralInteract2", function(_, state)
 		if state == Enum.UserInputState.Begin and secondary.Visible and secondaryCb then
 			secondaryCb()

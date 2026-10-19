@@ -537,6 +537,7 @@ function Monuments.Volcano(ctx: Common.Ctx)
 	altar:AddTag("Interactable")
 	altar:SetAttribute("Kind", "Menu")
 	altar:SetAttribute("Menu", "Summon")
+	altar:SetAttribute("Island", ctx.id)
 	altar:SetAttribute("Label", "Autel du magma")
 	-- Rivières de lave franchies par des ponts d'obsidienne
 	for k = 0, 2 do

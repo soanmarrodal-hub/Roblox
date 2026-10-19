@@ -47,7 +47,7 @@ local folder: Folder
 local telegraphId = 0
 
 local BASE_SPEED = 18
-local DODGE_COOLDOWN = 2
+local DODGE_COOLDOWN = Skills.DodgeCooldown
 local DODGE_IFRAMES = 0.45
 local ATTACK_RANGE = 16
 
@@ -634,6 +634,9 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 		elseif kind == "resetCooldowns" then
 			for _, p in nearbyPlayers(o, eff.radius or 20) do
 				table.clear(State.Get(p).cooldowns)
+				for slot = 1, 3 do
+					p:SetAttribute("CD" .. slot, nil)
+				end
 				p:SetAttribute("CooldownReset", Workspace:GetServerTimeNow())
 			end
 		end

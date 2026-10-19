@@ -36,6 +36,7 @@ type Item = {
 	lastHp: number,
 	flash: number,
 	dying: boolean,
+	conns: { RBXScriptConnection }?,
 }
 local items: { [BasePart]: Item } = {}
 local folder: Folder
@@ -115,7 +116,7 @@ local function watch(anchor: Instance)
 		return
 	end
 	local kind = anchor:GetAttribute("Kind")
-	if not ENEMY_KINDS[kind] then
+	if not ENEMY_KINDS[kind] or items[anchor] then
 		return
 	end
 	local def = Enemies.GetAny(tostring(anchor:GetAttribute("Ref")))
@@ -129,23 +130,29 @@ local function watch(anchor: Instance)
 		dying = false,
 	}
 	items[anchor] = it
-	anchor:GetAttributeChangedSignal("HP"):Connect(function()
+	local conns = {}
+	it.conns = conns
+	table.insert(conns, anchor:GetAttributeChangedSignal("HP"):Connect(function()
 		local hp = anchor:GetAttribute("HP") or 0
 		if hp < it.lastHp then
 			it.flash = 0.12
 		end
 		it.lastHp = hp
-	end)
-	anchor:GetAttributeChangedSignal("Phase"):Connect(function()
+	end))
+	table.insert(conns, anchor:GetAttributeChangedSignal("Phase"):Connect(function()
 		local ph = anchor:GetAttribute("Phase") or 1
 		if def and def.phases and def.phases[ph] then
 			VFX.Burst(anchor.Position, def.phases[ph], 40, 40, 1.5)
 			VFX.Ring(anchor.Position, it.size * 1.4, def.phases[ph], 1, 1.5)
-			C.Combat.Shake(0.8)
+			local cam = Workspace.CurrentCamera
+			local d = if cam then (cam.CFrame.Position - anchor.Position).Magnitude else math.huge
+			if d < 140 then
+				C.Combat.Shake(0.8 * math.clamp(1 - d / 140, 0.15, 1))
+			end
 			C.Sound.Play("Boom", anchor.Position)
 		end
-	end)
-	anchor.AncestryChanged:Connect(function()
+	end))
+	table.insert(conns, anchor.AncestryChanged:Connect(function()
 		if not anchor:IsDescendantOf(Workspace) then
 			local current = items[anchor]
 			if current then
@@ -156,8 +163,11 @@ local function watch(anchor: Instance)
 				destroyVisual(current)
 				items[anchor] = nil
 			end
+			for _, c in conns do
+				c:Disconnect()
+			end
 		end
-	end)
+	end))
 end
 
 local function step(dt: number)
@@ -237,7 +247,8 @@ local function bossRecap(p)
 		return
 	end
 	local share = p.share or 0
-	C.HUD.Toast(string.format("%s vaincu ! Ta part : %.1f %%%s", p.name or "Boss", share * 100, if p.chest then " · coffre obtenu" else ""), "Success")
+	local head = if p.slept then (p.name or "Boss") .. " se rendort" else (p.name or "Boss") .. " vaincu !"
+	C.HUD.Toast(string.format("%s Ta part : %.1f %%%s", head, share * 100, if p.chest then " · coffre obtenu" else ""), "Success")
 end
 
 function EnemiesCtl.Init(controllers)

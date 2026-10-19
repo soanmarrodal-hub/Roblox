@@ -29,6 +29,7 @@ local function setCarryAttrs(player: Player, c: any?)
 	player:SetAttribute("CarryRarity", c and c.rarity or nil)
 	player:SetAttribute("CarrySource", c and c.source or nil)
 	player:SetAttribute("Instability", c and c.instability or nil)
+	player:SetAttribute("CarryHits", c and c.hits or nil)
 end
 
 local function canInteract(player: Player, e: any): (boolean, string?)
