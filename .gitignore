@@ -9,3 +9,6 @@ tools/hero_pipeline/input_fbx/
 tools/hero_pipeline/input_sheets/
 tools/hero_pipeline/out/
 tools/hero_pipeline/cache/
+# Builds : seule la place prête à ouvrir est versionnée
+build/*
+!build/AstralHeist.rbxl

@@ -111,7 +111,7 @@ function HeroAnimator:Step(dt: number): CFrame
 	J(self, "WingL", CFrame.Angles(0, flap * 0.4, flap))
 	J(self, "WingR", CFrame.Angles(0, -flap * 0.4, -flap))
 	J(self, "Cape", CFrame.Angles(0.08 + math.sin(t * 2.5) * 0.06 + m * 0.25, 0, math.sin(t * 1.7) * 0.04))
-	J(self, "Halo", CFrame.Angles(0, 0, t * 0.8))
+	J(self, "Halo", if self.rig.haloAxis == "Y" then CFrame.Angles(0, t * 0.8, 0) else CFrame.Angles(0, 0, t * 0.8))
 	for _, j in prefixJoints(self, "Orbit") do
 		j.Transform = CFrame.Angles(0, t * 0.9, 0) * CFrame.new(0, math.sin(t * 2) * 0.03 * h, 0)
 	end

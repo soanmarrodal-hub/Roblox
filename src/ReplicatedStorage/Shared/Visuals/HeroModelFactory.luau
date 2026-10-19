@@ -22,6 +22,7 @@ export type Rig = {
 	heroId: string,
 	height: number,
 	procedural: boolean,
+	haloAxis: string,
 }
 
 local GROUP_ORDER = { "Body", "Head", "Halo", "EarL", "EarR", "ArmL", "ArmR", "LegL", "LegR", "Tail", "WingL", "WingR", "Cape", "Weapon", "WeaponR", "WeaponL", "Orbit", "Float1", "Float2", "Float3", "Float4" }
@@ -252,6 +253,7 @@ function HeroModelFactory.Create(heroId: string, height: number?): Rig
 		heroId = heroId,
 		height = targetH,
 		procedural = procedural,
+		haloAxis = rigInfo and rigInfo.haloAxis or "Z",
 	}
 end
 

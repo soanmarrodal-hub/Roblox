@@ -29,9 +29,9 @@ World.PlotRingRadius = 200
 World.PlazaRadius = 115
 World.SpireHeight = 60
 
--- Quand true, le monde est reconstruit au démarrage du serveur s'il n'existe pas déjà dans Workspace.
--- Pour un démarrage instantané : lancez une fois le jeu en Studio, copiez Workspace.AstralWorld et Terrain, puis
--- collez-les en mode édition (ou utilisez la commande de pré-construction décrite dans docs/GUIDE.md).
-World.BuildOnServerStart = true
+-- Le monde est généré à chaque démarrage du serveur (quelques secondes ; l'écran de chargement attend WorldReady).
+-- Pour le prévisualiser en mode édition, lancez dans la barre de commande de Studio :
+--   require(game.ServerScriptService.Server.World.WorldBuilder).Build()
+-- (le dossier Workspace.AstralWorld ainsi créé est remplacé au lancement du jeu).
 
 return World
