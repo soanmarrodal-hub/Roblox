@@ -61,6 +61,7 @@ function Team.Build(body: Frame, ctx: any)
 		selected = nil :: string?,
 		pickSlot = if ctx.args.pick then ctx.args.slot else nil,
 		sort = "Rarity",
+		island = nil :: string?, -- filtre d'île (nil = toutes)
 	}
 	local left = Kit.new("Frame", { Name = "Left", Size = UDim2.new(0.56, -6, 1, 0), BackgroundTransparency = 1, Parent = body })
 	local right = Kit.new("Frame", { Name = "Right", Size = UDim2.new(0.44, -6, 1, 0), Position = UDim2.new(0.56, 6, 0, 0), BackgroundTransparency = 1, Parent = body })
@@ -80,10 +81,18 @@ function Team.Build(body: Frame, ctx: any)
 		local keepCanvas = old and old.CanvasPosition
 		Kit.Clear(content)
 		local top = Kit.new("Frame", { Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Parent = content })
-		Kit.Label(top, { Text = string.format("%d / %d héros", C.Data.HeroCount(), C.Data.Capacity()), Size = UDim2.new(0.4, 0, 1, 0), AlignX = Enum.TextXAlignment.Left, Font = Theme.Font.Body })
+		Kit.Label(top, { Text = string.format("%d / %d héros", C.Data.HeroCount(), C.Data.Capacity()), Size = UDim2.new(0.26, 0, 1, 0), AlignX = Enum.TextXAlignment.Left, Font = Theme.Font.Body })
+		-- filtre d'île : un appui passe à l'île suivante (toutes → Forêt → … → Volcan → toutes)
+		local isl = state.island and Islands.Get(state.island)
+		Kit.Button(top, { Text = if isl then isl.symbol .. " " .. isl.short else "Toutes les îles", Size = UDim2.new(0.2, -4, 1, -4), Position = UDim2.new(0.26, 0, 0, 2), Color = if isl then isl.color:Lerp(Theme.Color.PanelDark, 0.4) else Theme.Color.ButtonGray, MaxSize = 15, OnClick = function()
+			local order = Islands.Order
+			local i = if state.island then table.find(order, state.island) else 0
+			state.island = order[(i or 0) + 1]
+			renderInventory(C.Data.profile)
+		end })
 		local sorts = { { "Rarity", "Rareté" }, { "Production", "Prod." }, { "Level", "Niveau" } }
 		for i, s in sorts do
-			Kit.Button(top, { Text = s[2], Size = UDim2.new(0.19, -4, 1, -4), Position = UDim2.new(0.4 + (i - 1) * 0.2, 0, 0, 2), Color = if state.sort == s[1] then Theme.Color.Accent else Theme.Color.ButtonGray, MaxSize = 16, OnClick = function()
+			Kit.Button(top, { Text = s[2], Size = UDim2.new(0.18, -4, 1, -4), Position = UDim2.new(0.46 + (i - 1) * 0.18, 0, 0, 2), Color = if state.sort == s[1] then Theme.Color.Accent else Theme.Color.ButtonGray, MaxSize = 16, OnClick = function()
 				state.sort = s[1]
 				renderInventory(C.Data.profile)
 			end })
@@ -103,6 +112,9 @@ function Team.Build(body: Frame, ctx: any)
 		end
 		for i, uid in sortedUids(d, state.sort) do
 			local h = d.heroes[uid]
+			if state.island and Heroes.Get(h.id).island ~= state.island then
+				continue
+			end
 			local use = C.Data.HeroUse(uid)
 			-- priorité d'affichage : équipe avant socle (un héros peut cumuler les deux)
 			local tag = if d.team.leader == uid then "👑" elseif table.find(d.team.assists, uid) then "⚔" elseif d.guardian == uid then "🛡" elseif use == "Displayed" then "🏛" elseif use == "Vault" then "🔐" else nil

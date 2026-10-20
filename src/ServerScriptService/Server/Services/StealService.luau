@@ -72,7 +72,10 @@ function StealService:CanTarget(attacker: Player, victim: Player, plotIndex: num
 	if not vd or not ad then
 		return false, nil
 	end
-	if Registry.Get("DataService"):Playtime(victim) < Economy.NewPlayerProtection then
+	-- protection des nouveaux joueurs, sauf contre la vengeance de quelqu'un qu'ils ont volé
+	local rv = ad.revenge[tostring(victim.UserId)]
+	local revenge = rv and rv.untilTime > os.time()
+	if not revenge and Registry.Get("DataService"):Playtime(victim) < Economy.NewPlayerProtection then
 		return false, victim.DisplayName .. " est protégé (nouveau joueur)"
 	end
 	local Storm = Registry.Get("StormService")
