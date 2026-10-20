@@ -88,6 +88,7 @@ local function clearPlot(index: number)
 			ped:SetAttribute(k, nil)
 		end
 		ped.Transparency = 1
+		ped.CanCollide = false -- terrain libre : pas de socle invisible qui bloque le passage
 		local rim = ped:FindFirstChild("Rim") :: BasePart?
 		if rim then
 			rim.Transparency = 1

@@ -463,12 +463,14 @@ local function buildMinimap(root: Frame)
 		-- marqueurs publiés par le serveur (indépendants du streaming) : boss, héros annoncés, porteurs
 		local markers = ReplicatedStorage:FindFirstChild("MapMarkers")
 		local carrierPos: { [string]: Vector3 } = {}
+		local thieves: { [string]: boolean } = {}
 		if markers then
 			for _, v in markers:GetChildren() do
 				if v:IsA("Vector3Value") then
 					local kind = v:GetAttribute("Kind")
-					if kind == "Carrier" then
+					if kind == "Carrier" or kind == "Thief" then
 						carrierPos[v.Name] = v.Value
+						thieves[v.Name] = kind == "Thief"
 					else
 						seen[v.Name] = true
 						place(blip(v.Name, if kind == "Boss" then "☠" else "★", if kind == "Boss" then Theme.Color.Error else Theme.Color.Gold, 20), v.Value, origin, rot, kind == "Boss")
@@ -482,7 +484,7 @@ local function buildMinimap(root: Frame)
 			if p ~= player and not streamed and carrierPos[key] and not HUD.CarrierConcealed(carrierPos[key], origin) then
 				-- porteur hors du rayon de streaming : position fournie par le serveur
 				seen[key] = true
-				place(blip(key, "●", Theme.Color.Warning, 16), carrierPos[key], origin, rot, false)
+				place(blip(key, "●", if thieves[key] then Theme.Color.Error else Theme.Color.Warning, 16), carrierPos[key], origin, rot, false)
 			end
 		end
 		for _, p in Players:GetPlayers() do
@@ -495,7 +497,8 @@ local function buildMinimap(root: Frame)
 					if carrying and HUD.CarrierConcealed(r.Position, origin) then
 						seen[key] = nil
 					else
-						local b = blip(key, "●", if carrying then Theme.Color.Warning else Color3.fromRGB(200, 220, 255), if carrying then 16 else 10)
+						local thief = carrying and p:GetAttribute("CarrySource") == "Steal"
+						local b = blip(key, "●", if thief then Theme.Color.Error elseif carrying then Theme.Color.Warning else Color3.fromRGB(200, 220, 255), if carrying then 16 else 10)
 						place(b, r.Position, origin, rot, false)
 					end
 				end
@@ -668,6 +671,13 @@ local function buildBottomCenter(root: Frame)
 			Net.Event("ReturnBase"):FireServer()
 		end,
 	})
+	-- recharge du retour base (30 s) affichée sur le bouton
+	local returnCd = Kit.Cooldown(HUD.returnButton)
+	RunService.Heartbeat:Connect(function()
+		local readyAt = player:GetAttribute("ReturnReadyAt")
+		local left = if readyAt then readyAt - Workspace:GetServerTimeNow() else 0
+		returnCd(math.clamp(left / Economy.ReturnBaseCooldown, 0, 1), if left > 0 then tostring(math.ceil(left)) else nil)
+	end)
 	castBar, castSet = Kit.Bar(root, { Name = "Cast", Size = UDim2.fromOffset(220, 16), Position = UDim2.new(0.5, 0, 1, -112), AnchorPoint = Vector2.new(0.5, 1), Color = Theme.Color.Accent })
 	castBar.Visible = false
 	player:GetAttributeChangedSignal("Casting"):Connect(function()

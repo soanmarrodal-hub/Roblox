@@ -296,6 +296,7 @@ function ProgressionService:ReturnBase(player: Player): (boolean, string?)
 			return
 		end
 		s.lastReturn = os.clock()
+		player:SetAttribute("ReturnReadyAt", Workspace:GetServerTimeNow() + Economy.ReturnBaseCooldown)
 		local plot = Registry.Get("BaseService"):PlotOf(player)
 		if plot then
 			self:TeleportTo(player, plot.spawn)

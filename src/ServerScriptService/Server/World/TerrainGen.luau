@@ -100,6 +100,24 @@ local function writeIsland(islandId: string)
 	local yMax = isl.surfaceY + 64
 	local seed = isl.index * 7.1
 	local summit = Islands.SubZoneCenter(islandId, "Summit")
+	-- chemin principal : porte → entrée → cœur → sommet (matériau « path », sans ralentissement)
+	local road = {
+		Islands.Frame(islandId):PointToWorldSpace(Vector3.new(0, 0, isl.radius * 0.86)),
+		Islands.SubZoneCenter(islandId, "Entry"),
+		Islands.SubZoneCenter(islandId, "Core"),
+		summit,
+	}
+	local function roadDist(x: number, z: number): number
+		local best = math.huge
+		for i = 1, #road - 1 do
+			local a, b = road[i], road[i + 1]
+			local ab = Vector2.new(b.X - a.X, b.Z - a.Z)
+			local ap = Vector2.new(x - a.X, z - a.Z)
+			local t = math.clamp(ap:Dot(ab) / math.max(ab:Dot(ab), 1e-3), 0, 1)
+			best = math.min(best, (ap - ab * t).Magnitude)
+		end
+		return best
+	end
 	local CH = 48 -- voxels par bloc horizontal
 	local x0 = math.floor((c.X - R) / RES) * RES
 	local z0 = math.floor((c.Z - R) / RES) * RES
@@ -141,6 +159,10 @@ local function writeIsland(islandId: string)
 						end
 						if islandId == "Glacier" and wet > 0.5 then
 							surf = Enum.Material.Ice
+						end
+						-- route (5 studs de demi-largeur, légèrement sinueuse), hors falaises et lacs
+						if path and slope <= 0.9 and wet <= 0.25 and roadDist(wx, wz) < 5 + math.noise(wx / 23, wz / 23, seed + 3) * 1.5 then
+							surf = path
 						end
 						for j = 1, ny do
 							local vy = y0 + (j - 1) * RES
@@ -184,7 +206,6 @@ local function writeIsland(islandId: string)
 		end
 	end
 	Terrain:FillBall(Vector3.new(c.X, yMin - 150, c.Z), 40, cliff)
-	local _ = path
 end
 
 -- Socle rocheux sous le hub (le hub lui-même est en pièces).

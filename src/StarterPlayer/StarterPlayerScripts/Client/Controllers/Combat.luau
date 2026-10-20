@@ -89,6 +89,10 @@ local function attackable(e: Instance): boolean
 	if (e:GetAttribute("HP") or 0) <= 0 then
 		return false
 	end
+	-- défenseur d'un duel : réservé à l'attaquant de ce duel
+	if kind == "Defender" and e:GetAttribute("Attacker") ~= player.UserId then
+		return false
+	end
 	local st = e:GetAttribute("State")
 	return st ~= "Dead" and st ~= "Downed"
 end

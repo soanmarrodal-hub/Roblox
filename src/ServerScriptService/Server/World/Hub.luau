@@ -500,7 +500,8 @@ function Hub.Build(parent: Instance): any
 	spawn.Name = "HubSpawn"
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.CFrame = CFrame.new(polar(180, 22, PLAZA_Y + 0.5))
+	-- entre les plateformes du Glacier (115°) et du Volcan (180°) : ne recouvre aucun téléporteur
+	spawn.CFrame = CFrame.new(polar(147.5, 22, PLAZA_Y + 0.5))
 	spawn.Transparency = 1
 	spawn.CanCollide = false
 	spawn.Neutral = true

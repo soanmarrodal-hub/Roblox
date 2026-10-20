@@ -5,6 +5,8 @@
 export type Obtain = {
 	kind: string, -- "Capture" | "Banner" | "Condition" | "WildEvent" | "BannerOrBoss"
 	subzone: string?,
+	subzones: { string }?, -- plusieurs sous-zones possibles (tirage à chaque apparition)
+	rooftop: boolean?, -- apparaît sur les toits de la sous-zone (Ville Néon)
 	interval: number?, -- secondes entre deux apparitions sauvages
 }
 
@@ -42,7 +44,7 @@ add({
 })
 add({
 	id = "Bramble", name = "Bramble", island = "Forest", rarity = "Rare", role = "Guardian", element = "Nature", size = 1.6,
-	obtain = { kind = "Capture", subzone = "Entry", interval = 120 }, kit = "Golem", signature = "RootWall",
+	obtain = { kind = "Capture", subzone = "Entry", subzones = { "Entry", "Core" }, interval = 120 }, kit = "Golem", signature = "RootWall",
 	palette = { "#3E6B34", "#6F8F3A", "#B1784E", "#7A4B2E", "#2D5E3A", "#9EF06A" }, crystal = "#9EF06A", companion = "Thornling",
 	blurb = "Gardien des racines, loyal et protecteur.",
 })
@@ -128,7 +130,7 @@ add({
 })
 add({
 	id = "Kairo", name = "Kaïro", island = "Neon", rarity = "Epic", role = "Assassin", element = "Néon / Ombre", size = 1.6,
-	obtain = { kind = "Capture", subzone = "Summit", interval = 480 }, kit = "Assassin", signature = "PhantomBlade",
+	obtain = { kind = "Capture", subzone = "Summit", rooftop = true, interval = 480 }, kit = "Assassin", signature = "PhantomBlade",
 	palette = { "#121018", "#FF3DCB", "#23D5FF", "#E8E8F0", "#8A3FCC" }, crystal = "#23D5FF", companion = "Shuri",
 	blurb = "Ninja des toits, gardien autoproclamé de Néo-Astra.",
 })

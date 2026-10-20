@@ -320,12 +320,14 @@ function CombatService:DamagePlayer(player: Player, amount: number, source: Enti
 		self:DamageEntity(source, amount * reflect, player, false)
 	end
 	if dmg > 0 then
-		hum.Health = math.max(0, hum.Health - dmg)
 		self:HitFx(root.Position, dmg, "hurt")
-		if hum.Health <= 0 and s.reviveBuff > os.clock() then
+		if hum.Health - dmg <= 0 and s.reviveBuff > os.clock() then
+			-- Renaissance ardente : on ne passe jamais par 0 PV (Humanoid mort = définitif dans Roblox)
 			s.reviveBuff = 0
 			hum.Health = hum.MaxHealth * 0.3
 			self:HitFx(root.Position, hum.MaxHealth * 0.3, "heal")
+		else
+			hum.Health = math.max(0, hum.Health - dmg)
 		end
 	end
 	s.lastHit = os.clock()
@@ -750,7 +752,11 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 			wall.Color = Color3.fromRGB(120, 90, 60)
 			wall.Material = Enum.Material.Wood
 			wall.Transparency = 1
+			-- ne bloque que les ennemis (EntityMotion) : le lanceur et ses alliés passent
+			wall.CanCollide = false
+			wall.CanQuery = false
 			wall:SetAttribute("WallVfx", true)
+			wall:AddTag("SkillWall")
 			wall.Parent = Workspace
 			task.delay(eff.duration or 3, function()
 				wall:Destroy()
@@ -1020,7 +1026,7 @@ function CombatService:Init()
 	Net.Event("Dodge").OnServerEvent:Connect(function(p, dir)
 		self:Dodge(p, vec(dir))
 	end)
-	-- pas de régénération automatique : les soins viennent des héros de Soutien et des sources chaudes
+	-- régénération : lente hors combat (Start), sinon soins des héros de Soutien et sources chaudes
 end
 
 -- Marqueurs de carte hors streaming : héros annoncés, boss et porteurs de héros, publiés chaque
@@ -1056,7 +1062,8 @@ local function startMapMarkers()
 			for _, p in Players:GetPlayers() do
 				local r = rootOf(p)
 				if r and p:GetAttribute("Carrying") then
-					put("P" .. p.UserId, r.Position, "Carrier")
+					-- voleur en course de retour : icône rouge pour tout le serveur (bible §15)
+					put("P" .. p.UserId, r.Position, if p:GetAttribute("CarrySource") == "Steal" then "Thief" else "Carrier")
 				end
 			end
 			for _, v in folder:GetChildren() do

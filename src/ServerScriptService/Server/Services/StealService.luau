@@ -218,6 +218,7 @@ function StealService:StartDuel(attacker: Player, pedestal: BasePart): (boolean,
 	})
 	Motion.Place(e.anchor, center + (attacker.Character and (attacker.Character:GetPivot().Position - center).Unit * 6 or Vector3.new(0, 0, -6)), math.min(def.size, 2.4) * 2.5)
 	duel.entity = e
+	e.anchor:SetAttribute("Attacker", attacker.UserId) -- seul l'attaquant peut le viser (visée auto du client)
 	pedestal:SetAttribute("Dueling", true)
 	s.duel = duel
 	table.insert(duels, duel)
@@ -716,7 +717,10 @@ function StealService:Start()
 				for _, other in Players:GetPlayers() do
 					if other ~= owner then
 						local r = Combat.RootOf(other)
-						if r and World:PlotContains(i, r.Position, margin) then
+						-- un voisin qui se tient sur sa propre base ne déclenche pas l'alerte
+						local own = Base:PlotIndexOf(other)
+						local onOwnPlot = r and own and World:PlotContains(own, r.Position, 0)
+						if r and not onOwnPlot and World:PlotContains(i, r.Position, margin) then
 							local key = owner.UserId .. ":" .. other.UserId
 							if (intruders[key] or 0) < now then
 								intruders[key] = now + 25

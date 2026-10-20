@@ -253,7 +253,7 @@ Islands.List = {
 		gateCost = 11000,
 		gateCurrency = "Frost",
 		symbol = "🔥",
-		terrain = { top = Enum.Material.Basalt, top2 = Enum.Material.Rock, cliff = Enum.Material.Basalt, path = Enum.Material.CrackedLava, liquid = Enum.Material.CrackedLava },
+		terrain = { top = Enum.Material.Basalt, top2 = Enum.Material.Rock, cliff = Enum.Material.Basalt, path = Enum.Material.Slate, liquid = Enum.Material.CrackedLava },
 		lighting = {
 			ambient = Color3.fromRGB(110, 50, 40),
 			outdoor = Color3.fromRGB(160, 90, 70),

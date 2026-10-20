@@ -149,7 +149,7 @@ function Page.Build(body: Frame, ctx: any)
 					continue -- tempête de sable / blizzard : porteur caché
 				end
 				seen[key] = true
-				local m = mark(key, if p == player then "▲" else "●", if p == player then Theme.Color.Gold elseif p:GetAttribute("Carrying") then Theme.Color.Warning else Color3.fromRGB(220, 230, 255), if p == player then 26 else 14)
+				local m = mark(key, if p == player then "▲" else "●", if p == player then Theme.Color.Gold elseif p:GetAttribute("CarrySource") == "Steal" then Theme.Color.Error elseif p:GetAttribute("Carrying") then Theme.Color.Warning else Color3.fromRGB(220, 230, 255), if p == player then 26 else 14)
 				m.Position = toMap(r.Position)
 				if p == player then
 					local lv = r.CFrame.LookVector
@@ -164,10 +164,10 @@ function Page.Build(body: Frame, ctx: any)
 			for _, v in markers:GetChildren() do
 				if v:IsA("Vector3Value") and not seen[v.Name] then
 					local kind = v:GetAttribute("Kind")
-					if kind == "Carrier" then
+					if kind == "Carrier" or kind == "Thief" then
 						if v.Name ~= "P" .. player.UserId and not ctx.C.HUD.CarrierConcealed(v.Value, mine and mine.Position) then
 							seen[v.Name] = true
-							local m = mark(v.Name, "●", Theme.Color.Warning, 14)
+							local m = mark(v.Name, "●", if kind == "Thief" then Theme.Color.Error else Theme.Color.Warning, 14)
 							m.Position = toMap(v.Value)
 						end
 					else

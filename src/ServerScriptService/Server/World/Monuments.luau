@@ -291,6 +291,7 @@ function Monuments.Neon(ctx: Common.Ctx)
 			end
 		end
 	end
+	ctx.info.special.Rooftops = roofs -- toits hauts (apparitions de Kaïro sur les toits du District Prisme)
 	-- Tyroliennes entre toits voisins (bible §7) : routes de fuite pour les voleurs, points d'embuscade
 	local zipFolder = Build.Model(city, "Ziplines")
 	local used: { [number]: boolean } = {}
@@ -460,8 +461,9 @@ function Monuments.Glacier(ctx: Common.Ctx)
 	-- La Cascade gelée (70 studs) escaladable par ses stalactites
 	local fcf = Common.GroundCF(ctx, summit.X + 90, summit.Z + 40, 180)
 	Build.Box(m, fcf * CFrame.new(0, 35, 0), Vector3.new(26, 70, 8), rgb(200, 240, 255), Enum.Material.Ice, "FrozenFall")
-	for k = 0, 8 do
-		Build.Box(m, fcf * CFrame.new(((k % 3) - 1) * 7, 6 + k * 7.5, -5), Vector3.new(5, 1.2, 3), rgb(220, 245, 255), Enum.Material.Ice, "Ledge")
+	-- marches de 5,6 studs (un saut fait environ 7) : l'escalade est réellement faisable
+	for k = 0, 11 do
+		Build.Box(m, fcf * CFrame.new(((k % 3) - 1) * 6, 4 + k * 5.6, -5.5), Vector3.new(5, 1.2, 3.5), rgb(220, 245, 255), Enum.Material.Ice, "Ledge")
 	end
 	-- Le Lac Miroir et le Dragon pris dans la glace
 	local core = ctx.island.subzones[2].offset

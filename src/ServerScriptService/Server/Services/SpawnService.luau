@@ -78,6 +78,23 @@ function SpawnService:SpawnWild(heroId: string, pos: Vector3, opts: { [string]: 
 	e.anchor:SetAttribute("Rarity", def.rarity)
 	e.anchor:SetAttribute("Island", def.island)
 	alive[heroId] = e
+	-- apparition : colonne de lumière à la couleur de la rareté (bible §14), visible de loin
+	local column = Instance.new("Part")
+	column.Name = "SpawnColumn"
+	column.Shape = Enum.PartType.Cylinder
+	column.Size = Vector3.new(160, 6, 6)
+	column.CFrame = CFrame.new(pos + Vector3.new(0, 80, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	column.Anchored = true
+	column.CanCollide = false
+	column.CanQuery = false
+	column.CanTouch = false
+	column.Material = Enum.Material.Neon
+	column.Color = r.color
+	column.Transparency = 0.35
+	column.Parent = workspace
+	task.delay(4, function()
+		column:Destroy()
+	end)
 	-- annonces : Épique et plus sur l'île, Légendaire et plus à tout le serveur (+ icône carte)
 	local Ann = Registry.Get("AnnouncementService")
 	if Rarities.AtLeast(def.rarity, "Legendary") or o.announce == "server" then
@@ -240,7 +257,24 @@ function SpawnService:TrySchedule()
 			if now >= schedule[id] and not alive[id] then
 				schedule[id] = now + interval
 				local isl = World:Island(def.island)
-				local pts = isl and isl.heroSpawns[def.obtain.subzone or "Entry"]
+				local sub = def.obtain.subzone or "Entry"
+				if def.obtain.subzones then
+					sub = def.obtain.subzones[math.random(1, #def.obtain.subzones)]
+				end
+				local pts = isl and isl.heroSpawns[sub]
+				if def.obtain.rooftop and isl and isl.special and isl.special.Rooftops then
+					-- sur les toits de la sous-zone (Kaïro : toits du District Prisme)
+					local c = Islands.SubZoneCenter(def.island, sub)
+					local roofs = {}
+					for _, rp in isl.special.Rooftops do
+						if Vector2.new(rp.X - c.X, rp.Z - c.Z).Magnitude < 180 then
+							table.insert(roofs, rp + Vector3.new(0, 3, 0))
+						end
+					end
+					if #roofs > 0 then
+						pts = roofs
+					end
+				end
 				if pts and #pts > 0 then
 					local pos = pts[math.random(1, #pts)]
 					local rare = Rarities.AtLeast(def.rarity, "Epic")
@@ -248,7 +282,7 @@ function SpawnService:TrySchedule()
 						local mut = stormMutation()
 						-- coupure de courant : les héros qui apparaissent dans le quartier éteint
 						-- ont une chance de mutation « Néon » plus élevée (bible §7)
-						if not mut and def.island == "Neon" and Registry.Get("IslandEventService"):BlackoutZone() == (def.obtain.subzone or "Entry") and math.random() < 0.25 then
+						if not mut and def.island == "Neon" and Registry.Get("IslandEventService"):BlackoutZone() == sub and math.random() < 0.25 then
 							mut = "Neon"
 						end
 						self:SpawnWild(id, pos, { mut = mut, despawn = if rare then 420 else 240 })

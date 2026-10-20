@@ -3,6 +3,7 @@
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 
 local EntityMotion = {}
 
@@ -58,6 +59,16 @@ function EntityMotion.StepToward(anchor: BasePart, target: Vector3, speed: numbe
 	end
 	local step = math.min(speed * dt, dist - stop)
 	local nextPos = pos + d.Unit * step
+	-- murs de compétence (Mur de racines, Rempart gelé) : les ennemis ne les traversent pas
+	for _, w in CollectionService:GetTagged("SkillWall") do
+		if w:IsA("BasePart") then
+			local lp = w.CFrame:PointToObjectSpace(nextPos)
+			if math.abs(lp.X) <= w.Size.X / 2 + 1.5 and math.abs(lp.Z) <= w.Size.Z / 2 + 2 then
+				anchor.CFrame = CFrame.lookAt(pos, pos + d.Unit)
+				return dist
+			end
+		end
+	end
 	local g = EntityMotion.Ground(nextPos)
 	if g then
 		if math.abs(g.Y + hover - pos.Y) > 9 then
