@@ -27,6 +27,8 @@ local StealService = {}
 
 local duels: { any } = {}
 local camps: { [string]: { heroes: { string? }, refill: { number }, cleared: { [Player]: number } } } = {}
+-- héros qui viennent de repousser un vol : bonus temporaire (victime -> uid -> fin)
+local defenderBuffs: { [Player]: { [string]: number } } = {}
 local intruders: { [string]: number } = {}
 
 local ROLE_ATTACK = {
@@ -143,7 +145,10 @@ function StealService:StartDuel(attacker: Player, pedestal: BasePart): (boolean,
 	local def = Heroes.Get(heroInst.id)
 	local r = Rarities.Get(def.rarity)
 	local Hero = Registry.Get("HeroService")
-	local atkPower = Hero:TeamPower(attacker)
+	-- comparaison à armes égales : le leader de l'attaquant face au héros exposé (le plafond « 2 fois plus
+	-- fort » de la bible ne doit pas opposer toute une équipe à un seul héros)
+	local leader = Hero:Leader(attacker)
+	local atkPower = if leader then HeroMath.Power(leader) else Hero:TeamPower(attacker)
 	local defPower = HeroMath.Power(heroInst)
 	local ad = data(attacker)
 	local hpMult = 1
@@ -162,6 +167,11 @@ function StealService:StartDuel(attacker: Player, pedestal: BasePart): (boolean,
 		hpMult = 0.45 -- premier vol au camp : réussite quasi garantie pour apprendre
 	end
 	local refTime = StealLogic.ReferenceTime(atkPower, defPower)
+	-- héros qui vient de repousser un vol : plus résistant pendant quelques minutes
+	local buffUntil = victim and heroInst.uid and defenderBuffs[victim] and defenderBuffs[victim][heroInst.uid]
+	if buffUntil and buffUntil > os.clock() then
+		guardianBonus *= Steal.FailedDefenderBuff
+	end
 	local center = pedestal.Position
 	local arena = arenaFor(center)
 	local Combat = Registry.Get("CombatService")
@@ -291,7 +301,7 @@ function StealService:EndDuel(duel: any, outcome: string)
 	if outcome == "win" then
 		local t = os.clock() - duel.startedAt
 		local crit = math.random() < (Steal.CriticalChance + (if Storm:IsActive() then Storms.Effects.criticalStealBonus else 0))
-		tier = StealLogic.Tier(t, duel.refTime, duel.atkPower, duel.defPower, crit)
+		tier = StealLogic.Tier(t, duel.refTime, duel.atkPower, duel.defPower, crit, duel.camp ~= nil)
 		if tier == "Gold" and victim then
 			local vd = data(victim)
 			if vd and os.time() - (vd.stats.lastLoss or 0) < Steal.LossWindow then
@@ -329,6 +339,10 @@ function StealService:EndDuel(duel: any, outcome: string)
 		if duel.plotIndex then
 			State.Get(attacker).failedBases[duel.plotIndex] = os.clock() + Steal.FailCooldown
 		end
+		if victim and duel.hero.uid then
+			defenderBuffs[victim] = defenderBuffs[victim] or {}
+			defenderBuffs[victim][duel.hero.uid] = os.clock() + Steal.FailedDefenderBuffTime
+		end
 		if attacker.Parent then
 			notify(attacker, "Vol raté… Réessaie dans 2 minutes.", "Error")
 		end
@@ -352,6 +366,7 @@ function StealService:Reward(duel: any, tier: string)
 	if ad then
 		ad.stats.steals += 1
 	end
+	Storm:AddRecap(attacker, "steals", 1)
 	Quest:Track(attacker, "StealSuccess", { npc = duel.camp ~= nil })
 	Quest:OnSteal(attacker, victim, tier)
 	local tierName = if tier == "Gold" then "Or" elseif tier == "Silver" then "Argent" else "Bronze"
@@ -360,6 +375,7 @@ function StealService:Reward(duel: any, tier: string)
 		Quest:Track(attacker, "StealGold", {})
 		if ad then
 			ad.stats.goldSteals += 1
+			Registry.Get("AnnouncementService"):AddSeasonGold(attacker)
 		end
 		if duel.revenge and victim then
 			-- vengeance réussie : on récupère son héros
@@ -443,10 +459,6 @@ function StealService:Transfer(thief: Player, duel: any): (string | false)?
 		if vd and vd.heroes[h.uid] then
 			Hero:RemoveHero(victim, h.uid)
 			vd.stats.lastLoss = os.time()
-			local td = data(thief)
-			if td then
-				vd.revenge[tostring(thief.UserId)] = { untilTime = os.time() + Steal.RevengeWindow, heroId = h.id }
-			end
 		else
 			-- la victime a quitté le serveur ou le héros n'existe plus : on annule pour éviter toute duplication
 			returnToPedestal(duel)
@@ -457,6 +469,13 @@ function StealService:Transfer(thief: Player, duel: any): (string | false)?
 		Registry.Get("BaseService"):Refresh(victim)
 	end
 	local uid = Hero:AddHero(thief, h.id, { lvl = h.lvl, stars = h.stars, mut = h.mut, source = "Steal" })
+	if victim then
+		local vd = data(victim)
+		if vd then
+			-- la vengeance vise ce héros précis (uid), pas une autre copie du voleur
+			vd.revenge[tostring(thief.UserId)] = { untilTime = os.time() + Steal.RevengeWindow, heroId = h.id, uid = uid }
+		end
+	end
 	return uid
 end
 
@@ -467,8 +486,19 @@ function StealService:RevengeRecover(avenger: Player, thief: Player)
 	if not (ad and td and rv) then
 		return
 	end
+	-- le héros volé lui-même ; sinon (fusionné, échangé…) la copie la moins investie du même héros
+	local pick = rv.uid and td.heroes[rv.uid] and td.heroes[rv.uid].id == rv.heroId and rv.uid or nil
+	if not pick then
+		local best
+		for uid, h in td.heroes do
+			if h.id == rv.heroId and (not best or h.stars < td.heroes[best].stars or (h.stars == td.heroes[best].stars and h.lvl < td.heroes[best].lvl)) then
+				best = uid
+			end
+		end
+		pick = best
+	end
 	for uid, h in td.heroes do
-		if h.id == rv.heroId then
+		if uid == pick then
 			local copy = table.clone(h)
 			Registry.Get("HeroService"):RemoveHero(thief, uid)
 			Registry.Get("HeroService"):AddHero(avenger, copy.id, { lvl = copy.lvl, stars = copy.stars, mut = copy.mut, source = "Revenge" })
@@ -560,6 +590,7 @@ end
 -- ============================================================================ Boucles
 function StealService:Init()
 	Players.PlayerRemoving:Connect(function(p)
+		defenderBuffs[p] = nil
 		local s = State.Get(p)
 		if s.duel then
 			-- l'attaquant part : échec ; la victime qui défendait part : duel annulé
@@ -654,10 +685,14 @@ function StealService:Start()
 			end
 		end
 		-- recharge des camps
+		local Storm = Registry.Get("StormService")
 		for id, camp in camps do
 			local changed = false
+			-- pendant une tempête, un camp entamé ne se recharge pas tant qu'il n'a pas été vidé :
+			-- le coffre « premier qui le vide » devient atteignable
+			local hold = Storm:IsActive() and camp.clearedStorm ~= Storm:StormIndex()
 			for i = 1, 4 do
-				if not camp.heroes[i] and (camp.refill[i] or 0) < now then
+				if not hold and not camp.heroes[i] and (camp.refill[i] or 0) < now then
 					camp.heroes[i] = rollCampHero(id)
 					changed = true
 				end

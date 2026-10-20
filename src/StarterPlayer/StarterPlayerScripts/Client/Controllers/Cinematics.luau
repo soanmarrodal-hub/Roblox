@@ -192,11 +192,30 @@ end
 
 -- ============================================================================ Introduction
 local INTRO_LINES = {
-	"Il y a mille ans, une étoile s'est brisée au-dessus de l'océan…",
-	"Ses éclats ont donné vie à des îles flottantes et à leurs héros.",
-	"Aujourd'hui, les explorateurs du Nexus Astral les capturent, les exposent… et se les volent.",
-	"Bienvenue, voyageur. Ta légende commence ici.",
+	"Une étoile s'est brisée : ses éclats ont donné vie aux îles et à leurs héros.",
+	"Ici, les explorateurs capturent les héros, les exposent… et se les volent.",
+	"Bienvenue au Nexus Astral, voyageur. Ta légende commence ici.",
 }
+
+-- Base du joueur présent qui produit le plus (montrée pendant le tour de la plaza), sinon nil.
+local function topBasePosition(): Vector3?
+	local best, bestProd = nil, -1
+	for _, p in Players:GetPlayers() do
+		local prod = p:GetAttribute("Production") or 0
+		if p:GetAttribute("PlotIndex") and prod > bestProd then
+			best, bestProd = p, prod
+		end
+	end
+	if not best then
+		return nil
+	end
+	for _, spot in CollectionService:GetTagged("StatueSpot") do
+		if spot:GetAttribute("PlotIndex") == best:GetAttribute("PlotIndex") and spot:IsA("BasePart") then
+			return spot.Position
+		end
+	end
+	return nil
+end
 
 local function playIntro()
 	local cam = Workspace.CurrentCamera
@@ -205,12 +224,33 @@ local function playIntro()
 	end
 	C.HUD.SetVisible(false)
 	cam.CameraType = Enum.CameraType.Scriptable
+	-- Arrivée en 6 s (bible §4) : le vortex s'ouvre, une colonne de lumière dépose l'avatar près de la
+	-- Flèche, puis tour rapide de la plaza (meilleure base du serveur, portes des îles).
 	local hub = Islands.HubCenter
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local landing = if hrp then hrp.Position else hub + Vector3.new(0, 4, 60)
+	local bestBase = topBasePosition() or (hub + Islands.Direction(Islands.Get("Desert").angle) * 200)
+	local column = Instance.new("Part")
+	column.Name = "ArrivalColumn"
+	column.Anchored = true
+	column.CanCollide = false
+	column.CanQuery = false
+	column.Material = Enum.Material.Neon
+	column.Color = Color3.fromRGB(120, 200, 255)
+	column.Shape = Enum.PartType.Cylinder
+	column.Size = Vector3.new(260, 7, 7)
+	column.CFrame = CFrame.new(landing + Vector3.new(0, 130, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	column.Transparency = 0.25
+	column.Parent = Workspace
+	TweenService:Create(column, TweenInfo.new(2.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1, Size = Vector3.new(260, 1, 1) }):Play()
+	task.delay(3, function()
+		column:Destroy()
+	end)
 	local shots = {
-		{ from = hub + Vector3.new(0, 420, 900), to = hub, t = 6 },
-		{ from = Islands.Center("Forest") + Vector3.new(160, 140, 240), to = Islands.Center("Forest"), t = 5 },
-		{ from = Islands.Center("Volcano") + Vector3.new(-200, 220, 120), to = Islands.Center("Volcano"), t = 5 },
-		{ from = hub + Vector3.new(80, 60, 160), to = hub + Vector3.new(0, 20, 0), t = 5 },
+		{ from = hub + Vector3.new(0, 340, 60), to = landing, t = 2.2 },
+		{ from = bestBase + Vector3.new(0, 70, 0) + (hub - bestBase).Unit * -60, to = bestBase, t = 2.1 },
+		{ from = hub + Islands.Direction(Islands.Get("Desert").angle) * 120 + Vector3.new(0, 45, 0), to = hub + Islands.Direction(Islands.Get("Desert").angle) * 300, t = 1.7 },
 	}
 	local bars = {}
 	for _, top in { true, false } do

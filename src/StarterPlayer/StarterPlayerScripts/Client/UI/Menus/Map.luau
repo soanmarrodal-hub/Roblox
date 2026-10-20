@@ -4,7 +4,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared.Net)
@@ -158,13 +157,26 @@ function Page.Build(body: Frame, ctx: any)
 				end
 			end
 		end
-		for _, e in CollectionService:GetTagged("Entity") do
-			if e:GetAttribute("MapIcon") and e:IsA("BasePart") then
-				local key = "E" .. tostring(e:GetAttribute("EntityId"))
-				seen[key] = true
-				local boss = e:GetAttribute("Kind") == "Boss"
-				local m = mark(key, if boss then "☠" else "★", if boss then Theme.Color.Error else Theme.Color.Gold, 22)
-				m.Position = toMap(e.Position)
+		-- marqueurs publiés par le serveur (indépendants du streaming)
+		local markers = ReplicatedStorage:FindFirstChild("MapMarkers")
+		if markers then
+			local mine = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			for _, v in markers:GetChildren() do
+				if v:IsA("Vector3Value") and not seen[v.Name] then
+					local kind = v:GetAttribute("Kind")
+					if kind == "Carrier" then
+						if v.Name ~= "P" .. player.UserId and not ctx.C.HUD.CarrierConcealed(v.Value, mine and mine.Position) then
+							seen[v.Name] = true
+							local m = mark(v.Name, "●", Theme.Color.Warning, 14)
+							m.Position = toMap(v.Value)
+						end
+					else
+						seen[v.Name] = true
+						local boss = kind == "Boss"
+						local m = mark(v.Name, if boss then "☠" else "★", if boss then Theme.Color.Error else Theme.Color.Gold, 22)
+						m.Position = toMap(v.Value)
+					end
+				end
 			end
 		end
 		for key, m in marks do

@@ -8,7 +8,7 @@ export type QuestDef = {
 	event: string,
 	goal: number,
 	filter: { [string]: any }?,
-	reward: { gems: number?, crystals: number?, energy: number?, shards: number?, xp: number? },
+	reward: { gems: number?, crystals: number?, energy: number?, shards: number?, xp: number?, purification: number? },
 }
 
 local Quests = {}
@@ -35,7 +35,6 @@ Quests.DailyPool = {
 	{ id = "D_Steal", text = "Réussis 2 vols (Bronze ou mieux)", event = "StealSuccess", goal = 2, reward = { gems = 20, crystals = 1 } },
 	{ id = "D_Summon", text = "Invoque 5 héros", event = "Summon", goal = 5, reward = { gems = 15 } },
 	{ id = "D_Level", text = "Améliore des héros 5 fois", event = "LevelUp", goal = 5, reward = { gems = 10 } },
-	{ id = "D_Intercept", text = "Intercepte un voleur", event = "Intercept", goal = 1, reward = { gems = 25 } },
 	{ id = "D_Guardian", text = "Bats un gardien de sanctuaire", event = "GuardianKill", goal = 1, reward = { gems = 20 } },
 	{ id = "D_Storm", text = "Participe à une tempête", event = "StormJoin", goal = 1, reward = { gems = 15, crystals = 1 } },
 } :: { QuestDef }
@@ -44,7 +43,9 @@ Quests.WeeklyPool = {
 	{ id = "W_Epic", text = "Capture 10 héros Épiques ou mieux", event = "Capture", goal = 10, filter = { minRarity = "Epic" }, reward = { gems = 150, crystals = 3 } },
 	{ id = "W_Gold", text = "Réussis 3 vols en Or", event = "StealGold", goal = 3, reward = { gems = 150, crystals = 2 } },
 	{ id = "W_Boss", text = "Participe à 5 combats de boss mondiaux", event = "BossContribution", goal = 5, reward = { gems = 200, crystals = 3 } },
-	{ id = "W_Mut", text = "Obtiens 2 mutations", event = "Mutation", goal = 2, reward = { gems = 120, crystals = 2 } },
+	{ id = "W_Mut", text = "Obtiens 2 mutations", event = "Mutation", goal = 2, reward = { gems = 120, crystals = 2, purification = 1 } },
+	-- (interception déplacée des quotidiennes : elle dépend d'un vol d'un autre joueur)
+	{ id = "W_Intercept", text = "Intercepte 2 voleurs", event = "Intercept", goal = 2, reward = { gems = 100, crystals = 1 } },
 	{ id = "W_Mobs", text = "Bats 400 ennemis", event = "MobKill", goal = 400, reward = { gems = 120 } },
 } :: { QuestDef }
 

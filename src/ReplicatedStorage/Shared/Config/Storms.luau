@@ -23,31 +23,32 @@ Storms.GreatDuration = 15 * 60
 -- Grandes Tempêtes du week-end : samedi (7) et dimanche (1), heures UTC.
 Storms.GreatSchedule = { days = { 7, 1 }, hoursUTC = { 15, 19 } }
 
+-- poids totalisant 100 : 5 tempêtes communes à 17,2 %, Pluie d'étoiles 1 sur 10, Éclipse 1 sur 25 (bible §17)
 Storms.List = {
 	EtherBloom = {
-		id = "EtherBloom", name = "Floraison d'Éther", weight = 20, mutation = "Sylvan", boss = "Forest", bossMod = 1,
+		id = "EtherBloom", name = "Floraison d'Éther", weight = 17.2, mutation = "Sylvan", boss = "Forest", bossMod = 1,
 		sky = { top = Color3.fromRGB(120, 210, 140), horizon = Color3.fromRGB(255, 225, 140), ambient = Color3.fromRGB(90, 130, 90), fog = Color3.fromRGB(200, 240, 190), tint = Color3.fromRGB(230, 255, 220) },
 		particles = Color3.fromRGB(255, 170, 210),
 	},
 	GoldenRain = {
-		id = "GoldenRain", name = "Pluie dorée", weight = 20, mutation = "Golden", boss = "Desert", bossMod = 1,
+		id = "GoldenRain", name = "Pluie dorée", weight = 17.2, mutation = "Golden", boss = "Desert", bossMod = 1,
 		sky = { top = Color3.fromRGB(255, 190, 90), horizon = Color3.fromRGB(255, 225, 160), ambient = Color3.fromRGB(140, 110, 60), fog = Color3.fromRGB(255, 215, 150), tint = Color3.fromRGB(255, 240, 200) },
 		particles = Color3.fromRGB(255, 215, 80),
 	},
 	NeonStorm = {
-		id = "NeonStorm", name = "Orage néon", weight = 20, mutation = "Neon", boss = "Neon", bossMod = 1,
+		id = "NeonStorm", name = "Orage néon", weight = 17.2, mutation = "Neon", boss = "Neon", bossMod = 1,
 		sky = { top = Color3.fromRGB(80, 30, 140), horizon = Color3.fromRGB(255, 60, 200), ambient = Color3.fromRGB(90, 50, 140), fog = Color3.fromRGB(110, 50, 170), tint = Color3.fromRGB(230, 210, 255) },
 		particles = Color3.fromRGB(35, 213, 255),
 		clock = 0.5,
 	},
 	PolarAurora = {
-		id = "PolarAurora", name = "Aurore polaire", weight = 20, mutation = "Frosted", boss = "Glacier", bossMod = 1,
+		id = "PolarAurora", name = "Aurore polaire", weight = 17.2, mutation = "Frosted", boss = "Glacier", bossMod = 1,
 		sky = { top = Color3.fromRGB(20, 40, 90), horizon = Color3.fromRGB(110, 255, 200), ambient = Color3.fromRGB(70, 100, 150), fog = Color3.fromRGB(80, 120, 180), tint = Color3.fromRGB(215, 240, 255) },
 		particles = Color3.fromRGB(160, 255, 220),
 		clock = 23,
 	},
 	Eruption = {
-		id = "Eruption", name = "Éruption", weight = 20, mutation = "Magma", boss = "Volcano", bossMod = 1,
+		id = "Eruption", name = "Éruption", weight = 17.2, mutation = "Magma", boss = "Volcano", bossMod = 1,
 		sky = { top = Color3.fromRGB(150, 40, 25), horizon = Color3.fromRGB(255, 120, 50), ambient = Color3.fromRGB(150, 60, 40), fog = Color3.fromRGB(130, 50, 35), tint = Color3.fromRGB(255, 215, 200) },
 		particles = Color3.fromRGB(255, 120, 40),
 		clock = 18,

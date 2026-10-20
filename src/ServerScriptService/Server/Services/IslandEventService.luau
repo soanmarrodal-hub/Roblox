@@ -67,7 +67,7 @@ end
 -- ============================================================================ Éruption : météores et cristaux
 local crystalFolder: Folder
 
-local function spawnCrystal(pos: Vector3)
+local function spawnCrystal(pos: Vector3, label: string?)
 	local p = Instance.new("Part")
 	p.Name = "MagmaCrystal"
 	p.Size = Vector3.new(2.2, 3.4, 2.2)
@@ -83,7 +83,7 @@ local function spawnCrystal(pos: Vector3)
 	l.Parent = p
 	p:SetAttribute("Kind", "MagmaCrystal")
 	p:SetAttribute("Island", "Volcano")
-	p:SetAttribute("Label", "Cristal de magma")
+	p:SetAttribute("Label", label or "Cristal de magma")
 	p:AddTag("Interactable")
 	p.Parent = crystalFolder
 	task.delay(CRYSTAL_LIFE, function()
@@ -270,6 +270,34 @@ function IslandEventService:Start()
 			environmentTick()
 		end
 	end)
+	-- Forge des Titans : le marteau fantôme frappe toutes les 30 s (heure serveur, comme l'animation
+	-- client) et projette des étincelles qui donnent des Éclats de magma
+	local info = Registry.Get("WorldService"):Island("Volcano")
+	local forge: CFrame? = info and info.special and info.special.Forge
+	if forge then
+		task.spawn(function()
+			while true do
+				task.wait(30 - (Workspace:GetServerTimeNow() % 30) + 0.05)
+				local someone = false
+				for _, p in Players:GetPlayers() do
+					local root = Registry.Get("CombatService").RootOf(p)
+					if root and (root.Position - forge.Position).Magnitude < 140 then
+						someone = true
+					end
+				end
+				if someone then
+					for _ = 1, math.random(3, 5) do
+						local a = math.random() * math.pi * 2
+						local r = 12 + math.random() * 20
+						local g = Motion.Ground(forge.Position + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r), 20)
+						if g then
+							spawnCrystal(g, "Étincelle de la forge")
+						end
+					end
+				end
+			end
+		end)
+	end
 end
 
 return IslandEventService

@@ -3,6 +3,7 @@
 -- Toutes les entrées sont validées (types, distances, limites de fréquence).
 
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
@@ -68,6 +69,11 @@ H.IntroDone = function(p)
 	return true, nil
 end
 
+-- Mur des légendes : derniers exploits du serveur, classements du serveur et de la saison
+H.Legends = function(_p)
+	return true, Registry.Get("AnnouncementService"):LegendsData()
+end
+
 H.TalkAstra = function(p)
 	local d = data(p)
 	if not d then
@@ -92,9 +98,9 @@ end
 H.Undisplay = function(p, a)
 	local slot = num(a.slot)
 	if slot then
-		Registry.Get("HeroService"):Undisplay(p, math.floor(slot))
+		return Registry.Get("HeroService"):Undisplay(p, math.floor(slot))
 	end
-	return true, nil
+	return false, nil
 end
 H.AutoDisplay = function(p)
 	Registry.Get("HeroService"):AutoDisplay(p)
@@ -318,7 +324,8 @@ H.DebugGrant = function(p)
 end
 
 -- ============================================================================ Bouton contextuel
-local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true }
+local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true, Monorail = true }
+local monorailWaiting: { [Player]: boolean } = {}
 
 local function interact(p: Player, kind: string, target: Instance?, extra: any)
 	local Ann = Registry.Get("AnnouncementService")
@@ -439,6 +446,27 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 			Registry.Get("ProgressionService"):Grant(p, { gems = 15, shards = 40, island = "Desert" }, "treasure")
 			Ann:Notify(p, "Tu résous l'énigme de la Pyramide : trésor obtenu !", "Success")
 		end
+	elseif kind == "Monorail" then
+		if target and near(p, target, 10) and not monorailWaiting[p] then
+			if State.Get(p).carrying then
+				Ann:Notify(p, "Les porteurs de héros ne peuvent pas prendre le monorail.", "Error")
+				return
+			end
+			local dest = target:GetAttribute("Next")
+			if typeof(dest) ~= "Vector3" then
+				return
+			end
+			-- départs toutes les 40 s (heure serveur, comme le wagon)
+			local wait = 40 - (Workspace:GetServerTimeNow() % 40)
+			monorailWaiting[p] = true
+			Ann:Notify(p, string.format("Départ du monorail dans %d s : reste sur le quai.", math.ceil(wait)), "Info")
+			task.delay(wait, function()
+				monorailWaiting[p] = nil
+				if p.Parent and near(p, target, 14) and not State.Get(p).carrying then
+					Registry.Get("ProgressionService"):TeleportTo(p, CFrame.new(dest + Vector3.new(0, 4, 0)))
+				end
+			end)
+		end
 	elseif kind == "MagmaCrystal" then
 		if target and near(p, target, 10) then
 			Registry.Get("IslandEventService"):PickCrystal(p, target :: BasePart)
@@ -487,6 +515,7 @@ function ActionService:Init()
 		rate[p] = nil
 		menhirSeq[p] = nil
 		menhirDone[p] = nil
+		monorailWaiting[p] = nil
 	end)
 end
 

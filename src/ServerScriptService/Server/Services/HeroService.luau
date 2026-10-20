@@ -157,10 +157,21 @@ function HeroService:RemoveHero(player: Player, uid: string)
 	sync(player)
 end
 
+-- Socle verrouillé par un vol : duel en cours ou héros en route avec le voleur. Le héros qui s'y trouve
+-- ne peut ni être retiré, ni échangé, ni mis au coffre (sinon la victime annulerait un vol en Or).
+local function slotLocked(player: Player, slot: any): boolean
+	local plot = Registry.Get("BaseService"):PlotOf(player)
+	local ped = plot and slot and plot.pedestals[tonumber(slot)]
+	return ped ~= nil and (ped:GetAttribute("InTransit") == true or ped:GetAttribute("Dueling") ~= nil)
+end
+
 function HeroService:Display(player: Player, uid: string, slot: number): (boolean, string?)
 	local d = data(player)
 	if not d or not d.heroes[uid] then
 		return false, "Héros introuvable"
+	end
+	if slotLocked(player, slot) or slotLocked(player, isDisplayed(d, uid)) then
+		return false, "Ce socle est en plein vol !"
 	end
 	local count = Registry.Get("BaseService"):PedestalCount(player)
 	if slot < 1 or slot > count then
@@ -180,14 +191,18 @@ function HeroService:Display(player: Player, uid: string, slot: number): (boolea
 	return true, nil
 end
 
-function HeroService:Undisplay(player: Player, slot: number)
+function HeroService:Undisplay(player: Player, slot: number): (boolean, string?)
 	local d = data(player)
 	if not d then
-		return
+		return false, nil
+	end
+	if slotLocked(player, slot) then
+		return false, "Ce socle est en plein vol !"
 	end
 	d.displayed[tostring(slot)] = nil
 	Registry.Get("BaseService"):Refresh(player)
 	sync(player)
+	return true, nil
 end
 
 -- Expose automatiquement les meilleurs producteurs.
@@ -195,6 +210,11 @@ function HeroService:AutoDisplay(player: Player)
 	local d = data(player)
 	if not d then
 		return
+	end
+	for slot in d.displayed do
+		if slotLocked(player, slot) then
+			return
+		end
 	end
 	local list = {}
 	for uid, h in d.heroes do
@@ -228,6 +248,9 @@ function HeroService:SetVault(player: Player, uid: string, on: boolean): (boolea
 			return false, "Coffre plein (améliore-le pour plus d'emplacements)"
 		end
 		local slot = isDisplayed(d, uid)
+		if slot and slotLocked(player, slot) then
+			return false, "Ce socle est en plein vol !"
+		end
 		if slot then
 			d.displayed[slot] = nil
 		end

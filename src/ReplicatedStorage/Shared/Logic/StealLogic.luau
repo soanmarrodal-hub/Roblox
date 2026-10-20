@@ -13,8 +13,9 @@ function StealLogic.ReferenceTime(attackerPower: number, defenderPower: number):
 	return math.clamp(t, Steal.ReferenceMin, math.min(Steal.ReferenceMax, Steal.DuelMaxTime))
 end
 
--- Palier obtenu selon le temps de victoire (nil = échec). Le plafond anti-frustration est appliqué.
-function StealLogic.Tier(victoryTime: number?, refTime: number, attackerPower: number, defenderPower: number, critical: boolean?): string?
+-- Palier obtenu selon le temps de victoire (nil = échec). Le plafond anti-frustration est appliqué,
+-- sauf dans les camps de PNJ (noCap : personne n'y perd rien).
+function StealLogic.Tier(victoryTime: number?, refTime: number, attackerPower: number, defenderPower: number, critical: boolean?, noCap: boolean?): string?
 	if not victoryTime or victoryTime > refTime then
 		return nil
 	end
@@ -33,7 +34,7 @@ function StealLogic.Tier(victoryTime: number?, refTime: number, attackerPower: n
 			tier = "Gold"
 		end
 	end
-	if attackerPower > defenderPower * Steal.MaxPowerRatioForGold then
+	if not noCap and attackerPower > defenderPower * Steal.MaxPowerRatioForGold then
 		tier = "Bronze"
 	end
 	return tier

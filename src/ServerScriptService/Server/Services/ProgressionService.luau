@@ -67,6 +67,9 @@ function ProgressionService:Grant(player: Player, reward: { [string]: any }, rea
 	if reward.gems then
 		d.gems += math.floor(reward.gems)
 	end
+	if reward.purification then
+		d.purification = (d.purification or 0) + math.floor(reward.purification)
+	end
 	if reward.crystals then
 		d.crystals += math.floor(reward.crystals)
 	end

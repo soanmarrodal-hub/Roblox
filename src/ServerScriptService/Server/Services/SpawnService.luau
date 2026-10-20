@@ -311,6 +311,13 @@ end
 
 function SpawnService:OnStormStart(stormId: string)
 	table.clear(stormSpecial)
+	-- apparitions deux fois plus fréquentes : les échéances déjà prévues sont rapprochées d'autant
+	local now = os.clock()
+	for id, at in schedule do
+		if at > now then
+			schedule[id] = now + (at - now) / Storms.Effects.wildSpawnMultiplier
+		end
+	end
 	if stormId == "PolarAurora" then
 		task.delay(60, function()
 			if alive.Kryovane then

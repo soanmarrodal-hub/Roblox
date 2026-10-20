@@ -99,8 +99,9 @@ function ShopService:CanBuy(player: Player, key: string): (boolean, string?)
 		if d.shield.day == today and d.shield.count >= Economy.BaseShieldPerDay then
 			return false, "2 boucliers par jour maximum"
 		end
-		if Registry.Get("StormService"):IsActive() then
-			return false, "Inactif pendant les tempêtes"
+		local st = Registry.Get("StormService"):State()
+		if st == "Active" or st == "Announce" then
+			return false, "Le bouclier est inactif pendant les tempêtes : attends la fin de celle-ci"
 		end
 	end
 	return true, nil
@@ -150,8 +151,10 @@ function ShopService:Buy(player: Player, kind: string, key: string): (boolean, s
 			if (c.gems or 0) <= 0 then
 				return false, "Disponible uniquement dans un pack"
 			end
-			if not Registry.Get("ProgressionService"):Spend(player, "Gems", c.gems) then
-				return false, c.gems .. " gemmes requises"
+			local offerKey, offerPrice = Shop.DailyOffer()
+			local price = if offerKey == key then offerPrice else c.gems
+			if not Registry.Get("ProgressionService"):Spend(player, "Gems", price) then
+				return false, price .. " gemmes requises"
 			end
 			d.cosmetics.owned[key] = true
 		end

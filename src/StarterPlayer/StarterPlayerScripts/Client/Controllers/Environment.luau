@@ -323,16 +323,17 @@ local function stepAnim(a: Anim, t: number, dt: number)
 	elseif k == "Monorail" then
 		local center = inst:GetAttribute("Center") or a.base.Position
 		local r = inst:GetAttribute("Radius") or 60
-		local ang = t * 0.12
+		local ang = (Workspace:GetServerTimeNow() % 120) / 120 * math.pi * 2 -- un tour en 2 min : une station toutes les 40 s
 		local pos = center + Vector3.new(math.cos(ang) * r, 0, math.sin(ang) * r)
 		local tangent = Vector3.new(-math.sin(ang), 0, math.cos(ang))
 		setPivot(inst, CFrame.lookAt(pos, pos + tangent))
 	elseif k == "GhostHammer" then
+		-- un coup toutes les 30 s, calé sur l'heure du serveur (les étincelles apparaissent au même moment)
 		local rest = inst:GetAttribute("Rest") or a.base
-		local cyc = (t * 0.5) % 1
-		local lift = if cyc < 0.7 then math.sin(cyc / 0.7 * math.pi * 0.5) * 14 else (1 - (cyc - 0.7) / 0.3) * 14
+		local cyc = (Workspace:GetServerTimeNow() % 30) / 30
+		local lift = if cyc < 0.94 then math.sin(cyc / 0.94 * math.pi * 0.5) * 14 else (1 - (cyc - 0.94) / 0.06) * 14
 		setPivot(inst, rest * CFrame.new(0, lift, 0) * CFrame.Angles(0, 0, math.rad(lift * 2)))
-		if cyc > 0.98 and not a.data then
+		if cyc > 0.995 and not a.data then
 			a.data = true
 			if C and C.Combat then
 				local cam = Workspace.CurrentCamera

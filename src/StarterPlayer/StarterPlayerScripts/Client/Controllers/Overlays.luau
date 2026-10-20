@@ -226,6 +226,9 @@ local function onStormRecap(r)
 	if (r.steals or 0) > 0 then
 		table.insert(parts, r.steals .. " vol(s)")
 	end
+	if (r.bossDamage or 0) > 0 then
+		table.insert(parts, Format.Short(r.bossDamage) .. " dégâts au boss")
+	end
 	local text = if #parts > 0 then "Bilan de la tempête : " .. table.concat(parts, ", ") else "La tempête se dissipe…"
 	C.HUD.Toast(text, "Info")
 end

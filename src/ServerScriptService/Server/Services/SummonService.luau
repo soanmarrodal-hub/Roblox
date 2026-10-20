@@ -9,8 +9,8 @@ local Shared = ReplicatedStorage.Shared
 local Banners = require(Shared.Config.Banners)
 local Heroes = require(Shared.Config.Heroes)
 local Rarities = require(Shared.Config.Rarities)
+local Islands = require(Shared.Config.Islands)
 local Economy = require(Shared.Config.Economy)
-local Mutations = require(Shared.Config.Mutations)
 local GachaLogic = require(Shared.Logic.GachaLogic)
 local Net = require(Shared.Net)
 local Format = require(Shared.Util.Format)
@@ -60,7 +60,8 @@ function SummonService:Summon(player: Player, bannerId: string, count: number): 
 		-- cristaux d'invocation d'abord (1 cristal = 1 tirage), puis gemmes
 		local fromCrystals = math.min(d.crystals, count)
 		local remaining = count - fromCrystals
-		local gemCost = if remaining >= 10 then banner.cost10 else banner.cost1 * remaining
+		-- x10 : chaque cristal retire un tirage du prix du x10 (le rabais « 10 pour 9 » est conservé)
+		local gemCost = if count >= 10 then math.max(0, banner.cost10 - banner.cost1 * fromCrystals) else banner.cost1 * remaining
 		if remaining > 0 and Prog:Balance(player, "Gems") < gemCost then
 			return false, "Il faut " .. gemCost .. " gemmes ou des cristaux d'invocation"
 		end
@@ -77,13 +78,30 @@ function SummonService:Summon(player: Player, bannerId: string, count: number): 
 	for _ = 1, count do
 		local heroId, rarity = GachaLogic.Roll(bannerId, d.gates, pity, rng)
 		local mut = nil
-		if Storm:IsActive() and rng:NextNumber() < Mutations.ChancePerStorm then
+		if Storm:IsActive() and rng:NextNumber() < Storm:MutationChance() then
 			local m = Storm:FavoredMutation()
 			mut = m and { m } or nil
 		end
-		-- doublon au-delà de 5 étoiles possibles : conversion en fragments et énergie
-		local uid = Hero:AddHero(player, heroId, { mut = mut, source = "Summon" })
-		table.insert(results, { heroId = heroId, rarity = rarity, uid = uid, mut = mut and mut[1] or nil })
+		-- doublon d'un héros déjà à 5 étoiles : conversion en énergie et fragments (pas de place perdue)
+		local maxed = false
+		for _, h in d.heroes do
+			if h.id == heroId and h.stars >= Economy.MaxStars then
+				maxed = true
+				break
+			end
+		end
+		local uid = nil
+		if maxed then
+			local def = Heroes.Get(heroId)
+			local refund = Economy.DuplicateRefund(Rarities.Index(def.rarity), Islands.Get(def.island).multiplier)
+			Prog:Grant(player, { energy = refund.energy, fragments = { [heroId] = refund.fragments } }, "duplicate")
+		else
+			uid = Hero:AddHero(player, heroId, { mut = mut, source = "Summon" })
+		end
+		table.insert(results, { heroId = heroId, rarity = rarity, uid = uid, mut = mut and mut[1] or nil, converted = maxed })
+		if mut and not maxed then
+			Storm:CountMutation(player, mut[1], heroId)
+		end
 		if rarity == "Secret" then
 			Registry.Get("AnnouncementService"):Announce("Secret", player.DisplayName .. " a invoqué " .. Heroes.Get(heroId).name .. " (SECRET) !", { heroId = heroId, rarity = rarity })
 			Workspace:SetAttribute("SecretSkyUntil", Workspace:GetServerTimeNow() + 10)
@@ -108,11 +126,17 @@ function SummonService:StarChoice(player: Player, bannerId: string, heroId: stri
 	local d = data(player)
 	local banner = Banners.List[bannerId]
 	local def = Heroes.List[heroId]
-	if not d or not banner or not banner.island or not def then
+	if not d or not banner or not def then
 		return false, "Choix invalide"
 	end
-	if def.island ~= banner.island or not (def.rarity == "Legendary" or def.rarity == "Mythic") then
+	if not (def.rarity == "Legendary" or def.rarity == "Mythic") then
 		return false, "Seuls les Légendaires et Mythiques de la bannière"
+	end
+	-- héros réellement présent dans la bannière (la Standard puise dans les îles débloquées)
+	local list: { string } = GachaLogic.Pool(bannerId, d.gates)[def.rarity] or {}
+	local inPool = table.find(list, heroId) ~= nil
+	if not inPool then
+		return false, "Ce héros n'est pas dans cette bannière"
 	end
 	local pity = pityOf(d, bannerId)
 	if pity.stars < Banners.StarsForChoice then

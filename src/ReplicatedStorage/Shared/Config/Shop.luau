@@ -7,13 +7,14 @@ local Shop = {}
 Shop.TestPurchasesInStudio = true
 
 Shop.Gamepasses = {
-	VIP = { id = 0, name = "VIP", price = 399, desc = "Production x1,5, badge, salon VIP, nom coloré." },
+	VIP = { id = 0, name = "VIP", price = 399, desc = "Production x1,5, badge VIP au-dessus de ton avatar, nom doré dans le chat." },
 	AutoCollect = { id = 0, name = "Auto-collecte", price = 299, desc = "L'énergie arrive sans passer au collecteur (80 %)." },
 	Pedestals4 = { id = 0, name = "Socles +4", price = 299, desc = "Quatre héros exposés de plus." },
 	Inventory100 = { id = 0, name = "Inventaire +100", price = 149, desc = "Stockage de héros supplémentaire." },
 	SeasonPass = { id = 0, name = "Pass de saison", price = 449, desc = "Récompenses de saison et cosmétiques exclusifs." },
 }
-Shop.GamepassOrder = { "VIP", "AutoCollect", "Pedestals4", "Inventory100", "SeasonPass" }
+-- Le Pass de saison n'est pas proposé tant que le système de saison n'existe pas (rien à livrer).
+Shop.GamepassOrder = { "VIP", "AutoCollect", "Pedestals4", "Inventory100" }
 
 Shop.VipMultiplier = 1.5
 Shop.AutoCollectShare = 0.8
@@ -45,5 +46,19 @@ Shop.CosmeticOrder = { "AuraStarter", "AuraEther", "AuraSolar", "TrailNeon", "Tr
 
 Shop.ServerBoostMutationBonus = 0.5 -- +50 % de chance de mutation à la prochaine tempête
 Shop.PurificationPrismGems = 120
+
+-- Offre du jour (onglet « À la une ») : un cosmétique payant à -30 %, le même pour tout le monde (jour UTC).
+Shop.DailyDiscount = 0.3
+function Shop.DailyOffer(day: number?): (string, number)
+	local paid = {}
+	for _, key in Shop.CosmeticOrder do
+		if (Shop.Cosmetics[key].gems or 0) > 0 then
+			table.insert(paid, key)
+		end
+	end
+	local d = day or math.floor(os.time() / 86400)
+	local key = paid[(d % #paid) + 1]
+	return key, math.floor(Shop.Cosmetics[key].gems * (1 - Shop.DailyDiscount))
+end
 
 return Shop

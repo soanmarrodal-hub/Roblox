@@ -43,6 +43,7 @@ local RANGE = {
 	Rift = 14,
 	Pedestal = 9,
 	MagmaCrystal = 10,
+	Monorail = 9,
 }
 
 local function root(): BasePart?
@@ -108,8 +109,12 @@ local function describe(inst: Instance): (string?, Color3?, (() -> ())?, string?
 		local name = ref and Heroes.List[ref] and Heroes.List[ref].name or "héros"
 		-- héros lâché par un porteur (pas de vainqueur enregistré) : on le ramasse tel quel
 		local isDropped = inst:GetAttribute("OwnerId") == nil
+		local stolenFrom = inst:GetAttribute("StolenFrom")
+		if stolenFrom and stolenFrom ~= player.UserId then
+			return nil -- héros volé lâché : il retourne seul sur son socle, seule la victime peut le reprendre
+		end
 		if isDropped then
-			return "Ramasser " .. name, Theme.Color.ButtonGold, function()
+			return (if stolenFrom then "Récupérer " else "Ramasser ") .. name, Theme.Color.ButtonGold, function()
 				send("Capture", inst)
 			end
 		end
@@ -156,6 +161,10 @@ local function describe(inst: Instance): (string?, Color3?, (() -> ())?, string?
 	elseif kind == "Deposit" then
 		return "Miner le gisement", Theme.Color.ButtonGold, function()
 			send("Deposit", inst)
+		end
+	elseif kind == "Monorail" then
+		return "Prendre le monorail", Theme.Color.Button, function()
+			send("Monorail", inst)
 		end
 	elseif kind == "MagmaCrystal" then
 		return "Ramasser le cristal", Theme.Color.ButtonGold, function()

@@ -156,11 +156,14 @@ function CaptureService:SpawnDropped(c: any, pos: Vector3)
 	Motion.Place(e.anchor, pos, def.size * 2.5)
 	e.anchor:SetAttribute("Hover", def.size * 2.5)
 	local returnDelay = if c.source == "Steal" then Steal.InterceptReturnDelay else r.groundTime
-	e.ai = { downed = true, downUntil = os.clock() + returnDelay, def = def, dropped = c, instabilityStart = c.instability * 0.7 }
+	e.ai = { downed = true, downUntil = os.clock() + returnDelay, def = def, dropped = c, instabilityStart = c.instability }
 	e.anchor:AddTag("Interactable")
 	e.anchor:SetAttribute("Kind", "Downed")
 	e.anchor:SetAttribute("Label", def.name)
 	e.anchor:SetAttribute("DownUntil", workspace:GetServerTimeNow() + returnDelay)
+	if c.source == "Steal" and c.origin and c.origin.victim then
+		e.anchor:SetAttribute("StolenFrom", c.origin.victim.UserId) -- seule la victime peut le ramasser
+	end
 	task.delay(returnDelay, function()
 		if e.anchor.Parent and not e.taken then
 			Combat:Remove(e, 0.5)
@@ -190,9 +193,21 @@ function CaptureService:PickUp(player: Player, e: any): boolean
 		end
 		return true
 	end
+	if c.source == "Steal" then
+		-- héros volé lâché : il retourne seul sur son socle après quelques secondes (bible §15) ;
+		-- ni le voleur ni un tiers ne peuvent le reprendre
+		Registry.Get("AnnouncementService"):Notify(player, "Ce héros volé retourne vers son socle d'origine.", "Info")
+		return false
+	end
+	if c.droppedBy == player and os.clock() < (c.droppedAt or 0) + Rarities.Get(Heroes.Get(c.heroId).rarity).groundTime then
+		-- se faire lâcher exprès pour remettre la jauge à zéro ne marche pas
+		Registry.Get("AnnouncementService"):Notify(player, "Tu viens de le lâcher : laisse-le se calmer un instant.", "Info")
+		return false
+	end
 	e.taken = true
 	Registry.Get("CombatService"):Remove(e, 0)
-	self:StartCarry(player, { heroId = c.heroId, mut = c.mut, source = c.source, origin = c.origin, instability = (c.instability or 0) * 0.7, lvl = c.lvl, stars = c.stars, onDrop = c.onDrop, onSuccess = c.onSuccess })
+	-- l'instabilité est conservée d'un porteur à l'autre (plus de remise à zéro en se faisant lâcher)
+	self:StartCarry(player, { heroId = c.heroId, mut = c.mut, source = c.source, origin = c.origin, instability = c.instability or 0, lvl = c.lvl, stars = c.stars, onDrop = c.onDrop, onSuccess = c.onSuccess })
 	return true
 end
 
@@ -205,6 +220,8 @@ function CaptureService:Drop(player: Player, reason: string?)
 	end
 	local root = Registry.Get("CombatService").RootOf(player)
 	endCarry(player)
+	c.droppedBy = player
+	c.droppedAt = os.clock()
 	local pos = if root then root.Position else nil
 	if reason == "fall" or not pos then
 		if c.onDrop then

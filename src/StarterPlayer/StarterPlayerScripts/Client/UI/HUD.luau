@@ -459,12 +459,29 @@ local function buildMinimap(root: Frame)
 		end
 		-- boss, héros rares, autres joueurs
 		local seen = {}
-		for _, e in CollectionService:GetTagged("Entity") do
-			if e:GetAttribute("MapIcon") and e:IsA("BasePart") then
-				local key = "E" .. tostring(e:GetAttribute("EntityId"))
+		-- marqueurs publiés par le serveur (indépendants du streaming) : boss, héros annoncés, porteurs
+		local markers = ReplicatedStorage:FindFirstChild("MapMarkers")
+		local carrierPos: { [string]: Vector3 } = {}
+		if markers then
+			for _, v in markers:GetChildren() do
+				if v:IsA("Vector3Value") then
+					local kind = v:GetAttribute("Kind")
+					if kind == "Carrier" then
+						carrierPos[v.Name] = v.Value
+					else
+						seen[v.Name] = true
+						place(blip(v.Name, if kind == "Boss" then "☠" else "★", if kind == "Boss" then Theme.Color.Error else Theme.Color.Gold, 20), v.Value, origin, rot, kind == "Boss")
+					end
+				end
+			end
+		end
+		for _, p in Players:GetPlayers() do
+			local key = "P" .. p.UserId
+			local streamed = p.Character and p.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if p ~= player and not streamed and carrierPos[key] and not HUD.CarrierConcealed(carrierPos[key], origin) then
+				-- porteur hors du rayon de streaming : position fournie par le serveur
 				seen[key] = true
-				local kind = e:GetAttribute("Kind")
-				place(blip(key, if kind == "Boss" then "☠" else "★", if kind == "Boss" then Theme.Color.Error else Theme.Color.Gold, 20), e.Position, origin, rot, kind == "Boss")
+				place(blip(key, "●", Theme.Color.Warning, 16), carrierPos[key], origin, rot, false)
 			end
 		end
 		for _, p in Players:GetPlayers() do

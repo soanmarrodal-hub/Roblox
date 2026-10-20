@@ -285,7 +285,9 @@ function CombatService:DamagePlayer(player: Player, amount: number, source: Enti
 	s.charge = math.min(100, s.charge + Skills.SignatureChargePerHurt)
 	player:SetAttribute("Charge", s.charge)
 	Registry.Get("ProgressionService"):CancelCast(player)
-	if s.carrying then
+	-- seuls les coups des poursuivants font lâcher le héros porté (pas les monstres ni les
+	-- attaques du héros instable lui-même)
+	if s.carrying and attacker then
 		Registry.Get("CaptureService"):OnCarrierHit(player, attacker)
 	end
 end
@@ -323,6 +325,9 @@ function CombatService:DamageEntity(e: Entity, amount: number, player: Player?, 
 	e.hp = math.max(0, e.hp - dmg)
 	if player then
 		e.contributors[player] = (e.contributors[player] or 0) + dmg
+		if e.kind == "Boss" then
+			Registry.Get("StormService"):AddRecap(player, "bossDamage", dmg)
+		end
 		local s = State.Get(player)
 		s.target = e
 		s.lastAttack = os.clock()
@@ -807,7 +812,53 @@ function CombatService:Init()
 	-- pas de régénération automatique : les soins viennent des héros de Soutien et des sources chaudes
 end
 
+-- Marqueurs de carte hors streaming : héros annoncés, boss et porteurs de héros, publiés chaque
+-- seconde dans ReplicatedStorage.MapMarkers (Vector3Value « E<id> » / « P<userId> », attribut Kind).
+local function startMapMarkers()
+	local folder = Instance.new("Folder")
+	folder.Name = "MapMarkers"
+	folder.Parent = ReplicatedStorage
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			local seen = {}
+			local function put(key: string, pos: Vector3, kind: string)
+				seen[key] = true
+				local v = folder:FindFirstChild(key) :: Vector3Value?
+				if not v then
+					local nv = Instance.new("Vector3Value")
+					nv.Name = key
+					nv.Parent = folder
+					v = nv
+				end
+				local mv = v :: Vector3Value
+				mv.Value = pos
+				if mv:GetAttribute("Kind") ~= kind then
+					mv:SetAttribute("Kind", kind)
+				end
+			end
+			for id, e in entities do
+				if not e.dead and e.anchor.Parent and e.anchor:GetAttribute("MapIcon") then
+					put("E" .. id, e.anchor.Position, e.kind)
+				end
+			end
+			for _, p in Players:GetPlayers() do
+				local r = rootOf(p)
+				if r and p:GetAttribute("Carrying") then
+					put("P" .. p.UserId, r.Position, "Carrier")
+				end
+			end
+			for _, v in folder:GetChildren() do
+				if not seen[v.Name] then
+					v:Destroy()
+				end
+			end
+		end
+	end)
+end
+
 function CombatService:Start()
+	startMapMarkers()
 	-- assistants : ils attaquent la cible du leader automatiquement
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)

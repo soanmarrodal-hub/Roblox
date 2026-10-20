@@ -103,15 +103,18 @@ function GachaLogic.Roll(bannerId: string, unlocked: { [string]: boolean }, pity
 	local heroId = list[rng:NextInteger(1, #list)]
 	local idx = Rarities.Index(rarity)
 	pity.stars += Banners.StarsPerPull
-	if idx >= Rarities.Index("Mythic") then
-		pity.mythic = 0
-		pity.legendary = 0
-	elseif idx >= Rarities.Index("Legendary") then
-		pity.legendary = 0
-		pity.mythic += 1
-	else
-		pity.legendary += 1
-		pity.mythic += 1
+	-- compteurs de pitié : seulement sur les bannières d'île (la Standard n'a pas de garantie)
+	if banner.island then
+		if idx >= Rarities.Index("Mythic") then
+			pity.mythic = 0
+			pity.legendary = 0
+		elseif idx >= Rarities.Index("Legendary") then
+			pity.legendary = 0
+			pity.mythic += 1
+		else
+			pity.legendary += 1
+			pity.mythic += 1
+		end
 	end
 	return heroId, rarity
 end

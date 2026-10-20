@@ -166,6 +166,20 @@ function Monuments.Desert(ctx: Common.Ctx)
 			glyph:SetAttribute("Index", i + 1)
 		end
 	end
+	-- L'Autel solaire (Nécropole) : accès direct à la bannière de l'île (bible §6)
+	local acf = Common.GroundCF(ctx, summit.X + 52, summit.Z + 22)
+	Build.Cylinder(m, (acf * CFrame.new(0, 0.8, 0)).Position, 1.6, 16, rgb(214, 170, 110), Enum.Material.Sandstone, "SolarAltarBase")
+	Build.Box(m, acf * CFrame.new(0, 3.2, 0), Vector3.new(6, 3.2, 4), rgb(230, 200, 140), Enum.Material.Sandstone, "SolarAltar")
+	local sun = Build.CylinderCF(m, acf * CFrame.new(0, 9, 0) * CFrame.Angles(0, math.rad(90), 0), 0.8, 7, gold, Enum.Material.Neon, "SolarAltarDisk")
+	sun.CanCollide = false
+	sun:AddTag("Spin")
+	Build.Light(sun, rgb(255, 210, 90), 18, 1.5)
+	local solar = Build.Part(m, { Name = "Interact", Size = Vector3.new(10, 8, 10), CFrame = acf * CFrame.new(0, 4, 0), Transparency = 1, CanCollide = false })
+	solar:AddTag("Interactable")
+	solar:SetAttribute("Kind", "Menu")
+	solar:SetAttribute("Menu", "Summon")
+	solar:SetAttribute("Island", ctx.id)
+	solar:SetAttribute("Label", "Autel solaire")
 	-- Le Temple du Soleil (sanctuaire) : façade à colonnes surmontée d'un disque solaire qui tourne
 	local core = ctx.island.subzones[2].offset
 	local tcf = Common.GroundCF(ctx, core.X + 70, core.Z - 60)
@@ -245,8 +259,10 @@ function Monuments.Neon(ctx: Common.Ctx)
 				sign.CanCollide = false
 				-- toit-terrasse accessible + terminal caché sur 5 toits
 				Build.Box(city, b.CFrame * CFrame.new(0, h / 2 + 0.6, 0), Vector3.new(w + 1, 1.2, b.Size.Z + 1), rgb(30, 28, 40), Enum.Material.Metal, "Roof")
+				local hasTerminal = false
 				if terminals < 5 and h > 45 and rng:NextNumber() < 0.5 then
 					terminals += 1
+					hasTerminal = true
 					local tcf = b.CFrame * CFrame.new(0, h / 2 + 3, 0)
 					local term = Build.Box(city, tcf, Vector3.new(2, 4, 1.4), rgb(20, 20, 30), Enum.Material.Metal, "Terminal")
 					local scr = Build.Box(city, tcf * CFrame.new(0, 0.6, -0.75), Vector3.new(1.6, 1.6, 0.1), rgb(35, 213, 255), Enum.Material.Neon, "Screen")
@@ -256,8 +272,9 @@ function Monuments.Neon(ctx: Common.Ctx)
 					term:SetAttribute("Index", terminals)
 					term:SetAttribute("Label", "Terminal " .. terminals)
 				end
-				-- tremplin sur les auvents pour monter sur les toits
-				if rng:NextNumber() < 0.25 then
+				-- tremplin sur les auvents pour monter sur les toits (toujours un sous chaque terminal)
+				local padRoll = rng:NextNumber() < 0.25
+				if padRoll or hasTerminal then
 					local pad = Build.Cylinder(city, (cf * CFrame.new(0, 0.4, -b.Size.Z / 2 - 6)).Position, 0.8, 6, rgb(255, 61, 203), Enum.Material.Neon, "JumpPad")
 					pad:AddTag("JumpPad")
 					pad:SetAttribute("Power", h * 2.2 + 60)
@@ -325,6 +342,25 @@ function Monuments.Neon(ctx: Common.Ctx)
 	wagon:SetAttribute("Radius", R * 0.7)
 	wagon:SetAttribute("Center", ctx.frame.Position + Vector3.new(0, 37.5, 0))
 	wagon:AddTag("Monorail")
+	-- Trois stations sous le rail : départ toutes les 40 s vers la station suivante (interdit aux porteurs)
+	local stations = {}
+	for i = 0, 2 do
+		local a = i / 3 * math.pi * 2 + 0.35
+		local p = Common.Ground(ctx, math.cos(a) * R * 0.7, math.sin(a) * R * 0.7)
+		local st = Build.Box(m, CFrame.new(p + Vector3.new(0, 0.5, 0)), Vector3.new(14, 1, 14), rgb(40, 36, 52), Enum.Material.DiamondPlate, "MonorailStation")
+		local trim = Build.Box(m, CFrame.new(p + Vector3.new(0, 1.05, 0)), Vector3.new(14.4, 0.1, 14.4), rgb(35, 213, 255), Enum.Material.Neon, "StationTrim")
+		trim.CanCollide = false
+		Build.Box(m, CFrame.new(p + Vector3.new(6, 6, 6)), Vector3.new(1, 11, 1), rgb(30, 28, 40), Enum.Material.Metal, "StationPole")
+		local inter = Build.Part(m, { Name = "Interact", Size = Vector3.new(14, 8, 14), CFrame = st.CFrame * CFrame.new(0, 4, 0), Transparency = 1, CanCollide = false })
+		inter:AddTag("Interactable")
+		inter:SetAttribute("Kind", "Monorail")
+		inter:SetAttribute("Station", i + 1)
+		inter:SetAttribute("Label", "Monorail · station " .. (i + 1))
+		stations[i + 1] = inter
+	end
+	for i, inter in stations do
+		inter:SetAttribute("Next", stations[i % #stations + 1].Position)
+	end
 	-- Jardin suspendu (seul îlot de verdure)
 	local gcf = Common.GroundCF(ctx, core.X + 60, core.Z + 70, 0, 18)
 	Build.Box(m, gcf, Vector3.new(40, 2, 40), rgb(70, 60, 50), Enum.Material.Concrete, "Garden")
@@ -480,6 +516,7 @@ function Monuments.Volcano(ctx: Common.Ctx)
 	hammer.Transparency = 0.3
 	hammer:AddTag("GhostHammer")
 	hammer:SetAttribute("Rest", hammer.CFrame)
+	ctx.info.special.Forge = fcf
 	for i = 0, 3 do
 		local a = i / 4 * math.pi * 2 + 0.4
 		local ch = Build.Box(forge, fcf * CFrame.new(math.cos(a) * 30, 0.8, math.sin(a) * 30) * CFrame.Angles(0, -a, 0), Vector3.new(30, 0.6, 3), lava, Enum.Material.Neon, "LavaChannel")

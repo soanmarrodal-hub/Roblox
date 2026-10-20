@@ -22,8 +22,9 @@ local state = "Calm"
 local current: string? = nil
 local great = false
 local stormIndex = 0
-local boostBy: string? = nil
-local recap: { [Player]: { mutations: number, steals: number } } = {}
+local boostBy: string? = nil -- boost appliqué à la tempête en cours
+local pendingBoost: { string } = {} -- boosts achetés, appliqués à la prochaine tempête
+local recap: { [Player]: { mutations: number, steals: number, bossDamage: number } } = {}
 
 -- En Studio, des tempêtes plus fréquentes pour tester.
 local STUDIO_INTERVAL = { min = 150, max = 240 }
@@ -50,15 +51,43 @@ end
 
 function StormService:FavoredMutation(): string?
 	if great then
-		local all = { "Sylvan", "Golden", "Neon", "Frosted", "Magma", "Cosmic", "Rainbow" }
-		return all[math.random(1, #all)]
+		-- Grande Tempête : toutes les mutations sont possibles (bible §17)
+		return Mutations.Order[math.random(1, #Mutations.Order)]
 	end
 	return current and Storms.List[current].mutation or nil
 end
 
+-- Chance de mutation d'une tempête entière (boost de serveur et Grande Tempête compris).
+function StormService:MutationChance(): number
+	return Mutations.ChancePerStorm * (if boostBy then 1 + Shop.ServerBoostMutationBonus else 1) * (if great then 2 else 1)
+end
+
+local function ensureRecap(p: Player)
+	recap[p] = recap[p] or { mutations = 0, steals = 0, bossDamage = 0 }
+	return recap[p]
+end
+
+-- Bilan personnel de la tempête : vols, dégâts aux boss (appelé par StealService et CombatService).
+function StormService:AddRecap(p: Player, field: string, n: number)
+	if state ~= "Active" then
+		return
+	end
+	local r = ensureRecap(p)
+	r[field] = (r[field] or 0) + n
+end
+
+-- Mutation obtenue pendant la tempête (héros exposé ou invocation) : bilan et annonce si rare.
+function StormService:CountMutation(p: Player, mut: string, heroId: string?)
+	ensureRecap(p).mutations += 1
+	if mut == "Cosmic" or mut == "Eclipse" or mut == "Rainbow" then
+		Registry.Get("AnnouncementService"):Announce("Cosmic", p.DisplayName .. " obtient une mutation " .. Mutations.List[mut].name .. " !", { heroId = heroId, mutation = mut })
+	end
+end
+
+-- Boost de serveur : toujours pour la PROCHAINE tempête (jamais pour les dernières secondes de
+-- la tempête en cours) ; plusieurs acheteurs sont tous crédités.
 function StormService:SetBoost(name: string)
-	boostBy = name
-	Workspace:SetAttribute("StormBoostBy", name)
+	table.insert(pendingBoost, name)
 	Registry.Get("AnnouncementService"):Announce("Boost", name .. " a acheté un Boost de serveur : mutations plus fréquentes à la prochaine tempête !")
 end
 
@@ -84,7 +113,7 @@ local function rollMutations(ticks: number)
 	local Data = Registry.Get("DataService")
 	local Hero = Registry.Get("HeroService")
 	local Ann = Registry.Get("AnnouncementService")
-	local chance = Mutations.ChancePerStorm * (if boostBy then 1 + Shop.ServerBoostMutationBonus else 1) * (if great then 2 else 1)
+	local chance = StormService:MutationChance()
 	local pTick = 1 - (1 - chance) ^ (1 / ticks)
 	for _, p in Players:GetPlayers() do
 		local d = Data:Get(p)
@@ -94,12 +123,8 @@ local function rollMutations(ticks: number)
 					local mut = StormService:FavoredMutation()
 					if mut and Hero:Mutate(p, uid, mut) then
 						local h = d.heroes[uid]
-						recap[p] = recap[p] or { mutations = 0, steals = 0 }
-						recap[p].mutations += 1
 						Ann:Notify(p, "Mutation " .. Mutations.List[mut].name .. " sur un de tes héros !", "Mutation")
-						if mut == "Cosmic" or mut == "Eclipse" or mut == "Rainbow" then
-							Ann:Announce("Cosmic", p.DisplayName .. " obtient une mutation " .. Mutations.List[mut].name .. " !", { heroId = h and h.id, mutation = mut })
-						end
+						StormService:CountMutation(p, mut, h and h.id)
 					end
 				end
 			end
@@ -119,10 +144,17 @@ function StormService:RunStorm(stormId: string, isGreat: boolean)
 	task.wait(Storms.AnnounceTime)
 	-- 2. Tempête
 	local duration = if isGreat then Storms.GreatDuration else Storms.Duration
+	-- les boosts achetés avant la tempête s'appliquent maintenant (nom affiché sur l'Horloge cosmique)
+	if #pendingBoost > 0 then
+		boostBy = table.concat(pendingBoost, ", ")
+		table.clear(pendingBoost)
+		Workspace:SetAttribute("StormBoostBy", boostBy)
+	end
 	setAttrs("Active", now() + duration, stormId)
 	table.clear(recap)
 	for _, p in Players:GetPlayers() do
 		State.Get(p).stormJoined = true
+		ensureRecap(p)
 		Registry.Get("QuestService"):Track(p, "StormJoin", {})
 	end
 	Ann:Announce("Storm", (if isGreat then "La GRANDE TEMPÊTE" else "La tempête « " .. def.name .. " »") .. " frappe le serveur !", { storm = stormId })
@@ -136,10 +168,8 @@ function StormService:RunStorm(stormId: string, isGreat: boolean)
 	-- 3. Retombée
 	setAttrs("Fallout", now() + Storms.FalloutTime, stormId)
 	Registry.Get("BossService"):StormEnded()
-	for p, r in recap do
-		if p.Parent then
-			Net.Event("StormRecap"):FireClient(p, r)
-		end
+	for _, p in Players:GetPlayers() do
+		Net.Event("StormRecap"):FireClient(p, recap[p] or { mutations = 0, steals = 0, bossDamage = 0 })
 	end
 	boostBy = nil
 	Workspace:SetAttribute("StormBoostBy", nil)
@@ -162,14 +192,23 @@ end
 
 function StormService:Init()
 	setAttrs("Calm", now() + 60, nil)
+	-- un joueur qui arrive pendant la tempête participe aussi (quête « StormJoin »)
+	Registry.Get("DataService").Loaded:Connect(function(p: Player)
+		if state == "Active" then
+			State.Get(p).stormJoined = true
+			ensureRecap(p)
+			Registry.Get("QuestService"):Track(p, "StormJoin", {})
+		end
+	end)
 end
 
 function StormService:Start()
 	local interval = if RunService:IsStudio() then STUDIO_INTERVAL else Storms.Interval
 	local lastGreatHour = -1
+	-- intervalle compté d'un début de tempête au suivant (bible : toutes les 20 à 30 min)
+	local lastStart = now()
 	while true do
-		local wait = math.random(interval.min, interval.max)
-		local nextAt = now() + wait
+		local nextAt = math.max(now() + 30, lastStart + math.random(interval.min, interval.max))
 		setAttrs("Calm", nextAt, nil)
 		Workspace:SetAttribute("NextStormAt", nextAt)
 		local greatNow = false
@@ -182,6 +221,7 @@ function StormService:Start()
 				break
 			end
 		end
+		lastStart = now()
 		if greatNow then
 			self:RunStorm(Weighted.Pick({ StarRain = 1 }, { "StarRain" }), true)
 		else

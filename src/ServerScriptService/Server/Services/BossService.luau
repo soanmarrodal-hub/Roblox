@@ -81,6 +81,42 @@ local function participants(): number
 	return math.max(1, #Players:GetPlayers())
 end
 
+-- Spectre Prisme : se fragmente en clones de verre à chaque changement de phase (bible §7).
+-- Les clones partagent les attaques, n'ont que peu de PV, ne rapportent rien et disparaissent
+-- avec le corps principal.
+function BossService:SpawnClones(main: any, count: number)
+	local Combat = Registry.Get("CombatService")
+	local def = main.ai.def
+	for i = 1, count do
+		local a = (i / count) * math.pi * 2 + math.random()
+		local pos = main.anchor.Position + Vector3.new(math.cos(a) * 26, 0, math.sin(a) * 26)
+		local clone
+		clone = Combat:Register({
+			kind = "Boss",
+			ref = def.id,
+			name = "Fragment du " .. def.name,
+			hp = main.maxHp * 0.05,
+			damage = main.damage * 0.45,
+			level = 0,
+			island = main.island,
+			scale = def.look.size / 8 * 0.55,
+			radius = def.look.size * 0.35 * 0.55,
+			position = pos,
+			onDeath = function(ent: any)
+				Combat:SetState(ent, "Dead")
+				Combat:Remove(ent, 1)
+				local idx = table.find(bosses, ent)
+				if idx then
+					table.remove(bosses, idx)
+				end
+			end,
+			ai = { home = main.ai.home, nextAttack = os.clock() + 2 + i, phase = main.ai.phase, hover = main.ai.hover * 0.55, def = def, clone = true, parent = main },
+		})
+		Motion.Place(clone.anchor, pos, clone.ai.hover)
+		table.insert(bosses, clone)
+	end
+end
+
 function BossService:SpawnBoss(bossId: string, cf: CFrame, scale: number?, mod: number?): any
 	local def = Enemies.Bosses[bossId]
 	local Combat = Registry.Get("CombatService")
@@ -111,6 +147,14 @@ function BossService:SpawnBoss(bossId: string, cf: CFrame, scale: number?, mod: 
 			if i then
 				table.remove(bosses, i)
 			end
+			-- les fragments du Spectre s'effacent avec lui
+			for _, other in table.clone(bosses) do
+				if other.ai.parent == ent and not other.dead then
+					other.dead = true
+					Combat:Remove(other, 0.5)
+					table.remove(bosses, table.find(bosses, other) :: number)
+				end
+			end
 		end,
 		ai = { home = cf.Position, nextAttack = os.clock() + 4, phase = 1, hover = def.look.size * 0.45 * math.max(s, 0.5), def = def, rewardDef = if shard then statDef else nil },
 	})
@@ -138,7 +182,8 @@ function BossService:WakeFor(stormId: string, isGreat: boolean)
 		local isl = Islands.Get(islandId)
 		local info = World:Island(islandId)
 		if info and info.bossSpawn then
-			self:SpawnBoss(isl.boss, info.bossSpawn, 1, def.bossMod)
+			-- Grande Tempête : les cinq boss à pleine puissance (pas l'affaiblissement de la Pluie d'étoiles)
+			self:SpawnBoss(isl.boss, info.bossSpawn, 1, if isGreat then 1 else def.bossMod)
 			Ann:Announce("Boss", Enemies.Bosses[isl.boss].name .. " se réveille : " .. isl.name.fr .. " !", { island = islandId })
 		end
 	end
@@ -179,9 +224,9 @@ function BossService:StormEnded()
 	local Combat = Registry.Get("CombatService")
 	for _, e in table.clone(bosses) do
 		if not e.dead then
-			-- le boss retourne au sommeil : récompense partielle pour les participants
+			-- le boss retourne au sommeil : récompense partielle pour les participants (pas pour les fragments)
 			Combat:SetState(e, "Sleep")
-			if next(e.contributors) then
+			if next(e.contributors) and not e.ai.clone then
 				rewardBoss(e, e.ai.def, false, true)
 			end
 			Combat:Remove(e, 2)
@@ -240,10 +285,13 @@ local function tickBoss(e: any, dt: number)
 	-- phases à 66 % et 33 %
 	local ratio = e.hp / e.maxHp
 	local phase = if ratio > 0.66 then 1 elseif ratio > 0.33 then 2 else 3
-	if not ai.guardian and phase ~= ai.phase then
+	if not ai.guardian and not ai.clone and phase ~= ai.phase then
 		ai.phase = phase
 		e.anchor:SetAttribute("Phase", phase)
 		Registry.Get("AnnouncementService"):AnnounceIsland(e.island, "Boss", e.name .. " entre en phase " .. phase .. " !", {})
+		if ai.def.id == "SpectrePrisme" and not ai.rewardDef then
+			BossService:SpawnClones(e, phase) -- 2 fragments en phase 2, 3 en phase 3
+		end
 	end
 	local target, dist = nil, math.huge
 	if not ai.guardian or os.clock() - (ai.lastHurt or -math.huge) < 20 then
