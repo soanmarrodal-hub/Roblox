@@ -422,7 +422,8 @@ function ProgressionService:Start()
 					if inLava then
 						-- la lave renvoie au dernier point sûr et fait lâcher tout héros porté
 						Registry.Get("CaptureService"):Drop(p, "lava")
-						hum.Health -= hum.MaxHealth * 0.15
+						-- via DamagePlayer : bouclier et Renaissance ardente s'appliquent aussi à la lave
+						Registry.Get("CombatService"):DamagePlayer(p, hum.MaxHealth * 0.15, nil)
 						local safe = s.lastSafe
 						if safe then
 							self:TeleportTo(p, CFrame.new(safe + Vector3.new(0, 4, 0)))

@@ -74,11 +74,13 @@ Le détail (dépannage, ordre conseillé, vérifications) est dans [docs/GUIDE.m
   serveur affiché sur l'Horloge cosmique ; bilan personnel en fin de tempête.
 - **Événements d'îles** : tempête de sable (Désert), coupures de courant (Ville Néon), blizzard et sources chaudes
   (Glacier), éruptions avec pluie de météores et cristaux de magma, jauge de chaleur (Volcan).
-- **Méta** : invocation avec taux affichés, pitié et étoiles ; index et titres ; quêtes guidées, quotidiennes,
+- **Méta** : invocation avec taux affichés, pitié et étoiles ; index et collection de titres (dont « Justicier ») ; quêtes guidées, quotidiennes,
   hebdomadaires, contrats ; calendrier de connexion ; échanges sécurisés ; boutique (gamepasses, produits, cosmétiques).
 - **Monde** : hub (plaza, flèche astrale, horloge cosmique, 12 bases, Mur des légendes avec classements du serveur
   et de la saison) et cinq îles thématiques avec leurs monuments, balises de téléportation, portes à débloquer,
-  monorail de la Ville Néon, Forge des Titans, cycle jour/nuit et éclairage propre à chaque île.
+  monorail et tyroliennes de la Ville Néon, Forge des Titans, énigme quotidienne de la Pyramide, monuments qui
+  réagissent à la collection (obélisques, héros gelés, cadran de l'Éclipse), cerf de cristal, routes sur chaque île,
+  cycle jour/nuit et éclairage propre à chaque île.
 - **Interface** : HUD mobile (colonne de menus de la bible, cibles tactiles agrandies), mini-carte et carte
   indépendantes du streaming, plaque pseudo/titre/rang au-dessus des avatars, notifications, annonces serveur,
   cinématique d'arrivée, objectif guidé.
