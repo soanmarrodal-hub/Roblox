@@ -59,17 +59,18 @@ function SummonService:Summon(player: Player, bannerId: string, count: number): 
 		end
 	else
 		-- cristaux d'invocation d'abord (1 cristal = 1 tirage), puis gemmes
-		local fromCrystals = math.min(d.crystals, count)
-		local remaining = count - fromCrystals
-		-- x10 : chaque cristal retire un tirage du prix du x10 (le rabais « 10 pour 9 » est conservé)
-		local gemCost = if count >= 10 then math.max(0, banner.cost10 - banner.cost1 * fromCrystals) else banner.cost1 * remaining
-		if remaining > 0 and Prog:Balance(player, "Gems") < gemCost then
+		-- x10 : chaque cristal retire un tirage du prix du x10 ; le rabais « 10 pour 9 » vaut aussi
+		-- pour les cristaux (9 cristaux suffisent, le 10e reste en poche)
+		local maxCrystals = if count >= 10 then math.ceil(banner.cost10 / banner.cost1) else count
+		local fromCrystals = math.min(d.crystals, maxCrystals)
+		local gemCost = if count >= 10 then math.max(0, banner.cost10 - banner.cost1 * fromCrystals) else banner.cost1 * (count - fromCrystals)
+		if gemCost > 0 and Prog:Balance(player, "Gems") < gemCost then
 			return false, "Il faut " .. gemCost .. " gemmes ou des cristaux d'invocation"
 		end
 		if fromCrystals > 0 then
 			Prog:Spend(player, "Crystals", fromCrystals)
 		end
-		if remaining > 0 then
+		if gemCost > 0 then
 			Prog:Spend(player, "Gems", gemCost)
 		end
 	end

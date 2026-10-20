@@ -148,11 +148,11 @@ function StealService:StartDuel(attacker: Player, pedestal: BasePart): (boolean,
 	local def = Heroes.Get(heroInst.id)
 	local r = Rarities.Get(def.rarity)
 	local Hero = Registry.Get("HeroService")
-	-- comparaison à armes égales : le leader de l'attaquant face au héros exposé (le plafond « 2 fois plus
-	-- fort » de la bible ne doit pas opposer toute une équipe à un seul héros)
-	local leader = Hero:Leader(attacker)
-	local atkPower = if leader then HeroMath.Power(leader) else Hero:TeamPower(attacker)
+	-- temps de référence : l'équipe de l'attaquant (celle qui frappe vraiment, assistants compris)
+	-- face au héros exposé. Plafond « 2 fois plus fort » (bible) : équipe contre équipe, joueur contre joueur.
+	local atkPower = Hero:TeamPower(attacker)
 	local defPower = HeroMath.Power(heroInst)
+	local capDefPower = if victim then math.max(Hero:TeamPower(victim), defPower) else defPower
 	local ad = data(attacker)
 	local hpMult = 1
 	local guardianBonus = 1
@@ -192,6 +192,7 @@ function StealService:StartDuel(attacker: Player, pedestal: BasePart): (boolean,
 		refTime = refTime,
 		atkPower = atkPower,
 		defPower = defPower,
+		capDefPower = capDefPower,
 		arena = arena,
 		attackerBonus = if revenge then Steal.RevengeBonus else 1,
 		revenge = revenge,
@@ -306,7 +307,7 @@ function StealService:EndDuel(duel: any, outcome: string)
 		local t = os.clock() - duel.startedAt
 		-- chance (bénédiction du cerf de cristal) : +5 points de vol critique
 		local crit = math.random() < (Steal.CriticalChance + (if Storm:IsActive() then Storms.Effects.criticalStealBonus else 0) + State.Buff(attacker, "luck"))
-		tier = StealLogic.Tier(t, duel.refTime, duel.atkPower, duel.defPower, crit, duel.camp ~= nil)
+		tier = StealLogic.Tier(t, duel.refTime, duel.atkPower, duel.capDefPower, crit, duel.camp ~= nil)
 		if tier == "Gold" and victim then
 			local vd = data(victim)
 			if vd and os.time() - (vd.stats.lastLoss or 0) < Steal.LossWindow then
@@ -380,7 +381,10 @@ function StealService:Reward(duel: any, tier: string)
 		Quest:Track(attacker, "StealGold", {})
 		if ad then
 			ad.stats.goldSteals += 1
-			Registry.Get("AnnouncementService"):AddSeasonGold(attacker)
+			-- classement de saison : seuls les vols sur de vrais joueurs comptent (les camps n'ont pas de plafond)
+			if victim then
+				Registry.Get("AnnouncementService"):AddSeasonGold(attacker)
+			end
 		end
 		if duel.revenge and victim then
 			-- vengeance réussie : on récupère son héros

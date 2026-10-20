@@ -305,9 +305,13 @@ local function tickBoss(e: any, dt: number)
 	if not ai.guardian and not ai.clone and phase ~= ai.phase then
 		ai.phase = phase
 		e.anchor:SetAttribute("Phase", phase)
-		Registry.Get("AnnouncementService"):AnnounceIsland(e.island, "Boss", e.name .. " entre en phase " .. phase .. " !", {})
-		if ai.def.id == "SpectrePrisme" and not ai.rewardDef then
-			BossService:SpawnClones(e, phase) -- 2 fragments en phase 2, 3 en phase 3
+		-- annonce et fragments une seule fois par phase atteinte (pas en remontant pendant une régénération)
+		if phase > (ai.reachedPhase or 1) then
+			ai.reachedPhase = phase
+			Registry.Get("AnnouncementService"):AnnounceIsland(e.island, "Boss", e.name .. " entre en phase " .. phase .. " !", {})
+			if ai.def.id == "SpectrePrisme" and not ai.rewardDef then
+				BossService:SpawnClones(e, phase) -- 2 fragments en phase 2, 3 en phase 3
+			end
 		end
 	end
 	local target, dist = nil, math.huge

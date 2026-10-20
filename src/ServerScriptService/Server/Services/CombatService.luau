@@ -272,6 +272,11 @@ function CombatService:CanHitPlayer(attacker: Player, target: Player): boolean
 	local ts = State.Get(target)
 	local as = State.Get(attacker)
 	if ts.carrying then
+		-- la victime d'un vol peut toujours poursuivre son voleur, même s'il est son ami
+		local origin = ts.carrying.origin
+		if ts.carrying.source == "Steal" and origin and origin.victim == attacker then
+			return true
+		end
 		-- on ne fait pas lâcher le héros d'un ami qu'on escorte (sauf adversaire déclaré)
 		return not isFriend(attacker, target) or self:IsOpponent(attacker, target)
 	end
@@ -288,19 +293,22 @@ function CombatService:CanHitPlayer(attacker: Player, target: Player): boolean
 	return false
 end
 
-function CombatService:DamagePlayer(player: Player, amount: number, source: Entity?, attacker: Player?)
+-- Renvoie true si le coup a porté (false : esquive, invisibilité, joueur déjà à terre).
+-- environmental : dégâts du décor (lave, chaleur, météores) qui ne comptent pas comme un coup reçu
+-- (pas de charge de signature, pas d'interruption de canalisation, pas de fenêtre de combat).
+function CombatService:DamagePlayer(player: Player, amount: number, source: Entity?, attacker: Player?, environmental: boolean?): boolean
 	local hum = humOf(player)
 	local root = rootOf(player)
 	if not hum or hum.Health <= 0 or not root then
-		return
+		return false
 	end
 	local s = State.Get(player)
 	if os.clock() < s.invulnerableUntil then
 		self:HitFx(root.Position, 0, "dodge")
-		return
+		return false
 	end
 	if State.Buff(player, "stealth") > 0 and source then
-		return
+		return false
 	end
 	local dmg = amount * (1 - State.Buff(player, "defense"))
 	if State.HasStatus(player, "vulnerable") then
@@ -330,6 +338,9 @@ function CombatService:DamagePlayer(player: Player, amount: number, source: Enti
 			hum.Health = math.max(0, hum.Health - dmg)
 		end
 	end
+	if environmental then
+		return true
+	end
 	s.lastHit = os.clock()
 	s.charge = math.min(100, s.charge + Skills.SignatureChargePerHurt)
 	player:SetAttribute("Charge", s.charge)
@@ -339,6 +350,7 @@ function CombatService:DamagePlayer(player: Player, amount: number, source: Enti
 	if s.carrying and attacker then
 		Registry.Get("CaptureService"):OnCarrierHit(player, attacker)
 	end
+	return true
 end
 
 function CombatService:HealPlayer(player: Player, fraction: number): number
@@ -499,11 +511,12 @@ function CombatService:Telegraph(t: { [string]: any })
 		for _, p in targets do
 			local r = rootOf(p)
 			if r and inShape(payload.shape, payload.origin, payload.dir, r.Position, payload, 1.5) then
-				self:DamagePlayer(p, t.damage or 10, t.source)
-				if t.status then
+				-- statut et projection seulement si le coup a porté (pas à travers une esquive)
+				local landed = self:DamagePlayer(p, t.damage or 10, t.source, nil, t.environmental)
+				if landed and t.status then
 					self:ApplyPlayerStatus(p, t.status, t.statusTime or 1)
 				end
-				if t.knock then
+				if landed and t.knock then
 					local f = (r.Position - payload.origin)
 					f = Vector3.new(f.X, 0, f.Z)
 					if f.Magnitude > 0.1 then
@@ -636,7 +649,8 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 				if r and self:CanHitPlayer(player, other) and inShape(shape, o, dir, r.Position, eff, 1.5) then
 					local hum = humOf(other)
 					local amt = (hum and hum.MaxHealth or 100) * 0.08 * (eff.mult or 1)
-					self:DamagePlayer(other, amt, nil, player)
+					-- coup d'assistant : ne compte pas comme une attaque du poursuivant sur un porteur
+					self:DamagePlayer(other, amt, nil, if passive then nil else player)
 					local cs = State.Get(player)
 					cs.targetPlayer = other
 					if not passive then
@@ -658,9 +672,14 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 				end
 				local hum = humOf(p)
 				local s = State.Get(p)
-				s.shield = (hum and hum.MaxHealth or 100) * (eff.amount or 0.2)
+				local amount = (hum and hum.MaxHealth or 100) * (eff.amount or 0.2)
+				-- un bouclier plus faible n'écrase jamais un bouclier plus fort encore actif
+				if s.shield > amount and s.shieldUntil > os.clock() then
+					continue
+				end
+				s.shield = amount
 				s.shieldUntil = os.clock() + (eff.duration or 4)
-				self:CreditSupport(player, p, s.shield * 0.5, o)
+				self:CreditSupport(player, p, amount * 0.5, o)
 				p:SetAttribute("Shield", s.shield)
 				p:SetAttribute("ShieldEnds", Workspace:GetServerTimeNow() + (eff.duration or 4))
 			end
@@ -1112,7 +1131,8 @@ function CombatService:Start()
 						local h = d.heroes[uid]
 						if h then
 							self:AssistAct(p, uid, h, tr.Position)
-							self:DamagePlayer(tp, th.MaxHealth * 0.02, nil, p)
+							-- dégâts d'usure : pas d'attaquant, pour ne pas compter comme des coups sur un porteur
+							self:DamagePlayer(tp, th.MaxHealth * 0.02)
 						end
 					end
 				end

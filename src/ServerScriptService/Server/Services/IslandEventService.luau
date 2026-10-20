@@ -28,6 +28,7 @@ IslandEventService.Events = {
 local HEAT_NEAR_LAVA = 20 -- studs : distance à la lave qui fait monter la chaleur
 local HEAT_GAIN = 9 -- par seconde près de la lave
 local HEAT_ERUPTION = 4 -- par seconde partout sur l'île pendant une éruption
+local HEAT_ERUPTION_CAP = 70 -- l'éruption seule ne dépasse pas ce niveau (pas de dégâts loin de la lave)
 local HEAT_DECAY = 15
 local HEAT_DAMAGE = 0.06 -- part des PV max par seconde quand la jauge est pleine
 local CRYSTAL_LIFE = 25
@@ -113,7 +114,7 @@ local function meteor(center: Vector3, spread: number)
 				local root = Combat.RootOf(p)
 				local hum = Combat.HumOf(p)
 				if root and hum and (Vector3.new(root.Position.X, ground.Y, root.Position.Z) - ground).Magnitude <= 7.5 and math.abs(root.Position.Y - ground.Y) < 10 then
-					Combat:DamagePlayer(p, hum.MaxHealth * 0.22, nil)
+					Combat:DamagePlayer(p, hum.MaxHealth * 0.22, nil, nil, true)
 				end
 			end
 			if math.random() < 0.7 then
@@ -196,13 +197,18 @@ local function environmentTick()
 				if nearLava(root.Position, HEAT_NEAR_LAVA) then
 					gain += HEAT_GAIN
 				end
+				-- l'éruption chauffe toute l'île mais plafonne à HEAT_ERUPTION_CAP : seule la lave remplit la jauge
+				local floor = 0
 				if active.Volcano then
-					gain += HEAT_ERUPTION
+					floor = HEAT_ERUPTION_CAP
+					if h < HEAT_ERUPTION_CAP then
+						gain += HEAT_ERUPTION
+					end
 				end
 				if gain > 0 and leaderResistsHeat(p) then
 					gain *= 0.5 -- un héros de feu en leader ralentit la chaleur
 				end
-				h = if gain > 0 then math.min(100, h + gain) else math.max(0, h - HEAT_DECAY)
+				h = if gain > 0 then math.min(100, h + gain) else math.max(math.min(h, floor), h - HEAT_DECAY)
 			else
 				h = math.max(0, h - HEAT_DECAY * 2)
 			end
@@ -212,7 +218,8 @@ local function environmentTick()
 				p:SetAttribute("Heat", if shown > 0 then shown else nil)
 			end
 			if h >= 100 then
-				Combat:DamagePlayer(p, hum.MaxHealth * HEAT_DAMAGE, nil)
+				-- dégâts du décor : n'empêchent ni la téléportation ni le retour à la base
+				Combat:DamagePlayer(p, hum.MaxHealth * HEAT_DAMAGE, nil, nil, true)
 			end
 			-- sources chaudes : dissipent le gel ; pendant le blizzard, rendent aussi des PV
 			if onIsland(p, "Glacier") and inHotSpring(root.Position) then
@@ -235,7 +242,8 @@ end
 -- ============================================================================ Coffre secret de l'Éclipse
 -- Pendant la tempête « Éclipse », l'ombre du Cadran (Désert) indique un coffre secret (bible §6).
 local secretChest: BasePart? = nil
-local chestTaken: { [Player]: number } = {}
+-- par UserId et conservé après déconnexion : rejoindre le serveur ne permet pas de rouvrir le coffre
+local chestTaken: { [number]: number } = {}
 
 function IslandEventService:OnStorm(stormId: string)
 	if stormId ~= "Eclipse" then
@@ -277,11 +285,11 @@ function IslandEventService:OpenSecretChest(player: Player, part: BasePart)
 		return
 	end
 	local idx = Registry.Get("StormService"):StormIndex()
-	if chestTaken[player] == idx then
+	if chestTaken[player.UserId] == idx then
 		Registry.Get("AnnouncementService"):Notify(player, "Tu as déjà ouvert ce coffre pendant cette Éclipse.", "Info")
 		return
 	end
-	chestTaken[player] = idx
+	chestTaken[player.UserId] = idx
 	Registry.Get("ProgressionService"):Grant(player, { gems = 50, crystals = 1, shards = 120, island = "Desert", xp = 20 }, "eclipse")
 	Registry.Get("AnnouncementService"):Announce("Chest", player.DisplayName .. " a trouvé le coffre secret du Cadran de l'Éclipse !")
 end
@@ -397,7 +405,6 @@ function IslandEventService:Init()
 	crystalFolder.Parent = Workspace
 	Players.PlayerRemoving:Connect(function(p)
 		heat[p] = nil
-		chestTaken[p] = nil
 		stagBlessed[p] = nil
 	end)
 end

@@ -22,7 +22,8 @@ local ActionService = {}
 local rate: { [Player]: { t: number, n: number } } = {}
 local depositCd: { [string]: number } = {}
 local menhirSeq: { [Player]: number } = {}
-local menhirDone: { [Player]: number } = {} -- index de la tempête où le coffre a été ouvert
+-- index de la tempête où le coffre a été ouvert, par UserId (survit à une reconnexion)
+local menhirDone: { [number]: number } = {}
 -- énigme de la Pyramide : ordre du jour des quatre dalles, progression et porte ouverte par joueur
 local SYMBOLS = { "☀", "☾", "★", "✦" }
 local RIDDLE = { ["☀"] = "celui qui brille à midi", ["☾"] = "celle qui veille la nuit", ["★"] = "celle qui guide les voyageurs", ["✦"] = "l'éclat de l'Éther" }
@@ -348,6 +349,7 @@ end
 -- ============================================================================ Bouton contextuel
 local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true, Monorail = true, SecretChest = true, Stag = true, Zipline = true, TreasureGlyph = true }
 local monorailWaiting: { [Player]: boolean } = {}
+local ziplineUntil: { [Player]: number } = {}
 
 local function interact(p: Player, kind: string, target: Instance?, extra: any)
 	local Ann = Registry.Get("AnnouncementService")
@@ -437,7 +439,7 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 				Ann:Notify(p, "Les runes ne s'éveillent que pendant une tempête.", "Info")
 				return
 			end
-			if menhirDone[p] == Storm:StormIndex() then
+			if menhirDone[p.UserId] == Storm:StormIndex() then
 				Ann:Notify(p, "Le coffre du Cercle est déjà ouvert pour cette tempête.", "Info")
 				return
 			end
@@ -447,7 +449,7 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 				Ann:Notify(p, "Menhir " .. order .. "/7 activé", "Info")
 				if expected >= 7 then
 					menhirSeq[p] = 0
-					menhirDone[p] = Storm:StormIndex()
+					menhirDone[p.UserId] = Storm:StormIndex()
 					Registry.Get("ProgressionService"):Grant(p, { gems = 40, crystals = 1, shards = 60, island = "Forest" }, "menhir")
 					Ann:Announce("Chest", p.DisplayName .. " a révélé le coffre caché du Cercle des Menhirs !")
 				end
@@ -501,8 +503,11 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 	elseif kind == "Zipline" then
 		-- tyrolienne : le client fait la descente (son personnage lui appartient), le serveur valide
 		local from, to = target and target:GetAttribute("From"), target and target:GetAttribute("To")
-		if target and near(p, target, 6) and typeof(from) == "Vector3" and typeof(to) == "Vector3" then
-			Net.Event("PlayerFx"):FireClient(p, { kind = "Zipline", from = from, to = to, duration = (to - from).Magnitude / 55 })
+		-- (les porteurs y ont droit : la bible en fait des routes de fuite pour les voleurs)
+		if target and near(p, target, 6) and typeof(from) == "Vector3" and typeof(to) == "Vector3" and os.clock() >= (ziplineUntil[p] or 0) then
+			local duration = (to - from).Magnitude / 55
+			ziplineUntil[p] = os.clock() + duration
+			Net.Event("PlayerFx"):FireClient(p, { kind = "Zipline", from = from, to = to, duration = duration })
 		end
 	elseif kind == "Stag" then
 		if target and near(p, target, 10) then
@@ -578,8 +583,8 @@ function ActionService:Init()
 	Players.PlayerRemoving:Connect(function(p)
 		rate[p] = nil
 		menhirSeq[p] = nil
-		menhirDone[p] = nil
 		monorailWaiting[p] = nil
+		ziplineUntil[p] = nil
 		treasureSeq[p] = nil
 		treasureOpen[p] = nil
 	end)

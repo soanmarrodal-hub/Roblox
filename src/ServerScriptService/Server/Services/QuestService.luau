@@ -66,6 +66,14 @@ function QuestService:Refresh(player: Player)
 		q.weekly.week = thisWeek()
 		q.weekly.list = pick(Quests.WeeklyPool, Quests.WeeklyCount, player.UserId * 3 + thisWeek())
 	end
+	-- quêtes retirées des pools depuis la dernière sauvegarde : on les écarte de la liste du jour
+	for _, pack in { { list = q.daily.list, pool = Quests.DailyPool }, { list = q.weekly.list, pool = Quests.WeeklyPool } } do
+		for i = #pack.list, 1, -1 do
+			if not findDef(pack.pool, pack.list[i].id) then
+				table.remove(pack.list, i)
+			end
+		end
+	end
 	-- calendrier de connexion
 	local login = q.login
 	if login.lastDay ~= today() then
@@ -160,8 +168,11 @@ function QuestService:Claim(player: Player, kind: string, id: string): (boolean,
 			if entry.claimed then
 				return false, "Déjà réclamée"
 			end
-			entry.claimed = true
 			local def = findDef(pool, id)
+			if not def then
+				return false, "Quête expirée"
+			end
+			entry.claimed = true
 			local reward = table.clone(def.reward)
 			reward.xp = (reward.xp or 0) + 40
 			Registry.Get("ProgressionService"):Grant(player, reward, "quest")

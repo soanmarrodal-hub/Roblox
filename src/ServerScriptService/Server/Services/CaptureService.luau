@@ -199,11 +199,6 @@ function CaptureService:PickUp(player: Player, e: any): boolean
 		Registry.Get("AnnouncementService"):Notify(player, "Ce héros volé retourne vers son socle d'origine.", "Info")
 		return false
 	end
-	if c.droppedBy == player and os.clock() < (c.droppedAt or 0) + Rarities.Get(Heroes.Get(c.heroId).rarity).groundTime then
-		-- se faire lâcher exprès pour remettre la jauge à zéro ne marche pas
-		Registry.Get("AnnouncementService"):Notify(player, "Tu viens de le lâcher : laisse-le se calmer un instant.", "Info")
-		return false
-	end
 	e.taken = true
 	Registry.Get("CombatService"):Remove(e, 0)
 	-- l'instabilité est conservée d'un porteur à l'autre (plus de remise à zéro en se faisant lâcher)
@@ -220,8 +215,6 @@ function CaptureService:Drop(player: Player, reason: string?)
 	end
 	local root = Registry.Get("CombatService").RootOf(player)
 	endCarry(player)
-	c.droppedBy = player
-	c.droppedAt = os.clock()
 	local pos = if root then root.Position else nil
 	if reason == "fall" or not pos then
 		if c.onDrop then

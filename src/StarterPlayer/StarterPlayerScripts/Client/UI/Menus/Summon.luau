@@ -90,11 +90,11 @@ function Summon.Build(body: Frame, ctx: any)
 				end
 				return "⚡ " .. Format.Short(cost)
 			end
-			local fromCrystals = math.min(d.crystals or 0, count)
-			local remaining = count - fromCrystals
-			-- même calcul que le serveur : chaque cristal retire un tirage du prix du x10
-			local gems = if count >= 10 then math.max(0, b.cost10 - b.cost1 * fromCrystals) else b.cost1 * remaining
-			if fromCrystals > 0 and remaining == 0 then
+			-- même calcul que le serveur : chaque cristal retire un tirage du prix du x10 (9 cristaux au plus)
+			local maxCrystals = if count >= 10 then math.ceil(b.cost10 / b.cost1) else count
+			local fromCrystals = math.min(d.crystals or 0, maxCrystals)
+			local gems = if count >= 10 then math.max(0, b.cost10 - b.cost1 * fromCrystals) else b.cost1 * (count - fromCrystals)
+			if fromCrystals > 0 and gems == 0 then
 				return "🔮 " .. fromCrystals
 			elseif fromCrystals > 0 then
 				return "🔮 " .. fromCrystals .. " + 💎 " .. gems
