@@ -115,9 +115,12 @@ des ancres invisibles portant des attributs ; le client les représente.
 - Remotes (`Shared/Net.luau`) : `DataSync`, `Notify`, `Announce`, `Telegraph`, `HitFx`, `SkillFx`, `PlayerFx`,
   `CarryState`, `DuelState`, `StealAlert`, `SummonResult`, `Cinematic`, `BossState`, `StormRecap`, `LevelUp`, `TradeState`
   vers le client ; `Attack`, `Skill`, `Dodge`, `Interact`, `Teleport`, `ReturnBase` et la fonction `Action` vers le serveur.
-- Attributs du joueur : devises, rang, `Power`, `Production`, `Collector`, `Island`, `LeaderHero`, `Carrying`, `CD1..3`,
-  `Charge`, `Gate_*`, `Pass_*`…
-- Attributs de `Workspace` : `StormState`, `StormType`, `StormEndsAt`, `NextStormAt`, `DayClock`, `WorldReady`.
+- Attributs du joueur : devises, rang, `Power`, `Production`, `Collector`, `Island`, `LeaderHero`, `Assists`, `Carrying`,
+  `CD1..3`, `Charge`, `Heat`, `Gate_*`, `Pass_*`…
+- Attributs de `Workspace` : `StormState`, `StormType`, `StormEndsAt`, `NextStormAt`, `StormBoostBy`, `StormGreat`,
+  `DayClock`, `WorldReady`, et pour les événements d'îles `IslEvt_<île>`, `IslEvtEnd_<île>`, `IslEvtZone_Neon`.
+- `ReplicatedStorage.MapMarkers` : boss, héros annoncés et porteurs publiés chaque seconde par le serveur (mini-carte et
+  carte fonctionnent même hors du rayon de streaming).
 - Étiquettes : `Entity`, `Interactable`, `Pedestal`, `CampPedestal`, `VaultPedestal`, `GuardianSpot`, `StatueSpot`, et les
   étiquettes d'animation du décor (`Spin`, `FloatRock`, `NightLight`, `JumpPad`, `GateBarrier`…).
 - Les horodatages publiés au client utilisent `Workspace:GetServerTimeNow()`.
