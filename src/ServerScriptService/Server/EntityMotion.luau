@@ -91,8 +91,29 @@ function EntityMotion.Face(anchor: BasePart, target: Vector3)
 	end
 end
 
+-- Vrai si le point est à l'intérieur d'une pièce pleine (immeuble, rocher…).
+local overlap = OverlapParams.new()
+overlap.FilterType = Enum.RaycastFilterType.Exclude
+overlap.RespectCanCollide = true
+local function blocked(p: Vector3): boolean
+	overlap.FilterDescendantsInstances = params.FilterDescendantsInstances
+	return #Workspace:GetPartBoundsInBox(CFrame.new(p + Vector3.new(0, 3, 0)), Vector3.new(2, 4, 2), overlap) > 0
+end
+
 function EntityMotion.Place(anchor: BasePart, pos: Vector3, hover: number)
 	local g = EntityMotion.Ground(pos, 30)
+	-- point d'apparition pris dans un bâtiment : on cherche un sol libre à proximité
+	if g and blocked(g) then
+		for i = 1, 8 do
+			local a = i / 8 * math.pi * 2
+			local alt = EntityMotion.Ground(pos + Vector3.new(math.cos(a), 0, math.sin(a)) * (10 + i * 2), 30)
+			if alt and not blocked(alt) then
+				g = alt
+				pos = Vector3.new(alt.X, pos.Y, alt.Z)
+				break
+			end
+		end
+	end
 	local p = if g then Vector3.new(pos.X, g.Y + hover, pos.Z) else pos
 	anchor.CFrame = CFrame.new(p) * (anchor.CFrame - anchor.CFrame.Position)
 end

@@ -189,7 +189,9 @@ local function tickWild(self: any, e: any, dt: number)
 			ai.nextSig = os.clock() + 11 + math.random() * 4
 			Combat:SetState(e, "Skill")
 			e.anchor:SetAttribute("Skill", def.signature)
-			Enemy:AttackPattern(e, target, pattern[2], { hover = ai.hover, damage = e.damage * 2, radius = 16 + def.size * 2 })
+			if not Enemy:CastSignature(e, target, def.signature, { hover = ai.hover, damage = e.damage * 2 }) then
+				Enemy:AttackPattern(e, target, pattern[2], { hover = ai.hover, damage = e.damage * 2, radius = 16 + def.size * 2 })
+			end
 		elseif os.clock() >= ai.nextAttack and dist <= range + 4 then
 			ai.nextAttack = os.clock() + 2 + math.random()
 			Combat:SetState(e, "Attack")

@@ -157,6 +157,29 @@ function Monuments.Desert(ctx: Common.Ctx)
 	door:AddTag("Interactable")
 	door:SetAttribute("Kind", "TreasureRoom")
 	door:SetAttribute("Label", "Salle des trésors")
+	-- Énigme : quatre dalles à symboles devant la porte, à activer dans l'ordre de la devinette du jour
+	for i, sym in { "☀", "☾", "★", "✦" } do
+		local pcf2 = pcf * CFrame.new(-21 + (i - 1) * 14, 0.4, -66)
+		local plate = Build.Box(pyr, pcf2, Vector3.new(7, 0.8, 7), rgb(200, 160, 90), Enum.Material.Sandstone, "GlyphPlate")
+		local sg = Instance.new("SurfaceGui")
+		sg.Face = Enum.NormalId.Top
+		sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		sg.PixelsPerStud = 30
+		sg.LightInfluence = 0
+		sg.Parent = plate
+		local t = Instance.new("TextLabel")
+		t.Size = UDim2.fromScale(1, 1)
+		t.BackgroundTransparency = 1
+		t.Font = Enum.Font.LuckiestGuy
+		t.TextScaled = true
+		t.TextColor3 = gold
+		t.Text = sym
+		t.Parent = sg
+		plate:AddTag("Interactable")
+		plate:SetAttribute("Kind", "TreasureGlyph")
+		plate:SetAttribute("Symbol", sym)
+		plate:SetAttribute("Label", "Dalle " .. sym)
+	end
 	ctx.info.bossSpawn = pcf * CFrame.new(0, 4, -80)
 	-- L'Allée des Obélisques (8 obélisques aux glyphes lumineux)
 	for i = 0, 7 do
@@ -244,6 +267,31 @@ function Monuments.Neon(ctx: Common.Ctx)
 	local R = ctx.island.radius
 	local terminals = 0
 	local roofs: { Vector3 } = {} -- toits hauts (départs de tyroliennes)
+	-- emplacements à laisser libres (repère local de l'île) : arène du boss, sanctuaire, camp, balises,
+	-- Tour Prisme, jardin, stations du monorail
+	local coreO, entryO, summitO = ctx.island.subzones[2].offset, ctx.island.subzones[1].offset, ctx.island.subzones[3].offset
+	local keep = {
+		{ coreO.X - 90, coreO.Z - 80, 50 },
+		{ coreO.X + 70, coreO.Z - 25, 36 },
+		{ coreO.X - 80, coreO.Z + 30, 40 },
+		{ entryO.X + 24, entryO.Z + 20, 22 },
+		{ coreO.X + 70, coreO.Z - 2, 22 },
+		{ summitO.X + 30, summitO.Z + 20, 22 },
+		{ summitO.X, summitO.Z - 30, 34 },
+		{ coreO.X + 60, coreO.Z + 70, 30 },
+	}
+	for k = 0, 2 do
+		local a = k / 3 * math.pi * 2 + 0.35
+		table.insert(keep, { math.cos(a) * R * 0.7, math.sin(a) * R * 0.7, 20 })
+	end
+	local function nearKey(x: number, z: number): boolean
+		for _, kp in keep do
+			if (Vector2.new(x - kp[1], z - kp[2])).Magnitude < kp[3] + 14 then
+				return true
+			end
+		end
+		return false
+	end
 	-- grille d'immeubles abandonnés aux enseignes toujours allumées
 	for gx = -5, 5 do
 		for gz = -5, 5 do
@@ -251,7 +299,7 @@ function Monuments.Neon(ctx: Common.Ctx)
 			local d = math.sqrt(lx * lx + lz * lz)
 			local nearPath = math.abs(lx) < 30 and lz > 0
 			local nearCanal = math.abs(lz) < 24 and d < 140
-			if d < R * 0.82 and not nearPath and not nearCanal and rng:NextNumber() < 0.8 then
+			if d < R * 0.82 and not nearPath and not nearCanal and not nearKey(lx, lz) and rng:NextNumber() < 0.8 then
 				local cf = Common.GroundCF(ctx, lx + rng:NextNumber(-6, 6), lz + rng:NextNumber(-6, 6), rng:NextInteger(0, 3) * 90, 0)
 				local h = rng:NextNumber(20, 70) + (if lz < -120 then 40 else 0)
 				local w = rng:NextNumber(18, 30)

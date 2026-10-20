@@ -682,7 +682,9 @@ function StealService:Start()
 				if now >= ai.nextSig then
 					ai.nextSig = now + 10
 					Combat:SetState(e, "Skill")
-					Enemy:AttackPattern(e, d.attacker, "Ring", { onlyPlayer = d.attacker, radius = 12, damage = e.damage * 1.6, hover = ai.hover })
+					if not Enemy:CastSignature(e, d.attacker, ai.def.signature, { onlyPlayer = d.attacker, damage = e.damage * 1.6, hover = ai.hover }) then
+						Enemy:AttackPattern(e, d.attacker, "Ring", { onlyPlayer = d.attacker, radius = 12, damage = e.damage * 1.6, hover = ai.hover })
+					end
 				elseif now >= ai.nextAttack then
 					ai.nextAttack = now + 1.8 + math.random() * 0.6
 					Combat:SetState(e, "Attack")

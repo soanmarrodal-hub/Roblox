@@ -47,6 +47,7 @@ local RANGE = {
 	SecretChest = 10,
 	Stag = 10,
 	Zipline = 6,
+	TreasureGlyph = 6,
 }
 
 local function root(): BasePart?
@@ -185,7 +186,7 @@ local function describe(inst: Instance): (string?, Color3?, (() -> ())?, string?
 		return "Ramasser le cristal", Theme.Color.ButtonGold, function()
 			send("MagmaCrystal", inst)
 		end
-	elseif kind == "EtherTree" or kind == "Terminal" or kind == "Menhir" or kind == "TreasureRoom" or kind == "Rift" then
+	elseif kind == "EtherTree" or kind == "Terminal" or kind == "Menhir" or kind == "TreasureRoom" or kind == "Rift" or kind == "TreasureGlyph" then
 		return label or kind, Theme.Color.Crystal, function()
 			send(kind, inst)
 		end

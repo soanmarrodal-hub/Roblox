@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage.Shared
 local Enemies = require(Shared.Config.Enemies)
+local Skills = require(Shared.Config.Skills)
 local Islands = require(Shared.Config.Islands)
 local Economy = require(Shared.Config.Economy)
 local Registry = require(script.Parent.Parent.Registry)
@@ -24,6 +25,62 @@ local TICK = 0.1
 -- Force d'une île (multiplicateur adouci comme la puissance des héros).
 function EnemyService:IslandScale(island: string): number
 	return Islands.Get(island).multiplier ^ 0.85
+end
+
+-- Signature réelle d'un héros contrôlé par l'IA (héros sauvage, défenseur de duel) : la forme et les
+-- effets de sa compétence (cercle, cône, ligne, statut) deviennent une attaque télégraphiée, avec le
+-- vrai effet visuel (bible §14 : « avec ses vraies compétences »).
+function EnemyService:CastSignature(e: any, target: Player, skillId: string, opts: { [string]: any }?): boolean
+	local Combat = Registry.Get("CombatService")
+	local skill = Skills.Get(skillId)
+	local root = Combat.RootOf(target)
+	if not skill or not root then
+		return false
+	end
+	local o = opts or {}
+	local dmgEff, statusEff
+	local function scan(list: { any })
+		for _, eff in list do
+			if eff.type == "damage" and not dmgEff then
+				dmgEff = eff
+			elseif eff.type == "status" and not statusEff then
+				statusEff = eff
+			end
+			if eff.effects and (not dmgEff or not statusEff) then
+				scan(eff.effects)
+			end
+		end
+	end
+	scan(skill.effects)
+	if not dmgEff then
+		return false
+	end
+	local pos = e.anchor.Position
+	local selfGround = Vector3.new(pos.X, pos.Y - (o.hover or 2.5), pos.Z)
+	local tpos = root.Position
+	local dir = Vector3.new(tpos.X - pos.X, 0, tpos.Z - pos.Z)
+	dir = if dir.Magnitude > 0.1 then dir.Unit else e.anchor.CFrame.LookVector
+	local shape = dmgEff.shape or "circle"
+	local radius = math.min(dmgEff.radius or 12, 26)
+	local origin = if shape == "circle" and (dmgEff.at == "target" or radius <= 14) then Vector3.new(tpos.X, tpos.Y - 2.5, tpos.Z) else selfGround
+	Combat:Telegraph({
+		shape = shape,
+		origin = origin,
+		dir = dir,
+		radius = radius,
+		length = math.min(dmgEff.length or 40, 60),
+		width = dmgEff.width or 6,
+		angle = dmgEff.angle or 90,
+		damage = o.damage or e.damage * 2,
+		source = e,
+		onlyPlayer = o.onlyPlayer,
+		status = statusEff and statusEff.status,
+		statusTime = statusEff and (statusEff.duration or 1) * 0.5,
+		delay = 1.2,
+	})
+	local def = e.ai and e.ai.def
+	Combat:SkillFx(nil, skill.vfx, selfGround, dir, if def and def.crystal then Color3.fromHex(def.crystal) else Color3.new(1, 1, 1), radius)
+	return true
 end
 
 -- Patrons d'attaque partagés (mobs, héros sauvages, boss, défenseurs de duel).

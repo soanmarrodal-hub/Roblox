@@ -23,6 +23,20 @@ local rate: { [Player]: { t: number, n: number } } = {}
 local depositCd: { [string]: number } = {}
 local menhirSeq: { [Player]: number } = {}
 local menhirDone: { [Player]: number } = {} -- index de la tempête où le coffre a été ouvert
+-- énigme de la Pyramide : ordre du jour des quatre dalles, progression et porte ouverte par joueur
+local SYMBOLS = { "☀", "☾", "★", "✦" }
+local RIDDLE = { ["☀"] = "celui qui brille à midi", ["☾"] = "celle qui veille la nuit", ["★"] = "celle qui guide les voyageurs", ["✦"] = "l'éclat de l'Éther" }
+local treasureSeq: { [Player]: number } = {}
+local treasureOpen: { [Player]: number } = {}
+local function riddleOrder(day: number): { string }
+	local order = table.clone(SYMBOLS)
+	local rng = Random.new(day * 7919)
+	for i = #order, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		order[i], order[j] = order[j], order[i]
+	end
+	return order
+end
 
 local function data(p: Player): any
 	return Registry.Get("DataService"):Get(p)
@@ -332,7 +346,7 @@ H.DebugGrant = function(p)
 end
 
 -- ============================================================================ Bouton contextuel
-local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true, Monorail = true, SecretChest = true, Stag = true, Zipline = true }
+local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true, Monorail = true, SecretChest = true, Stag = true, Zipline = true, TreasureGlyph = true }
 local monorailWaiting: { [Player]: boolean } = {}
 
 local function interact(p: Player, kind: string, target: Instance?, extra: any)
@@ -450,6 +464,15 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 				Ann:Notify(p, "La salle des trésors est vide pour aujourd'hui.", "Info")
 				return
 			end
+			if treasureOpen[p] ~= today then
+				-- devinette : l'ordre des dalles change chaque jour
+				local parts = {}
+				for _, sym in riddleOrder(today) do
+					table.insert(parts, RIDDLE[sym])
+				end
+				Ann:Notify(p, "Énigme gravée sur la porte : « Éveille d'abord " .. table.concat(parts, ", puis ") .. ". »", "Info")
+				return
+			end
 			d.stats.treasureDay = today
 			Registry.Get("ProgressionService"):Grant(p, { gems = 15, shards = 40, island = "Desert" }, "treasure")
 			Ann:Notify(p, "Tu résous l'énigme de la Pyramide : trésor obtenu !", "Success")
@@ -492,6 +515,25 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 	elseif kind == "MagmaCrystal" then
 		if target and near(p, target, 10) then
 			Registry.Get("IslandEventService"):PickCrystal(p, target :: BasePart)
+		end
+	elseif kind == "TreasureGlyph" then
+		if target and near(p, target, 8) then
+			local today = math.floor(os.time() / 86400)
+			local order = riddleOrder(today)
+			local expected = (treasureSeq[p] or 0) + 1
+			if target:GetAttribute("Symbol") == order[expected] then
+				treasureSeq[p] = expected
+				if expected >= #order then
+					treasureSeq[p] = 0
+					treasureOpen[p] = today
+					Ann:Notify(p, "La porte de la Pyramide s'ouvre !", "Success")
+				else
+					Ann:Notify(p, "La dalle s'illumine (" .. expected .. "/" .. #order .. ")", "Info")
+				end
+			else
+				treasureSeq[p] = 0
+				Ann:Notify(p, "Les dalles s'éteignent… relis l'énigme de la porte.", "Error")
+			end
 		end
 	elseif kind == "Rift" then
 		Ann:Notify(p, "Les Failles s'ouvriront à la saison prochaine…", "Info")
@@ -538,6 +580,8 @@ function ActionService:Init()
 		menhirSeq[p] = nil
 		menhirDone[p] = nil
 		monorailWaiting[p] = nil
+		treasureSeq[p] = nil
+		treasureOpen[p] = nil
 	end)
 end
 
