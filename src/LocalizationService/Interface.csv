@@ -117,6 +117,7 @@ Key,Source,Context,Example,en,es,pt
 ,Produit inconnu,,,Unknown product,Producto desconocido,Produto desconhecido
 ,Propose un échange à un joueur présent. Il doit accepter en te proposant aussi l'échange.,,,Offer a trade to a player on the server. They accept by offering you a trade too.,Propón un intercambio a un jugador presente. Acepta proponiéndote también el intercambio.,Proponha uma troca a um jogador presente. Ele aceita propondo a troca também.
 ,Quête introuvable,,,Quest not found,Misión no encontrada,Missão não encontrada
+,Quête expirée,,,Quest expired,Misión caducada,Missão expirada
 ,Recevoir mon premier héros,,,Get my first hero,Recibir mi primer héroe,Receber meu primeiro herói
 ,Retirer assistant,,,Remove assistant,Quitar asistente,Remover assistente
 ,Retirer du socle,,,Remove from pedestal,Quitar del pedestal,Tirar do pedestal
@@ -140,7 +141,7 @@ Key,Source,Context,Example,en,es,pt
 ,Tu es déjà en duel,,,You're already in a duel,Ya estás en un duelo,Você já está em um duelo
 ,Tu résous l'énigme de la Pyramide : trésor obtenu !,,,You solve the Pyramid's riddle: treasure obtained!,Resuelves el enigma de la Pirámide: ¡tesoro obtenido!,Você resolve o enigma da Pirâmide: tesouro obtido!
 ,Tu viens d'être touché,,,You were just hit,Acabas de recibir un golpe,Você acabou de ser atingido
-,Tu viens de le lâcher : laisse-le se calmer un instant.,,,You just dropped it: let it calm down a moment.,Acabas de soltarlo: déjalo calmarse un momento.,Você acabou de soltá-lo: deixe-o se acalmar um instante.
+,Ton poursuivant a la priorité quelques secondes.,,,Your pursuer has priority for a few seconds.,Tu perseguidor tiene prioridad unos segundos.,Seu perseguidor tem prioridade por alguns segundos.
 ,Téléportations,,,Teleports,Teletransportes,Teletransportes
 ,Un autre conseil,,,Another tip,Otro consejo,Outra dica
 ,VOL EN ARGENT,,,SILVER STEAL,ROBO DE PLATA,ROUBO PRATA

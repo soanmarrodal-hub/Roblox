@@ -32,6 +32,8 @@ local function setCarryAttrs(player: Player, c: any?)
 	player:SetAttribute("CarryHits", c and c.hits or nil)
 end
 
+local DROPPER_LOCKOUT = 3 -- s : un porteur lâché sous les coups ne peut pas reprendre le héros tout de suite
+
 local function canInteract(player: Player, e: any): (boolean, string?)
 	if not e.ai.downed then
 		return false, nil
@@ -199,6 +201,12 @@ function CaptureService:PickUp(player: Player, e: any): boolean
 		Registry.Get("AnnouncementService"):Notify(player, "Ce héros volé retourne vers son socle d'origine.", "Info")
 		return false
 	end
+	if c.droppedBy == player and os.clock() < (c.droppedAt or 0) + DROPPER_LOCKOUT then
+		-- lâché sous les coups : le poursuivant a la priorité quelques secondes (sinon le porteur le
+		-- ramasse aussitôt et son compteur de coups repart de zéro)
+		Registry.Get("AnnouncementService"):Notify(player, "Ton poursuivant a la priorité quelques secondes.", "Info")
+		return false
+	end
 	e.taken = true
 	Registry.Get("CombatService"):Remove(e, 0)
 	-- l'instabilité est conservée d'un porteur à l'autre (plus de remise à zéro en se faisant lâcher)
@@ -215,6 +223,10 @@ function CaptureService:Drop(player: Player, reason: string?)
 	end
 	local root = Registry.Get("CombatService").RootOf(player)
 	endCarry(player)
+	if reason == "hits" then
+		c.droppedBy = player
+		c.droppedAt = os.clock()
+	end
 	local pos = if root then root.Position else nil
 	if reason == "fall" or not pos then
 		if c.onDrop then

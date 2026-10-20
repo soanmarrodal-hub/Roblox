@@ -8,6 +8,7 @@ export type PlayerState = {
 	carrying: any?, -- { heroId, mut, rarity, source = "Wild"|"Steal", ... }
 	duel: any?,
 	lastHit: number,
+	lastEnvHit: number?,
 	cooldowns: { [string]: number },
 	charge: number,
 	shield: number,

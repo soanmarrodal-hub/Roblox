@@ -454,10 +454,6 @@ function Monuments.Neon(ctx: Common.Ctx)
 		local p = Common.Ground(ctx, math.cos(a) * R * 0.7, math.sin(a) * R * 0.7)
 		Build.Box(m, CFrame.new(p + Vector3.new(0, (ctx.frame.Position.Y + 34 - p.Y) / 2, 0)), Vector3.new(2, ctx.frame.Position.Y + 34 - p.Y, 2), rgb(30, 28, 40), Enum.Material.Metal, "RailPillar")
 	end
-	local wagon = Build.Box(m, ctx.frame * CFrame.new(R * 0.7, 37.5, 0), Vector3.new(10, 6, 20), rgb(60, 50, 90), Enum.Material.Metal, "Wagon")
-	wagon:SetAttribute("Radius", R * 0.7)
-	wagon:SetAttribute("Center", ctx.frame.Position + Vector3.new(0, 37.5, 0))
-	wagon:AddTag("Monorail")
 	-- Trois stations sous le rail : départ toutes les 40 s vers la station suivante (interdit aux porteurs)
 	local stations = {}
 	for i = 0, 2 do
@@ -477,11 +473,20 @@ function Monuments.Neon(ctx: Common.Ctx)
 	for i, inter in stations do
 		inter:SetAttribute("Next", stations[i % #stations + 1].Position)
 	end
-	-- angle monde de la station 1 : le wagon (animé côté client à l'heure serveur) y passe quand
-	-- GetServerTimeNow() % 120 == 0, puis à la station suivante toutes les 40 s, au moment des départs
+	-- Trois wagons espacés d'un tiers de tour (un tour en 120 s, animés côté client à l'heure serveur) :
+	-- à chaque départ (GetServerTimeNow() % 40 == 0), un wagon se trouve au-dessus de chaque station.
 	local c0 = ctx.frame.Position
 	local s1 = stations[1].Position
-	wagon:SetAttribute("Phase", math.atan2(s1.Z - c0.Z, s1.X - c0.X))
+	local phase1 = math.atan2(s1.Z - c0.Z, s1.X - c0.X)
+	for k = 0, 2 do
+		local ang = phase1 + k / 3 * math.pi * 2
+		local wpos = c0 + Vector3.new(math.cos(ang) * R * 0.7, 37.5, math.sin(ang) * R * 0.7)
+		local wagon = Build.Box(m, CFrame.lookAt(wpos, wpos + Vector3.new(-math.sin(ang), 0, math.cos(ang))), Vector3.new(10, 6, 20), rgb(60, 50, 90), Enum.Material.Metal, "Wagon")
+		wagon:SetAttribute("Radius", R * 0.7)
+		wagon:SetAttribute("Center", c0 + Vector3.new(0, 37.5, 0))
+		wagon:SetAttribute("Phase", ang)
+		wagon:AddTag("Monorail")
+	end
 	-- Jardin suspendu (seul îlot de verdure)
 	local gcf = Common.GroundCF(ctx, core.X + 60, core.Z + 70, 0, 18)
 	Build.Box(m, gcf, Vector3.new(40, 2, 40), rgb(70, 60, 50), Enum.Material.Concrete, "Garden")

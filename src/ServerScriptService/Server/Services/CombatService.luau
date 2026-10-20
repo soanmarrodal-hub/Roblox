@@ -339,6 +339,8 @@ function CombatService:DamagePlayer(player: Player, amount: number, source: Enti
 		end
 	end
 	if environmental then
+		-- bloque quand même la régénération hors combat (sinon elle compense la chaleur)
+		s.lastEnvHit = os.clock()
 		return true
 	end
 	s.lastHit = os.clock()
@@ -1139,7 +1141,7 @@ function CombatService:Start()
 			end
 			-- régénération lente hors combat (10 s sans coup reçu)
 			local hum = humOf(p)
-			if hum and hum.Health > 0 and hum.Health < hum.MaxHealth and os.clock() - s.lastHit > 10 then
+			if hum and hum.Health > 0 and hum.Health < hum.MaxHealth and os.clock() - s.lastHit > 10 and os.clock() - (s.lastEnvHit or 0) > 10 then
 				hum.Health = math.min(hum.MaxHealth, hum.Health + hum.MaxHealth * 0.04)
 			end
 			local _ = HeroService

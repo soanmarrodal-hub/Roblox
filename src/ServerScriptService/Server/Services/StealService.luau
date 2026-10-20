@@ -307,7 +307,7 @@ function StealService:EndDuel(duel: any, outcome: string)
 		local t = os.clock() - duel.startedAt
 		-- chance (bénédiction du cerf de cristal) : +5 points de vol critique
 		local crit = math.random() < (Steal.CriticalChance + (if Storm:IsActive() then Storms.Effects.criticalStealBonus else 0) + State.Buff(attacker, "luck"))
-		tier = StealLogic.Tier(t, duel.refTime, duel.atkPower, duel.capDefPower, crit, duel.camp ~= nil)
+		tier = StealLogic.Tier(t, duel.refTime, duel.atkPower, duel.capDefPower, crit, duel.camp ~= nil or duel.revenge) -- vengeance : la victime reprend son propre héros, sans plafond
 		if tier == "Gold" and victim then
 			local vd = data(victim)
 			if vd and os.time() - (vd.stats.lastLoss or 0) < Steal.LossWindow then
