@@ -544,16 +544,34 @@ local function updateClock()
 	local id = Workspace:GetAttribute("StormType")
 	local def = id and Storms.List[id]
 	local timeText, stormText
+	local great = Workspace:GetAttribute("StormGreat")
+	local boost = Workspace:GetAttribute("StormBoostBy")
 	if st == "Active" then
 		timeText = Format.Time((Workspace:GetAttribute("StormEndsAt") or now) - now)
-		stormText = def and def.name or "Tempête"
+		stormText = (if great then "GRANDE TEMPÊTE" else (def and def.name or "Tempête"))
+		if boost then
+			-- nom de l'acheteur du boost affiché pendant toute la tempête (bible §19)
+			stormText ..= "\nBoost offert par " .. boost
+		end
 	elseif st == "Announce" then
 		timeText = Format.Time((Workspace:GetAttribute("StormEndsAt") or now) - now)
-		stormText = "Arrive : " .. (def and def.name or "?")
+		stormText = "Arrive : " .. (if great then "GRANDE TEMPÊTE" else (def and def.name or "?"))
+	elseif st == "Fallout" then
+		timeText = Format.Time((Workspace:GetAttribute("StormEndsAt") or now) - now)
+		stormText = "Retombées"
 	else
 		local nextAt = Workspace:GetAttribute("NextStormAt")
-		timeText = if nextAt then Format.Time(nextAt - now) else "--:--"
-		stormText = "Prochaine tempête"
+		timeText = if nextAt then Format.Time(math.max(0, nextAt - now)) else "--:--"
+		-- horaire des Grandes Tempêtes, annoncé en jeu (bible §17)
+		local days = { [1] = "dim.", [7] = "sam." }
+		local dlist, hlist = {}, {}
+		for _, wd in Storms.GreatSchedule.days do
+			table.insert(dlist, days[wd] or tostring(wd))
+		end
+		for _, h in Storms.GreatSchedule.hoursUTC do
+			table.insert(hlist, h .. "h")
+		end
+		stormText = "Prochaine tempête\nGrande Tempête : " .. table.concat(dlist, " et ") .. " " .. table.concat(hlist, ", ") .. " UTC"
 	end
 	for _, dial in CollectionService:GetTagged("CosmicClock") do
 		for _, sg in dial:GetChildren() do

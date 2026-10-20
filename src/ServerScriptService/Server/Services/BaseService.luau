@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PhysicsService = game:GetService("PhysicsService")
 
 local Shared = ReplicatedStorage.Shared
 local Economy = require(Shared.Config.Economy)
@@ -193,6 +194,16 @@ end
 function BaseService:SpawnCharacter(player: Player, char: Model)
 	local d = data(player)
 	local plot = self:PlotOf(player)
+	-- les joueurs se traversent (bible §13) : pas de blocage des socles, ponts et portails
+	local function noCollide(inst: Instance)
+		if inst:IsA("BasePart") then
+			inst.CollisionGroup = "Players"
+		end
+	end
+	for _, inst in char:GetDescendants() do
+		noCollide(inst)
+	end
+	char.DescendantAdded:Connect(noCollide)
 	task.defer(function()
 		local root = char:WaitForChild("HumanoidRootPart", 5)
 		if not root then
@@ -215,6 +226,10 @@ function BaseService:SpawnCharacter(player: Player, char: Model)
 end
 
 function BaseService:Init()
+	pcall(function()
+		PhysicsService:RegisterCollisionGroup("Players")
+		PhysicsService:CollisionGroupSetCollidable("Players", "Players", false)
+	end)
 	local DataService = Registry.Get("DataService")
 	DataService.Loaded:Connect(function(player: Player)
 		Registry.Get("WorldService"):WaitReady()

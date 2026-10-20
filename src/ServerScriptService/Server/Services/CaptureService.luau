@@ -327,6 +327,14 @@ function CaptureService:Start()
 						end
 					end
 				end
+				-- escorte : un joueur proche avec un leader Soutien fait baisser la jauge (bible §14)
+				for _, other in Players:GetPlayers() do
+					local lid = other ~= p and other:GetAttribute("LeaderHero")
+					local orr = lid and Combat.RootOf(other)
+					if orr and Heroes.List[lid] and Heroes.List[lid].role == "Support" and (orr.Position - root.Position).Magnitude < 25 then
+						support += 1.5
+					end
+				end
 				c.instability = math.clamp(c.instability + (r.instabilityPerSecond - support) * step, 0, 100)
 				p:SetAttribute("Instability", c.instability)
 				if c.instability >= 100 then

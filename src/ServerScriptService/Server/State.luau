@@ -19,6 +19,7 @@ export type PlayerState = {
 	lastReturn: number,
 	island: string?,
 	target: any?,
+	targetPlayer: Player?, -- dernier joueur adverse touché (les assistants l'attaquent aussi)
 	failedBases: { [number]: number },
 	pvpUntil: number,
 	carriedHits: number,

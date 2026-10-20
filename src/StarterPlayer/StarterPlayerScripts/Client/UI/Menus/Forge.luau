@@ -69,10 +69,17 @@ function Page.Build(body: Frame, ctx: any)
 					costText ..= " + ✦" .. u.shards * (tier + 1)
 				end
 			end
-			local b = Kit.Button(row, { Text = costText, Size = UDim2.new(0.28, 0, 0, 48), Position = UDim2.new(1, -10, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5), Color = if maxed then Theme.Color.ButtonGray else Theme.Color.ButtonGreen, MaxSize = 18, OnClick = function()
+			local alt = not maxed and Economy.UpgradeAltCost(id, tier + 1)
+			local b = Kit.Button(row, { Text = costText, Size = UDim2.new(if alt then 0.14 else 0.28, if alt then -3 else 0, 0, 48), Position = UDim2.new(1, -10, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5), Color = if maxed then Theme.Color.ButtonGray else Theme.Color.ButtonGreen, MaxSize = 18, OnClick = function()
 				C.Data.Action("Upgrade", { id = id })
 			end })
 			Kit.SetEnabled(b, not maxed)
+			if alt then
+				-- deuxième prix (Éclats) pour les améliorations payables de deux façons
+				Kit.Button(row, { Text = "✦ " .. Format.Short(alt) .. " " .. shardName, Size = UDim2.new(0.14, -3, 0, 48), Position = UDim2.new(0.86, -16, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5), Color = Theme.Color.ButtonGold, MaxSize = 16, OnClick = function()
+					C.Data.Action("Upgrade", { id = id, alt = true })
+				end })
+			end
 		end
 		local _ = shard
 	end

@@ -149,7 +149,7 @@ H.Fuse = function(p, a)
 	if not (uid) then
 		return false, nil
 	end
-	return Registry.Get("HeroService"):Fuse(p, uid)
+	return Registry.Get("HeroService"):Fuse(p, uid, a.force == true)
 end
 H.Purify = function(p, a)
 	local uid, mut = str(a.uid), str(a.mut)
@@ -163,7 +163,7 @@ H.Upgrade = function(p, a)
 	if not (id) then
 		return false, nil
 	end
-	return Registry.Get("EconomyService"):BuyUpgrade(p, id)
+	return Registry.Get("EconomyService"):BuyUpgrade(p, id, a.alt == true)
 end
 H.Summon = function(p, a)
 	local b = str(a.banner)

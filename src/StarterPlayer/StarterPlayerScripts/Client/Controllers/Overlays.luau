@@ -176,9 +176,16 @@ local function onDuel(p)
 			end
 			local name = p.heroId and Heroes.List[p.heroId] and Heroes.List[p.heroId].name or ""
 			if st and st.defending then
-				resultBanner("BASE PERDUE…", Theme.Color.Error, "Le voleur s'enfuit avec " .. name .. " : intercepte-le !")
+				-- seul l'Or emporte le héros : en Argent et en Bronze, le défenseur ne perd presque rien
+				if p.tier == "Gold" then
+					resultBanner("BASE PERDUE…", Theme.Color.Error, "Le voleur s'enfuit avec " .. name .. " : intercepte-le !")
+				elseif p.tier == "Silver" then
+					resultBanner("VOL EN ARGENT", Theme.Color.Warning, "Des fragments volés, " .. name .. " reste sur son socle")
+				else
+					resultBanner("VOL EN BRONZE", Theme.Color.Warning, "Un peu d'énergie volée, " .. name .. " reste sur son socle")
+				end
 			else
-				local sub = if p.tier == "Gold" then "Ramène " .. name .. " à ta base !" elseif p.tier == "Silver" then "Fragments et énergie récupérés" else "Énergie récupérée"
+				local sub = if p.tier == "Gold" then "Ramène " .. name .. " à ta base !" elseif p.tier == "Silver" then "Fragments récupérés" else "Énergie récupérée"
 				resultBanner("VOL " .. string.upper(tierDef and tierDef.name or p.tier) .. " !", tierDef and tierDef.color or Theme.Color.Gold, sub)
 			end
 			C.Sound.Play("Fanfare")

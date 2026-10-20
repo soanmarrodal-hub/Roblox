@@ -32,6 +32,7 @@ local chargeRing: Frame
 local lastAttack = 0
 local lastDodge = 0
 local ATTACK_CD = Skills.Get("BasicAttack").cooldown
+local held = { button = false, mouse = false, pad = false }
 local DODGE_CD = Skills.DodgeCooldown
 local lockedId: number? = nil
 local lockMarker: BillboardGui
@@ -261,6 +262,10 @@ function Combat.Shake(amount: number)
 	end
 end
 
+function Combat.ShakeEnabled(): boolean
+	return shakeEnabled
+end
+
 function Combat.LockedId(): number?
 	return lockedId
 end
@@ -343,6 +348,20 @@ local function buildPad()
 		return UDim2.new(1, x, 1, y)
 	end
 	local atk = skillButton(pad, "Attack", at(-95, -95), 104, Color3.fromRGB(230, 80, 70), Combat.Attack)
+	-- maintenir le gros bouton enchaîne les attaques (bible §13)
+	atk.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+			held.button = true
+			Combat.Attack()
+			local conn
+			conn = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
+				if input.UserInputState == Enum.UserInputState.End or input.UserInputState == Enum.UserInputState.Cancel then
+					held.button = false
+					conn:Disconnect()
+				end
+			end)
+		end
+	end)
 	;(atk:FindFirstChild("Icon") :: TextLabel).Text = Theme.Icon.Attack
 	keyHint(atk, "🖱")
 	local s1 = skillButton(pad, "Skill1", at(-222, -72), 70, Color3.fromRGB(70, 130, 230), function()
@@ -409,6 +428,10 @@ end
 -- ============================================================================ Boucle
 local function update(dt: number)
 	local now = Workspace:GetServerTimeNow()
+	-- attaque maintenue (bouton, clic gauche, manette) : Attack se limite déjà à sa recharge
+	if (held.button or held.mouse or held.pad) and not C.Menus.IsOpen() then
+		Combat.Attack()
+	end
 	-- recharges
 	local atkLeft = ATTACK_CD - (os.clock() - lastAttack)
 	if cooldownSetters.Attack then
@@ -556,11 +579,22 @@ function Combat.Start()
 	bind("AstralSkill3", function()
 		Combat.Skill(3)
 	end, Enum.KeyCode.Three, Enum.KeyCode.ButtonY)
-	bind("AstralDodge", Combat.Dodge, Enum.KeyCode.Q, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonB)
-	bind("AstralAttackPad", Combat.Attack, Enum.KeyCode.ButtonX, Enum.KeyCode.ButtonR2, Enum.KeyCode.F)
+	-- table des contrôles de la bible (§13) : esquive Espace / A, interaction E / B. L'action laisse passer
+	-- l'entrée (Pass) : sur Espace / A, le saut reste possible et devient un saut esquivé.
+	bind("AstralDodge", Combat.Dodge, Enum.KeyCode.Space, Enum.KeyCode.ButtonA, Enum.KeyCode.Q, Enum.KeyCode.LeftShift)
+	-- attaque maintenue = enchaînement (manette / clavier)
+	ContextActionService:BindAction("AstralAttackPad", function(_, state)
+		if state == Enum.UserInputState.Begin then
+			held.pad = true
+			Combat.Attack()
+		elseif state == Enum.UserInputState.End or state == Enum.UserInputState.Cancel then
+			held.pad = false
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.ButtonX, Enum.KeyCode.ButtonR2, Enum.KeyCode.F)
 	bind("AstralInteract", function()
 		C.HUD.TriggerContext()
-	end, Enum.KeyCode.E, Enum.KeyCode.DPadUp)
+	end, Enum.KeyCode.E, Enum.KeyCode.ButtonB, Enum.KeyCode.DPadUp)
 	bind("AstralReturn", function()
 		Net.Event("ReturnBase"):FireServer()
 	end, Enum.KeyCode.B)
@@ -583,10 +617,16 @@ function Combat.Start()
 				return
 			end
 			tryLockAt(UserInputService:GetMouseLocation())
+			held.mouse = true
 			Combat.Attack()
 		elseif input.UserInputType == Enum.UserInputType.Touch then
 			local inset = game:GetService("GuiService"):GetGuiInset()
 			tryLockAt(Vector2.new(input.Position.X, input.Position.Y) + inset)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			held.mouse = false
 		end
 	end)
 	local _ = Locale

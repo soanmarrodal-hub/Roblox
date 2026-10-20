@@ -33,6 +33,7 @@ export type Entity = {
 	radius: number,
 	status: { [string]: number },
 	contributors: { [Player]: number },
+	support: { [Player]: number }, -- soins et boucliers donnés aux joueurs qui le combattent
 	dead: boolean,
 	onDeath: ((Entity, Player?) -> ())?,
 	onHurt: ((Entity, Player?, number) -> ())?,
@@ -81,6 +82,7 @@ function CombatService:Register(def: { [string]: any }): Entity
 		radius = def.radius or 3,
 		status = {},
 		contributors = {},
+		support = {},
 		dead = false,
 		onDeath = def.onDeath,
 		onHurt = def.onHurt,
@@ -165,8 +167,8 @@ local function nearbyPlayers(pos: Vector3, radius: number): { Player }
 end
 CombatService.NearbyPlayers = nearbyPlayers
 
-function CombatService:HitFx(pos: Vector3, amount: number, kind: string, crit: boolean?)
-	local payload = { pos = pos, amount = math.floor(amount), kind = kind, crit = crit }
+function CombatService:HitFx(pos: Vector3, amount: number, kind: string, crit: boolean?, by: Player?)
+	local payload = { pos = pos, amount = math.floor(amount), kind = kind, crit = crit, by = by and by.UserId }
 	for _, p in nearbyPlayers(pos, 180) do
 		Net.Unrel("HitFx"):FireClient(p, payload)
 	end
@@ -224,6 +226,44 @@ function CombatService:ApplyPlayerStatus(player: Player, status: string, duratio
 	end)
 end
 
+-- Adversaires réels : même duel (attaquant et défenseur) ou même camp pendant une tempête. Sert à
+-- refuser soins, boucliers, bonus et remises à zéro à un adversaire.
+function CombatService:IsOpponent(a: Player, b: Player): boolean
+	if a == b then
+		return false
+	end
+	local as, bs = State.Get(a), State.Get(b)
+	if as.duel and bs.duel and as.duel == bs.duel and (as.duel.defender == a or as.duel.defender == b) then
+		return true
+	end
+	local Storm = Registry.Get("StormService")
+	return Storm:IsActive() and a:GetAttribute("InCamp") ~= nil and a:GetAttribute("InCamp") == b:GetAttribute("InCamp")
+end
+
+-- Amis Roblox (rempli en arrière-plan : IsFriendsWith fait une requête) : on n'abat pas le héros
+-- porté par un ami qu'on escorte.
+local friends: { [number]: { [number]: boolean } } = {}
+local function isFriend(a: Player, b: Player): boolean
+	local fa = friends[a.UserId]
+	return fa ~= nil and fa[b.UserId] == true
+end
+local function cacheFriends(p: Player)
+	for _, other in Players:GetPlayers() do
+		if other ~= p then
+			task.spawn(function()
+				local ok, yes = pcall(p.IsFriendsWith, p, other.UserId)
+				if ok and yes then
+					friends[p.UserId] = friends[p.UserId] or {}
+					friends[other.UserId] = friends[other.UserId] or {}
+					friends[p.UserId][other.UserId] = true
+					friends[other.UserId][p.UserId] = true
+				end
+			end)
+		end
+	end
+end
+CombatService.IsFriend = isFriend
+
 -- PvP : seulement si la cible porte un héros, est dans un duel de défense, ou dans un camp pendant une tempête.
 function CombatService:CanHitPlayer(attacker: Player, target: Player): boolean
 	if attacker == target then
@@ -232,7 +272,8 @@ function CombatService:CanHitPlayer(attacker: Player, target: Player): boolean
 	local ts = State.Get(target)
 	local as = State.Get(attacker)
 	if ts.carrying then
-		return true
+		-- on ne fait pas lâcher le héros d'un ami qu'on escorte (sauf adversaire déclaré)
+		return not isFriend(attacker, target) or self:IsOpponent(attacker, target)
 	end
 	if ts.duel and as.duel and ts.duel == as.duel and ts.duel.defender == target then
 		return true
@@ -262,6 +303,12 @@ function CombatService:DamagePlayer(player: Player, amount: number, source: Enti
 		return
 	end
 	local dmg = amount * (1 - State.Buff(player, "defense"))
+	if State.HasStatus(player, "vulnerable") then
+		dmg *= 1.25
+	end
+	if State.HasStatus(player, "shieldBreak") then
+		s.shield = 0
+	end
 	if s.shield > 0 and s.shieldUntil > os.clock() then
 		local absorbed = math.min(s.shield, dmg)
 		s.shield -= absorbed
@@ -292,18 +339,23 @@ function CombatService:DamagePlayer(player: Player, amount: number, source: Enti
 	end
 end
 
-function CombatService:HealPlayer(player: Player, fraction: number)
+function CombatService:HealPlayer(player: Player, fraction: number): number
 	local hum = humOf(player)
 	local root = rootOf(player)
 	if hum and root and hum.Health > 0 then
-		local amt = hum.MaxHealth * fraction
+		local amt = math.min(hum.MaxHealth * fraction, hum.MaxHealth - hum.Health)
 		hum.Health = math.min(hum.MaxHealth, hum.Health + amt)
-		self:HitFx(root.Position, amt, "heal")
+		if amt > 0 then
+			self:HitFx(root.Position, amt, "heal")
+		end
+		return amt
 	end
+	return 0
 end
 
 -- ============================================================================ Dégâts aux entités
-function CombatService:DamageEntity(e: Entity, amount: number, player: Player?, crit: boolean?)
+-- passive : coup d'un assistant (crédité au joueur, mais ne prolonge pas sa fenêtre de combat)
+function CombatService:DamageEntity(e: Entity, amount: number, player: Player?, crit: boolean?, passive: boolean?)
 	if e.dead then
 		return
 	end
@@ -311,9 +363,13 @@ function CombatService:DamageEntity(e: Entity, amount: number, player: Player?, 
 		return
 	end
 	local dmg = math.max(1, amount)
+	if self:HasStatus(e, "vulnerable") then
+		dmg *= 1.25 -- Jugement solaire : défense abaissée
+	end
 	-- bouclier frontal (méca de sécurité) : dégâts réduits pour un attaquant placé devant
+	-- (brisé par la Surcharge de Mekhar)
 	local shield = e.ai and e.ai.def and e.ai.def.frontShield
-	if shield and player then
+	if shield and player and not self:HasStatus(e, "shieldBreak") then
 		local root = CombatService.RootOf(player)
 		if root then
 			local to = Vector3.new(root.Position.X - e.anchor.Position.X, 0, root.Position.Z - e.anchor.Position.Z)
@@ -328,12 +384,14 @@ function CombatService:DamageEntity(e: Entity, amount: number, player: Player?, 
 		if e.kind == "Boss" then
 			Registry.Get("StormService"):AddRecap(player, "bossDamage", dmg)
 		end
-		local s = State.Get(player)
-		s.target = e
-		s.lastAttack = os.clock()
+		if not passive then
+			local s = State.Get(player)
+			s.target = e
+			s.lastAttack = os.clock()
+		end
 	end
 	e.anchor:SetAttribute("HP", e.hp)
-	self:HitFx(e.anchor.Position + Vector3.new(0, 3, 0), dmg, "dmg", crit)
+	self:HitFx(e.anchor.Position + Vector3.new(0, 3, 0), dmg, "dmg", crit, if passive then nil else player)
 	if e.onHurt then
 		e.onHurt(e, player, dmg)
 	end
@@ -508,7 +566,19 @@ local function powerOf(player: Player): number
 end
 
 -- Exécute une liste d'effets de compétence.
-function CombatService:RunEffects(player: Player, effects: { any }, origin: Vector3, dir: Vector3, targetPos: Vector3?, depth: number?)
+-- Soin ou bouclier donné à un joueur qui combat un boss / gardien : compte comme contribution.
+function CombatService:CreditSupport(caster: Player, helped: Player, amount: number, pos: Vector3)
+	if amount <= 0 then
+		return
+	end
+	for _, b in self:Near(pos, 80) do
+		if (b.kind == "Boss" or b.kind == "Guardian") and not b.dead and b.contributors[helped] then
+			b.support[caster] = (b.support[caster] or 0) + amount
+		end
+	end
+end
+
+function CombatService:RunEffects(player: Player, effects: { any }, origin: Vector3, dir: Vector3, targetPos: Vector3?, depth: number?, passive: boolean?)
 	if (depth or 0) > 4 then
 		return
 	end
@@ -531,10 +601,12 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 				if not e.dead and (not e.attackableBy or e.attackableBy(player)) and inShape(shape, o, dir, e.anchor.Position, eff, e.radius) then
 					local crit = math.random() < 0.1
 					local amount = power * (eff.mult or 1) * (0.9 + math.random() * 0.2) * (if crit then 1.5 else 1)
-					self:DamageEntity(e, amount, player, crit)
-					local s = State.Get(player)
-					s.charge = math.min(100, s.charge + Skills.SignatureChargePerHit)
-					player:SetAttribute("Charge", s.charge)
+					self:DamageEntity(e, amount, player, crit, passive)
+					if not passive then
+						local s = State.Get(player)
+						s.charge = math.min(100, s.charge + Skills.SignatureChargePerHit)
+						player:SetAttribute("Charge", s.charge)
+					end
 				end
 			end
 			for _, other in Players:GetPlayers() do
@@ -543,18 +615,30 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 					local hum = humOf(other)
 					local amt = (hum and hum.MaxHealth or 100) * 0.08 * (eff.mult or 1)
 					self:DamagePlayer(other, amt, nil, player)
+					local cs = State.Get(player)
+					cs.targetPlayer = other
+					if not passive then
+						cs.lastAttack = os.clock()
+					end
 				end
 			end
 		elseif kind == "heal" then
 			for _, p in nearbyPlayers(o, eff.radius or 20) do
-				self:HealPlayer(p, eff.mult or 0.1)
+				if p == player or not self:IsOpponent(player, p) then
+					local healed = self:HealPlayer(p, eff.mult or 0.1)
+					self:CreditSupport(player, p, healed, o)
+				end
 			end
 		elseif kind == "shield" then
 			for _, p in nearbyPlayers(o, eff.radius or 10) do
+				if p ~= player and self:IsOpponent(player, p) then
+					continue
+				end
 				local hum = humOf(p)
 				local s = State.Get(p)
 				s.shield = (hum and hum.MaxHealth or 100) * (eff.amount or 0.2)
 				s.shieldUntil = os.clock() + (eff.duration or 4)
+				self:CreditSupport(player, p, s.shield * 0.5, o)
 				p:SetAttribute("Shield", s.shield)
 				p:SetAttribute("ShieldEnds", Workspace:GetServerTimeNow() + (eff.duration or 4))
 			end
@@ -595,12 +679,15 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 			for i = 1, ticks do
 				task.delay(i * (eff.tick or 1), function()
 					if player.Parent then
-						self:RunEffects(player, eff.effects, zoneOrigin, dir, targetPos, (depth or 0) + 1)
+						self:RunEffects(player, eff.effects, zoneOrigin, dir, targetPos, (depth or 0) + 1, passive)
 					end
 				end)
 			end
 		elseif kind == "buff" then
 			for _, p in nearbyPlayers(o, eff.radius or 10) do
+				if p ~= player and self:IsOpponent(player, p) then
+					continue
+				end
 				local s = State.Get(p)
 				if eff.stat == "revive" then
 					s.reviveBuff = os.clock() + (eff.duration or 6)
@@ -612,7 +699,7 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 		elseif kind == "delay" then
 			task.delay(eff.t or 1, function()
 				if player.Parent then
-					self:RunEffects(player, eff.effects, o, dir, targetPos, (depth or 0) + 1)
+					self:RunEffects(player, eff.effects, o, dir, targetPos, (depth or 0) + 1, passive)
 				end
 			end)
 		elseif kind == "multi" then
@@ -629,7 +716,7 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 						po = base + Vector3.new(math.cos(a), 0, math.sin(a)) * math.random() * eff.random
 					end
 					local d2 = if r then Vector3.new(r.CFrame.LookVector.X, 0, r.CFrame.LookVector.Z).Unit else dir
-					self:RunEffects(player, eff.effects, po, if eff.random then dir else d2, targetPos, (depth or 0) + 1)
+					self:RunEffects(player, eff.effects, po, if eff.random then dir else d2, targetPos, (depth or 0) + 1, passive)
 				end)
 			end
 		elseif kind == "wall" then
@@ -650,6 +737,9 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 			end)
 		elseif kind == "resetCooldowns" then
 			for _, p in nearbyPlayers(o, eff.radius or 20) do
+				if p ~= player and self:IsOpponent(player, p) then
+					continue -- Réécriture : seulement les alliés
+				end
 				table.clear(State.Get(p).cooldowns)
 				for slot = 1, 3 do
 					p:SetAttribute("CD" .. slot, nil)
@@ -658,6 +748,28 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 			end
 		end
 	end
+end
+
+-- Version réduite d'une liste d'effets pour un assistant (pas de dash : c'est le joueur qui bougerait).
+local function reducedEffects(effects: { any }): { any }
+	local out = {}
+	for _, eff in effects do
+		if eff.type ~= "dash" then
+			local c = table.clone(eff)
+			if c.type == "damage" then
+				c.mult = (c.mult or 1) * 0.4
+			elseif c.type == "heal" then
+				c.mult = (c.mult or 0.1) * 0.5
+			elseif c.type == "shield" or c.type == "buff" then
+				c.amount = (c.amount or 0.2) * 0.5
+			end
+			if c.effects then
+				c.effects = reducedEffects(c.effects)
+			end
+			table.insert(out, c)
+		end
+	end
+	return out
 end
 
 local function checkCooldown(player: Player, key: string, cd: number): boolean
@@ -686,6 +798,22 @@ local function canAct(player: Player): boolean
 		return false
 	end
 	return true
+end
+
+-- Un assistant lance la version réduite de sa compétence de rôle (soin, bouclier, frappe…) sur la
+-- cible du leader, à son propre rythme (bible §10 et §13).
+function CombatService:AssistAct(p: Player, uid: string, h: any, targetPos: Vector3)
+	local def = Heroes.List[h.id]
+	local role = def and Heroes.Roles[def.role]
+	local sk = role and Skills.Get(role.roleSkill)
+	local r = rootOf(p)
+	if not sk or not r or not checkCooldown(p, "A" .. uid, sk.cooldown * 1.5) then
+		return
+	end
+	local flat = Vector3.new(targetPos.X - r.Position.X, 0, targetPos.Z - r.Position.Z)
+	local dir = if flat.Magnitude > 0.1 then flat.Unit else Vector3.new(0, 0, -1)
+	self:RunEffects(p, reducedEffects(sk.effects), r.Position, dir, targetPos, 0, true)
+	self:SkillFx(p, sk.vfx, r.Position, dir, Color3.fromHex(def.crystal), 8)
 end
 
 function CombatService:Attack(player: Player, dir: Vector3, lockedId: number?)
@@ -790,6 +918,13 @@ function CombatService:Init()
 	folder = Instance.new("Folder")
 	folder.Name = "Entities"
 	folder.Parent = Workspace
+	Players.PlayerAdded:Connect(cacheFriends)
+	for _, p in Players:GetPlayers() do
+		cacheFriends(p)
+	end
+	Players.PlayerRemoving:Connect(function(p)
+		friends[p.UserId] = nil
+	end)
 	local function vec(v: any): Vector3
 		if typeof(v) == "Vector3" and v.Magnitude == v.Magnitude and v.Magnitude < 1e4 then
 			return v
@@ -872,14 +1007,29 @@ function CombatService:Start()
 		for _, p in Players:GetPlayers() do
 			local s = State.Get(p)
 			local d = DataService:Get(p)
+			local r = rootOf(p)
+			-- les assistants n'agissent que si le joueur se bat vraiment (fenêtre de 5 s après SON dernier coup)
+			local fighting = d and r and canAct(p) and (os.clock() - (s.lastAttack or 0)) < 5
 			local e = s.target
-			if d and e and not e.dead and (os.clock() - (s.lastAttack or 0)) < 5 and not s.carrying then
-				local r = rootOf(p)
-				if r and (e.anchor.Position - r.Position).Magnitude < 45 then
+			local tp: Player? = s.targetPlayer
+			if fighting and e and not e.dead and (e.anchor.Position - (r :: BasePart).Position).Magnitude < 45 then
+				for _, uid in d.team.assists do
+					local h = d.heroes[uid]
+					if h and not e.dead then
+						self:AssistAct(p, uid, h, e.anchor.Position)
+						self:DamageEntity(e, HeroMath.Power(h, s.island) * 0.25, p, false, true)
+					end
+				end
+			elseif fighting and tp and tp.Parent and self:CanHitPlayer(p, tp) then
+				-- adversaire joueur (duel de défense, porteur intercepté, camp en tempête)
+				local tr = rootOf(tp)
+				local th = humOf(tp)
+				if tr and th and (tr.Position - (r :: BasePart).Position).Magnitude < 45 then
 					for _, uid in d.team.assists do
 						local h = d.heroes[uid]
-						if h and not e.dead then
-							self:DamageEntity(e, HeroMath.Power(h, s.island) * 0.25, p, false)
+						if h then
+							self:AssistAct(p, uid, h, tr.Position)
+							self:DamagePlayer(tp, th.MaxHealth * 0.02, nil, p)
 						end
 					end
 				end

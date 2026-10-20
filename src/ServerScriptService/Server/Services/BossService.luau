@@ -32,15 +32,23 @@ local function rewardBoss(e: any, bossDef: any, isGuardian: boolean, slept: bool
 	local Ann = Registry.Get("AnnouncementService")
 	-- un Éclat de tempête garde l'apparence du boss mais rapporte comme le boss de la Forêt
 	local def = e.ai.rewardDef or bossDef
-	local total = 0
-	for _, v in e.contributors do
-		total += v
-	end
+	-- contribution = dégâts + soutien (soins et boucliers donnés aux combattants, bible §13)
+	local total, totalSupport = 0, 0
+	local everyone: { [Player]: boolean } = {}
 	for p, v in e.contributors do
+		total += v
+		everyone[p] = true
+	end
+	for p, v in e.support or {} do
+		totalSupport += v
+		everyone[p] = true
+	end
+	for p in everyone do
+		local v = (e.contributors[p] or 0) + ((e.support or {})[p] or 0)
 		if p.Parent then
-			-- boss vaincu : part des dégâts entre participants ; boss qui se rendort : part des PV max
-			-- réellement infligée (un seul coup ne rapporte presque rien)
-			local share = if slept then v / math.max(e.maxHp, 1) else v / math.max(total, 1)
+			-- boss vaincu : part de la contribution entre participants ; boss qui se rendort : part des PV
+			-- max réellement apportée (un seul coup ne rapporte presque rien)
+			local share = if slept then v / math.max(e.maxHp, 1) else v / math.max(total + totalSupport, 1)
 			local mult = if slept then math.clamp(share * 2, 0, 1) else math.clamp(share * 2, 0.15, 1)
 			local reward = {
 				energy = def.reward.energy * mult,

@@ -148,12 +148,41 @@ local function onSummon(p)
 		-- éclat de la plus haute rareté
 		local best = results[#results].rarity
 		local bc = Rarities.Get(best).color
+		-- mise en scène selon la rareté (bible §16) : Épique tourbillon, Légendaire rayon doré,
+		-- Mythique écran rouge et secousse, Secret écran noir puis éclat arc-en-ciel
+		if best == "Secret" then
+			local veil = Kit.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0, ZIndex = 40, Parent = root })
+			local q = Kit.Label(veil, { Text = "?", Size = UDim2.fromOffset(200, 200), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), Font = Theme.Font.Title, Color = Color3.new(0.12, 0.12, 0.12), ZIndex = 41 })
+			C.Sound.Play("Alarm")
+			task.wait(1.2)
+			Kit.new("UIGradient", { Color = Rarities.SecretGradient, Parent = q })
+			q.TextColor3 = Color3.new(1, 1, 1)
+			Kit.Tween(q, 0.5, { Size = UDim2.fromOffset(900, 900), TextTransparency = 1 })
+			task.wait(0.5)
+			veil:Destroy()
+		elseif best == "Mythic" then
+			local red = Kit.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(200, 20, 40), BackgroundTransparency = 0.1, ZIndex = 40, Parent = root })
+			C.Combat.Shake(0.7)
+			C.Sound.Play("Boom")
+			Kit.Tween(red, 0.9, { BackgroundTransparency = 1 })
+			task.delay(1, function()
+				red:Destroy()
+			end)
+			task.wait(0.5)
+		elseif best == "Legendary" then
+			local beam = Kit.new("Frame", { Size = UDim2.new(0, 40, 1, 0), Position = UDim2.fromScale(0.5, 0), AnchorPoint = Vector2.new(0.5, 0), BackgroundColor3 = Theme.Color.Gold, BackgroundTransparency = 0.2, ZIndex = 40, Parent = root })
+			Kit.Tween(beam, 0.7, { Size = UDim2.new(0, 260, 1, 0), BackgroundTransparency = 1 })
+			task.delay(0.8, function()
+				beam:Destroy()
+			end)
+			task.wait(0.4)
+		end
 		local flash = Kit.new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.2, Parent = root })
 		local orb = Kit.new("Frame", { Size = UDim2.fromOffset(60, 60), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = bc, Parent = root })
 		Kit.Corner(orb, 999)
 		Kit.new("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 4, Parent = orb })
 		C.Sound.Play("Reveal")
-		Kit.Tween(orb, 1.1, { Size = UDim2.fromOffset(240, 240), Rotation = 180 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		Kit.Tween(orb, 1.1, { Size = UDim2.fromOffset(240, 240), Rotation = if Rarities.AtLeast(best, "Epic") then 720 else 180 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 		task.wait(1.1)
 		Kit.Tween(orb, 0.25, { Size = UDim2.fromOffset(2400, 2400), BackgroundTransparency = 1 })
 		flash.BackgroundColor3 = bc
@@ -163,14 +192,14 @@ local function onSummon(p)
 		orb:Destroy()
 		if #results == 1 then
 			local r = results[1]
-			revealCard(root, r.heroId, r.mut, if not known[r.heroId] then "NOUVEAU !" else "Invocation")
+			revealCard(root, r.heroId, r.mut, if r.converted then "Doublon 5★ → énergie et fragments" elseif not known[r.heroId] then "NOUVEAU !" else "Invocation")
 		else
 			local grid = Kit.new("Frame", { Size = UDim2.fromOffset(640, 330), Position = UDim2.fromScale(0.5, 0.45), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Parent = root })
 			Kit.Grid(grid, UDim2.fromOffset(118, 156), 8)
 			for i, r in results do
 				local def = Heroes.Get(r.heroId)
 				local inst = { id = r.heroId, lvl = 1, stars = 0, mut = if r.mut then { r.mut } else nil }
-				local card = Kit.HeroCard(grid, r.heroId, inst, { LayoutOrder = i, Size = UDim2.fromOffset(118, 156), Tag = if not known[r.heroId] then "!" else nil, TagColor = Theme.Color.Gold })
+				local card = Kit.HeroCard(grid, r.heroId, inst, { LayoutOrder = i, Size = UDim2.fromOffset(118, 156), Tag = if r.converted then "⇄" elseif not known[r.heroId] then "!" else nil, TagColor = Theme.Color.Gold })
 				local sc = Kit.new("UIScale", { Scale = 0, Parent = card })
 				Kit.Tween(sc, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 				if Rarities.AtLeast(def.rarity, "Epic") then

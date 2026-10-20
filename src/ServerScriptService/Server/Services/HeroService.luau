@@ -364,7 +364,10 @@ function HeroService:LevelUp(player: Player, uid: string, times: number?): (bool
 end
 
 -- Forge : 3 copies identiques -> +1 étoile (le héros cible garde son niveau et ses mutations).
-function HeroService:Fuse(player: Player, uid: string): (boolean, string?)
+-- Fusion d'étoiles. Les copies consommées sont choisies d'abord parmi les moins précieuses (sans
+-- mutation, niveau le plus bas) ; une copie mutée ou montée de niveau demande une confirmation (force).
+HeroService.FuseConfirmPrefix = "⚠ "
+function HeroService:Fuse(player: Player, uid: string, force: boolean?): (boolean, string?)
 	local d = data(player)
 	local h = d and d.heroes[uid]
 	if not h then
@@ -373,17 +376,33 @@ function HeroService:Fuse(player: Player, uid: string): (boolean, string?)
 	if h.stars >= Economy.MaxStars then
 		return false, "5 étoiles maximum"
 	end
-	local mats = {}
+	local candidates = {}
 	for u, o in d.heroes do
 		if u ~= uid and o.id == h.id and o.stars == 0 and not o.locked and not self:IsBusy(d, u) then
-			table.insert(mats, u)
-			if #mats >= Economy.StarCopies - 1 then
-				break
-			end
+			table.insert(candidates, u)
 		end
 	end
-	if #mats < Economy.StarCopies - 1 then
+	table.sort(candidates, function(a, b)
+		local ma, mb = #(d.heroes[a].mut or {}), #(d.heroes[b].mut or {})
+		if ma ~= mb then
+			return ma < mb
+		end
+		return d.heroes[a].lvl < d.heroes[b].lvl
+	end)
+	if #candidates < Economy.StarCopies - 1 then
 		return false, "Il faut " .. Economy.StarCopies .. " copies (libres et non verrouillées)"
+	end
+	local mats = {}
+	local precious = false
+	for i = 1, Economy.StarCopies - 1 do
+		local o = d.heroes[candidates[i]]
+		if #(o.mut or {}) > 0 or o.lvl > 1 then
+			precious = true
+		end
+		table.insert(mats, candidates[i])
+	end
+	if precious and not force then
+		return false, HeroService.FuseConfirmPrefix .. "Une copie mutée ou montée de niveau serait consommée. Verrouille-la (🔒) ou confirme la fusion."
 	end
 	for _, u in mats do
 		d.heroes[u] = nil

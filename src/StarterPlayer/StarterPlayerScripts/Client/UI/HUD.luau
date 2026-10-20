@@ -324,14 +324,15 @@ local function buildStormClock(root: Frame)
 			local great = Workspace:GetAttribute("StormGreat")
 			top.Text = if great then "GRANDE TEMPÊTE !" else Locale.t("stormActive")
 			top.TextColor3 = def and def.particles or Theme.Color.Storm
-			bottom.Text = (def and def.name or "") .. "  " .. Format.Time((Workspace:GetAttribute("StormEndsAt") or now) - now)
+			local boost = Workspace:GetAttribute("StormBoostBy")
+			bottom.Text = (if great then "Toutes mutations" else (def and def.name or "")) .. "  " .. Format.Time((Workspace:GetAttribute("StormEndsAt") or now) - now) .. (if boost then "  ·  ⚡ " .. boost else "")
 			stroke.Color = def and def.particles or Theme.Color.Storm
 			stroke.Transparency = 0.1 + math.sin(os.clock() * 6) * 0.1
 			icon.Rotation = (icon.Rotation + 20) % 360
 		elseif st == "Announce" then
 			top.Text = Locale.t("stormIn")
 			top.TextColor3 = Theme.Color.Warning
-			bottom.Text = (def and def.name or "?") .. "  " .. Format.Time((Workspace:GetAttribute("StormEndsAt") or now) - now)
+			bottom.Text = (if Workspace:GetAttribute("StormGreat") then "GRANDE TEMPÊTE" else (def and def.name or "?")) .. "  " .. Format.Time((Workspace:GetAttribute("StormEndsAt") or now) - now)
 			stroke.Color = Theme.Color.Warning
 			stroke.Transparency = 0.1
 			icon.Rotation = (icon.Rotation + 8) % 360

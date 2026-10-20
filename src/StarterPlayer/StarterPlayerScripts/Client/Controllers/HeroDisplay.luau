@@ -58,6 +58,7 @@ type Slot = {
 	signature: string,
 }
 local slots: { [string]: Slot } = {}
+local hitStopUntil = 0
 local creating = 0
 
 local function parseMut(s: any): { string }
@@ -288,6 +289,29 @@ local function slotCF(s: Slot, dt: number): (CFrame?, string?)
 		local speed = hrp.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
 		local state = if speed.Magnitude > 18 then "Run" elseif speed.Magnitude > 2 then "Walk" else "Idle"
 		return CFrame.lookAt(pos, pos + look.Unit), state
+	elseif kind == "Assist" then
+		-- assistants : petite escorte derrière le joueur (gauche, centre, droite)
+		local p = src :: Player
+		local char = p.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not hrp or not hum or hum.Health <= 0 or p:GetAttribute("Carrying") then
+			return nil
+		end
+		local i = tonumber(string.match(s.key, ":(%d+)$")) or 1
+		local feetY = hrp.Position.Y - hum.HipHeight - hrp.Size.Y / 2
+		local lv = flatLook(hrp.CFrame)
+		local right = Vector3.new(-lv.Z, 0, lv.X)
+		local lateral = ({ -4.5, 0, 4.5 })[i] or 0
+		local goal = Vector3.new(hrp.Position.X, feetY, hrp.Position.Z) + right * lateral - lv * (6 + (if i == 2 then 2 else 0))
+		local prev = s.cf and s.cf.Position or goal
+		local pos = prev:Lerp(goal, 1 - math.exp(-dt * 5))
+		pos = Vector3.new(pos.X, feetY + (pos.Y - feetY) * 0.2, pos.Z)
+		local moveDir = Vector3.new(pos.X - prev.X, 0, pos.Z - prev.Z)
+		local face = if moveDir.Magnitude > 0.02 then moveDir.Unit else lv
+		local speed = hrp.AssemblyLinearVelocity * Vector3.new(1, 0, 1)
+		local state = if speed.Magnitude > 18 then "Run" elseif speed.Magnitude > 2 then "Walk" else "Idle"
+		return CFrame.lookAt(pos, pos + face), state
 	elseif kind == "Carried" then
 		local p = src :: Player
 		local char = p.Character
@@ -522,6 +546,21 @@ local function watchPlayer(p: Player)
 		local h = if id then math.clamp(Heroes.Get(id).size * 5 * 0.55, 2.5, 5) else 0
 		setSlot("Carried:" .. p.UserId, "Carried", p, id, parseMut(p:GetAttribute("CarryMut")), h, 6)
 	end
+	-- assistants (attribut « Assists » : ids séparés par des virgules)
+	local function refreshAssists()
+		local raw = p:GetAttribute("Assists")
+		local ids = if typeof(raw) == "string" and raw ~= "" then string.split(raw, ",") else {}
+		for i = 1, 3 do
+			local id = ids[i]
+			if id and not Heroes.List[id] then
+				id = nil
+			end
+			local h = if id then math.min(Heroes.Get(id).size * 3.6, 5) else 0
+			setSlot("Assist:" .. p.UserId .. ":" .. i, "Assist", p, id, {}, h, if p == player then 3 else 1)
+		end
+	end
+	p:GetAttributeChangedSignal("Assists"):Connect(refreshAssists)
+	refreshAssists()
 	p:GetAttributeChangedSignal("LeaderHero"):Connect(refreshLeader)
 	p:GetAttributeChangedSignal("LeaderMut"):Connect(refreshLeader)
 	p:GetAttributeChangedSignal("Carrying"):Connect(refreshCarry)
@@ -531,6 +570,11 @@ local function watchPlayer(p: Player)
 end
 
 -- ============================================================================ API
+-- Courte pause de l'animation du leader local (coup porté).
+function HeroDisplay.HitStop(duration: number)
+	hitStopUntil = math.max(hitStopUntil, os.clock() + duration)
+end
+
 function HeroDisplay.PlayLeader(anim: string)
 	HeroDisplay.PlayCompanion(player.UserId, anim)
 end
@@ -645,7 +689,9 @@ local function step(dt: number)
 						s.animator:SetState(state)
 						s.lastState = state
 					end
-					offset = s.animator:Step(dt)
+					-- arrêt sur image du leader local quand il touche (bible §13)
+					local frozen = hitStopUntil > os.clock() and s.key == "Companion:" .. player.UserId
+					offset = s.animator:Step(if frozen then 0 else dt)
 				elseif s.animator and s.lastState ~= "Far" then
 					s.animator:Reset()
 					s.lastState = "Far"
@@ -704,6 +750,9 @@ function HeroDisplay.Start()
 	Players.PlayerRemoving:Connect(function(p)
 		removeSlot("Companion:" .. p.UserId)
 		removeSlot("Carried:" .. p.UserId)
+		for i = 1, 3 do
+			removeSlot("Assist:" .. p.UserId .. ":" .. i)
+		end
 	end)
 	C.Data.Changed:Connect(function(d)
 		local q = d and d.settings and d.settings.quality

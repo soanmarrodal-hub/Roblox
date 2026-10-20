@@ -1,10 +1,12 @@
 --!nonstrict
 -- Menu Équipe : leader + assistants + gardien, inventaire complet (tri), socles de la base et coffre.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Heroes = require(Shared.Config.Heroes)
+local Islands = require(Shared.Config.Islands)
 local Rarities = require(Shared.Config.Rarities)
 local HeroMath = require(Shared.Logic.HeroMath)
 local Format = require(Shared.Util.Format)
@@ -139,6 +141,13 @@ function Team.Build(body: Frame, ctx: any)
 				select(uid)
 			end })
 			card.Position = UDim2.fromOffset(2, 24)
+			-- affinité d'île : +20 % quand le héros combat sur son île
+			local here = Players.LocalPlayer:GetAttribute("Island")
+			local isl = Heroes.Get(h.id).island
+			if here == isl then
+				local tag = Kit.Label(card, { Text = Islands.Get(isl).symbol .. " +20 %", Size = UDim2.fromOffset(70, 20), Position = UDim2.new(1, -4, 0, 4), AnchorPoint = Vector2.new(1, 0), Font = Theme.Font.Title, Color = Theme.Color.Success, ZIndex = 8 })
+				local _ = tag
+			end
 		else
 			local b = Kit.Button(holder, { Text = "+", Size = UDim2.fromOffset(108, 146), Position = UDim2.fromOffset(2, 24), Color = Theme.Color.PanelLight, MaxSize = 48, OnClick = onEmpty })
 			local _ = b

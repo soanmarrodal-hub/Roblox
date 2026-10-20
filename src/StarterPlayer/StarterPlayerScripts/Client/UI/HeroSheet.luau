@@ -11,6 +11,7 @@ local Islands = require(Shared.Config.Islands)
 local Mutations = require(Shared.Config.Mutations)
 local Economy = require(Shared.Config.Economy)
 local Shop = require(Shared.Config.Shop)
+local Skills = require(Shared.Config.Skills)
 local HeroMath = require(Shared.Logic.HeroMath)
 local Format = require(Shared.Util.Format)
 local Locale = require(Shared.Locale)
@@ -45,6 +46,29 @@ end
 
 local function actionButton(self, text: string, color: Color3, order: number, fn: () -> ())
 	Kit.Button(self.actions, { Text = text, Color = color, LayoutOrder = order, MaxSize = 18, OnClick = fn })
+end
+
+-- Les trois compétences que le héros apporte en leader (rôle, élément, signature) — bible §10.
+local function showSkills(self, def: any)
+	local lines = {}
+	local list = {
+		{ "Rôle", Skills.Get(Heroes.Roles[def.role].roleSkill) },
+		{ "Élément", Skills.Get(Skills.ElementByIsland[def.island]) },
+		{ "Signature", Skills.Get(def.signature) },
+	}
+	for _, e in list do
+		local sk = e[2]
+		if sk then
+			local timing = if sk.charge then "charge " .. sk.charge else "recharge " .. sk.cooldown .. " s"
+			table.insert(lines, "<b>" .. e[1] .. " · " .. sk.name .. "</b> (" .. timing .. ")\n" .. sk.desc)
+		end
+	end
+	local modal = Kit.Panel(self.frame, { Size = UDim2.new(0.94, 0, 0.86, 0), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 30, Color = Theme.Color.Panel, StrokeColor = Theme.Color.Accent })
+	Kit.Label(modal, { Text = "Compétences de " .. def.name, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.fromOffset(10, 6), Font = Theme.Font.Title, ZIndex = 31 })
+	Kit.Label(modal, { Text = table.concat(lines, "\n\n"), Rich = true, Size = UDim2.new(1, -24, 1, -100), Position = UDim2.fromOffset(12, 42), AlignX = Enum.TextXAlignment.Left, AlignY = Enum.TextYAlignment.Top, Font = Theme.Font.Body, Scaled = false, TextSize = 16, Wrapped = true, ZIndex = 31 })
+	Kit.Button(modal, { Text = Locale.t("close"), Size = UDim2.fromOffset(160, 46), Position = UDim2.new(0.5, 0, 1, -8), AnchorPoint = Vector2.new(0.5, 1), Color = Theme.Color.ButtonGray, ZIndex = 31, MaxSize = 18, OnClick = function()
+		modal:Destroy()
+	end })
 end
 
 function HeroSheet:Set(uid: string?)
@@ -187,6 +211,9 @@ function HeroSheet:Set(uid: string?)
 			C.Data.Action("Vault", { uid = uid, on = true })
 		end)
 	end
+	actionButton(self, "📜 Compétences", Theme.Color.Button, nexto(), function()
+		showSkills(self, def)
+	end)
 	actionButton(self, if h.locked then "Déverrouiller" else "🔒 Verrouiller", Theme.Color.ButtonGray, nexto(), function()
 		C.Data.Action("Lock", { uid = uid })
 	end)
@@ -208,7 +235,26 @@ function HeroSheet:Set(uid: string?)
 		end
 		local need = Economy.StarCopies - 1
 		actionButton(self, string.format("★ Fusion (%d/%d)", math.min(copies, need), need), if copies >= need then Theme.Color.ButtonGold else Theme.Color.ButtonGray, nexto(), function()
-			C.Data.Action("Fuse", { uid = uid })
+			local ok, msg = C.Data.Action("Fuse", { uid = uid }, true)
+			if ok then
+				if msg then
+					C.HUD.Toast(msg, "Success")
+				end
+			elseif typeof(msg) == "string" and string.sub(msg, 1, #"⚠ ") == "⚠ " then
+				-- une copie précieuse serait consommée : confirmation explicite
+				local root = self.frame :: GuiObject
+				local modal = Kit.Panel(root, { Size = UDim2.new(0.9, 0, 0, 170), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 30, Color = Theme.Color.Panel, StrokeColor = Theme.Color.Warning })
+				Kit.Label(modal, { Text = string.sub(msg, #"⚠ " + 1), Size = UDim2.new(1, -20, 0, 90), Position = UDim2.fromOffset(10, 8), Wrapped = true, Font = Theme.Font.Body, ZIndex = 31 })
+				Kit.Button(modal, { Text = "Fusionner quand même", Size = UDim2.new(0.5, -15, 0, 50), Position = UDim2.new(0, 10, 1, -10), AnchorPoint = Vector2.new(0, 1), Color = Theme.Color.ButtonRed, ZIndex = 31, MaxSize = 18, OnClick = function()
+					modal:Destroy()
+					C.Data.Action("Fuse", { uid = uid, force = true })
+				end })
+				Kit.Button(modal, { Text = "Annuler", Size = UDim2.new(0.5, -15, 0, 50), Position = UDim2.new(1, -10, 1, -10), AnchorPoint = Vector2.new(1, 1), Color = Theme.Color.ButtonGray, ZIndex = 31, MaxSize = 18, OnClick = function()
+					modal:Destroy()
+				end })
+			elseif msg then
+				C.HUD.Toast(msg, "Error")
+			end
 		end)
 	end
 	for _, m in h.mut or {} do

@@ -22,6 +22,8 @@ local function distToMe(pos: Vector3): number
 	return if r then (r.Position - pos).Magnitude else math.huge
 end
 
+local lastHitFeel = 0
+
 function FX.Init(controllers)
 	C = controllers
 end
@@ -39,6 +41,14 @@ function FX.Start()
 			C.Sound.Play("Hit", p.pos, 0.3)
 			if p.crit then
 				VFX.Burst(p.pos, Color3.fromRGB(255, 220, 80), 10, 18, 0.5)
+			end
+			-- coup porté par le joueur : légère secousse et arrêt sur image (désactivables avec la secousse)
+			if p.by == player.UserId and os.clock() - lastHitFeel > 0.1 then
+				lastHitFeel = os.clock()
+				C.Combat.Shake(if p.crit then 0.25 else 0.12)
+				if C.Combat.ShakeEnabled() and C.HeroDisplay then
+					C.HeroDisplay.HitStop(0.06)
+				end
 			end
 		elseif p.kind == "hurt" and distToMe(p.pos) < 4 then
 			C.Sound.Play("Hurt")

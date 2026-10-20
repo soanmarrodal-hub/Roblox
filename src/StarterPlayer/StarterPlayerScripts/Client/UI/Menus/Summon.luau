@@ -92,7 +92,8 @@ function Summon.Build(body: Frame, ctx: any)
 			end
 			local fromCrystals = math.min(d.crystals or 0, count)
 			local remaining = count - fromCrystals
-			local gems = if remaining >= 10 then b.cost10 else b.cost1 * remaining
+			-- même calcul que le serveur : chaque cristal retire un tirage du prix du x10
+			local gems = if count >= 10 then math.max(0, b.cost10 - b.cost1 * fromCrystals) else b.cost1 * remaining
 			if fromCrystals > 0 and remaining == 0 then
 				return "🔮 " .. fromCrystals
 			elseif fromCrystals > 0 then
@@ -116,14 +117,15 @@ function Summon.Build(body: Frame, ctx: any)
 		end
 		-- pitié et étoiles
 		local pity = d.pity[current] or { legendary = 0, mythic = 0, stars = 0 }
-		local pityText = string.format("%s Légendaire : <b>%d / %d</b>", Locale.t("pity"), pity.legendary or 0, Banners.PityLegendary)
-		if r.Mythic then
+		-- la bannière Standard n'a pas de pitié garantie : aucun compteur affiché
+		local pityText = if b.island then string.format("%s Légendaire : <b>%d / %d</b>", Locale.t("pity"), pity.legendary or 0, Banners.PityLegendary) else "Pas de garantie sur cette bannière : chaque tirage donne une étoile."
+		if b.island and r.Mythic then
 			pityText ..= string.format("\n%s Mythique : <b>%d / %d</b>", Locale.t("pity"), pity.mythic or 0, Banners.PityMythic)
 		end
 		pityLabel.Text = pityText
 		local stars = pity.stars or 0
 		starSet(stars / Banners.StarsForChoice, string.format("★ %d / %d", stars, Banners.StarsForChoice))
-		choiceBtn.Visible = b.island ~= nil
+		choiceBtn.Visible = true
 		Kit.SetEnabled(choiceBtn, stars >= Banners.StarsForChoice)
 		-- contenu
 		local pool = GachaLogic.Pool(current, d.gates)
@@ -157,20 +159,23 @@ function Summon.Build(body: Frame, ctx: any)
 		if choiceBtn:GetAttribute("Disabled") then
 			return
 		end
-		local b = Banners.List[current]
-		if not b.island then
+		local d = C.Data.profile
+		if not d then
 			return
 		end
-		-- petite fenêtre de choix
+		-- petite fenêtre de choix : Légendaires et Mythiques réellement présents dans la bannière
 		local modal = Kit.Panel(body, { Size = UDim2.new(0.7, 0, 0.7, 0), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 20, Color = Theme.Color.Panel })
 		Kit.Label(modal, { Text = "Choisis ton héros", Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, 6), Font = Theme.Font.Title, ZIndex = 21 })
 		local grid = Kit.Scroll(modal, { Size = UDim2.new(1, -16, 1, -96), Position = UDim2.fromOffset(8, 42), ZIndex = 21 })
 		Kit.Grid(grid, UDim2.fromOffset(108, 146), 8)
-		for i, h in Heroes.ByIsland(b.island) do
-			if h.rarity == "Legendary" or h.rarity == "Mythic" then
-				local card = Kit.HeroCard(grid, h.id, nil, { LayoutOrder = i, OnClick = function()
+		local pool = GachaLogic.Pool(current, d.gates)
+		local order = 0
+		for _, rid in { "Mythic", "Legendary" } do
+			for _, hid in pool[rid] or {} do
+				order += 1
+				local card = Kit.HeroCard(grid, hid, nil, { LayoutOrder = order, OnClick = function()
 					modal:Destroy()
-					C.Data.Action("StarChoice", { banner = current, heroId = h.id })
+					C.Data.Action("StarChoice", { banner = current, heroId = hid })
 				end })
 				card.ZIndex = 22
 			end

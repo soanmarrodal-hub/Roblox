@@ -60,7 +60,9 @@ function EconomyService:Capacity(player: Player, prod: number?): number
 	local d = data(player)
 	local tier = d and d.upgrades.Collector or 0
 	local p = prod or self:Production(player)
-	return math.max(Economy.CollectorMinCapacity, p * Economy.CollectorBaseCapacity * (1.6 ^ tier))
+	-- en secondes de production : 10 min au palier 0, environ 1 h 30 au palier 10 (les chiffres de fin
+	-- de partie restent en millions, bible §18)
+	return math.max(Economy.CollectorMinCapacity, p * Economy.CollectorBaseCapacity * (Economy.CollectorGrowth ^ tier))
 end
 
 function EconomyService:Collect(player: Player): boolean
@@ -79,7 +81,7 @@ function EconomyService:Collect(player: Player): boolean
 	return true
 end
 
-function EconomyService:BuyUpgrade(player: Player, id: string): (boolean, string?)
+function EconomyService:BuyUpgrade(player: Player, id: string, useAlt: boolean?): (boolean, string?)
 	local d = data(player)
 	local u = Economy.Upgrades[id]
 	if not d or not u then
@@ -93,6 +95,10 @@ function EconomyService:BuyUpgrade(player: Player, id: string): (boolean, string
 	local mult = Prog:HighestMultiplier(player)
 	local cost = Economy.UpgradeCost(id, tier + 1, mult)
 	local currency = u.currency
+	if useAlt and u.altCurrency then
+		currency = u.altCurrency
+		cost = Economy.UpgradeAltCost(id, tier + 1) :: number
+	end
 	if currency == "Shards" then
 		-- statue : éclats de l'île la plus haute débloquée
 		local best = "Ether"

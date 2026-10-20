@@ -11,17 +11,19 @@ Economy.GamepassPedestals = 4
 Economy.InventoryBase = 60
 Economy.InventoryGamepass = 100
 
--- Collecteur : capacité = base * (1.6 ^ palier) * multiplicateur d'île le plus haut
+-- Collecteur : capacité = base (secondes de production) * (CollectorGrowth ^ palier)
 Economy.CollectorBaseCapacity = 600 -- secondes de production stockables au palier 0 (multiplié par la production)
 Economy.CollectorMinCapacity = 2000
+Economy.CollectorGrowth = 1.25 -- capacité x1,25 par palier du collecteur
 
 -- Améliorations de base : coûts par palier (palier 1 = index 1).
 Economy.Upgrades = {
 	Pedestals = { name = "Socles supplémentaires", max = 12, currency = "Energy", base = 2500, growth = 1.9, desc = "+1 socle par palier" },
-	Collector = { name = "Collecteur", max = 10, currency = "Energy", base = 1500, growth = 2.0, desc = "Capacité avant débordement +60 %" },
+	Collector = { name = "Collecteur", max = 10, currency = "Energy", base = 1500, growth = 2.0, desc = "Capacité avant débordement +25 %" },
 	Condenser = { name = "Condensateur", max = 10, currency = "Energy", base = 4000, growth = 2.1, shards = 40, desc = "+5 % de production par palier" },
 	Alarm = { name = "Barrière d'alerte", max = 5, currency = "Energy", base = 3000, growth = 2.2, desc = "Alerte plus tôt quand un voleur approche" },
-	Vault = { name = "Coffre", max = 10, currency = "Gems", base = 40, growth = 1.35, desc = "+1 emplacement protégé aux paliers 5 et 10" },
+	-- payable en Gemmes ou en Éclats (bible §4 et §18)
+	Vault = { name = "Coffre", max = 10, currency = "Gems", base = 40, growth = 1.35, altCurrency = "Shards", altBase = 120, altGrowth = 1.5, desc = "+1 emplacement protégé aux paliers 5 et 10" },
 	Statue = { name = "Statue de prestige", max = 3, currency = "Shards", base = 150, growth = 3.0, desc = "Statue du héros favori à l'entrée" },
 }
 Economy.UpgradeOrder = { "Pedestals", "Collector", "Condenser", "Alarm", "Vault", "Statue" }
@@ -30,6 +32,15 @@ function Economy.UpgradeCost(id: string, nextTier: number, islandMult: number): 
 	local u = Economy.Upgrades[id]
 	local mult = if u.currency == "Energy" then islandMult else 1
 	return math.floor(u.base * (u.growth ^ (nextTier - 1)) * mult)
+end
+
+-- Prix dans la monnaie alternative (Éclats de la plus haute île débloquée) pour les améliorations qui en ont une.
+function Economy.UpgradeAltCost(id: string, nextTier: number): number?
+	local u = Economy.Upgrades[id]
+	if not u.altCurrency then
+		return nil
+	end
+	return math.floor(u.altBase * (u.altGrowth ^ (nextTier - 1)))
 end
 
 -- Niveau des héros : +5 % production et puissance par niveau, payé en énergie.
