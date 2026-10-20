@@ -133,6 +133,9 @@ des ancres invisibles portant des attributs ; le client les représente.
 
 - `tools/hero_pipeline/heropipe.py` : conversion des FBX générés (nettoyage des coques internes, segmentation en parties
   animables, peinture projetée depuis les planches de personnage, décimation, dépliage UV, cuisson PBR, yeux anime).
+  La peinture projetée est nettoyée (`labelprop.clean_labels`) : chaque petite pièce (feuille, ruban, plaque) prend sa
+  couleur majoritaire, puis les îlots de couleur trop petits fusionnent avec leur voisin, pour des aplats francs au lieu
+  de taches. Réglable par héros dans `specs.py` (`clean=dict(island=…, island_rel=…)`, ou `clean=False`).
   Entrées via `ASTRAL_FBX_DIR` et `ASTRAL_SHEETS_DIR`, lancement : `python3 tools/hero_pipeline/run_heroes.py <sortie> <cache>`.
 - `tools/hero_pipeline/sdfhero.py` + `sdf_neon.py`, `sdf_glacier.py`, `sdf_volcano.py` : modeleur procédural par champs de
   distance signée (formes lissées, motifs, yeux, AO et normales cuits depuis le champ analytique).
@@ -147,7 +150,7 @@ des ancres invisibles portant des attributs ; le client les représente.
 - [ ] 30 héros importés dans `Assets/HeroModels`.
 - [ ] Musiques choisies dans `Config/Audio.luau`.
 - [ ] Localisation (Creator Hub > Localization) : langue source **français**, langues **anglais, espagnol, portugais**,
-  activer « Capture automatique des textes » et « Traduction automatique ». La table `Interface.csv` (243 textes
+  activer « Capture automatique des textes » et « Traduction automatique ». La table `Interface.csv` (244 textes
   relus) a priorité ; le reste est traduit automatiquement. Pour ajouter un texte relu : compléter
   `tools/localization/strings.py` puis lancer `python3 tools/localization/make_csv.py`.
 - [ ] Questionnaire d'expérience (classement d'âge) et taux d'invocation affichés (déjà visibles dans le menu Invocation).

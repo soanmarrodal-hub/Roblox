@@ -51,3 +51,70 @@ def snap_labels(col, conf, palette_rgb, part_of_vertex, allowed, default, P, inv
         cur = keep * base + (1 - keep) * (P @ cur)
         cur *= maskw
     return np.argmax(cur, 1)[inv]
+
+
+def clean_labels(V, F, lab, pv, k, small_comp=0.08, smooth_iters=2, island=0.006, island_rel=0.25, rounds=6):
+    """Nettoyage « cartoon » des étiquettes projetées depuis les planches (taches de camouflage) :
+    1) chaque petite pièce connexe (feuille, ruban, plaque) prend sa couleur majoritaire ;
+    2) filtre de mode pondéré par l'aire pour lisser les frontières ;
+    3) les îlots d'une même couleur trop petits (absolu et relatif à leur pièce) fusionnent avec la
+       couleur voisine qui les borde le plus.
+    Le graphe ne relie jamais deux parties différentes. Renvoie une étiquette par sommet d'origine."""
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import connected_components
+    q = np.round(V / 1e-6).astype(np.int64)
+    _, first, inv = np.unique(q, axis=0, return_index=True, return_inverse=True)
+    inv = inv.ravel(); n = inv.max() + 1
+    Fw = inv[F]
+    wl = np.zeros(n, dtype=np.int64); wl[inv] = lab          # étiquette par sommet soudé
+    wp = pv[first]                                            # partie par sommet soudé
+    # aire par sommet (1/3 de chaque face adjacente)
+    fa = 0.5 * np.linalg.norm(np.cross(V[F[:, 1]] - V[F[:, 0]], V[F[:, 2]] - V[F[:, 0]]), axis=1)
+    area = np.zeros(n)
+    for c in range(3):
+        np.add.at(area, Fw[:, c], fa / 3)
+    total = area.sum()
+    # arêtes non orientées internes à une partie
+    e = np.concatenate([Fw[:, [0, 1]], Fw[:, [1, 2]], Fw[:, [2, 0]]])
+    e = e[e[:, 0] != e[:, 1]]
+    e = np.sort(e, 1); e = np.unique(e, axis=0)
+    e = e[wp[e[:, 0]] == wp[e[:, 1]]]
+    a, b = e[:, 0], e[:, 1]
+    G = csr_matrix((np.ones(len(e)), (a, b)), shape=(n, n)); G = G + G.T
+    ncomp, comp = connected_components(G, directed=False)
+    comp_area = np.bincount(comp, weights=area, minlength=ncomp)
+    part_area = np.bincount(wp, weights=area)
+    # 1) petites pièces : couleur majoritaire (pondérée par l'aire)
+    hist = csr_matrix((area, (comp, wl)), shape=(ncomp, k)).toarray()
+    maj = np.argmax(hist, 1)
+    comp_part = np.zeros(ncomp, dtype=np.int64); comp_part[comp] = wp
+    small = comp_area < small_comp * part_area[comp_part]
+    sel = small[comp]
+    wl[sel] = maj[comp[sel]]
+    # 2) filtre de mode (sommet + voisins, pondéré par l'aire)
+    A = G + csr_matrix((np.ones(n), (np.arange(n), np.arange(n))), shape=(n, n))
+    for _ in range(smooth_iters):
+        onehot = csr_matrix((area, (np.arange(n), wl)), shape=(n, k))
+        wl = np.asarray((A @ onehot).argmax(1)).ravel()
+    # 3) fusion des îlots
+    for _ in range(rounds):
+        same = wl[a] == wl[b]
+        R = csr_matrix((np.ones(same.sum()), (a[same], b[same])), shape=(n, n))
+        nreg, reg = connected_components(R + R.T, directed=False)
+        reg_area = np.bincount(reg, weights=area, minlength=nreg)
+        reg_comp = np.zeros(nreg, dtype=np.int64); reg_comp[reg] = comp
+        tiny = (reg_area < island * total) & (reg_area < island_rel * comp_area[reg_comp])
+        bd = ~same
+        if not tiny.any() or not bd.any():
+            break
+        # pour chaque région, nombre d'arêtes frontières vers chaque couleur voisine
+        ra = np.concatenate([reg[a[bd]], reg[b[bd]]]); lb = np.concatenate([wl[b[bd]], wl[a[bd]]])
+        M = csr_matrix((np.ones(len(ra)), (ra, lb)), shape=(nreg, k)).toarray()
+        has = M.sum(1) > 0
+        tgt = np.argmax(M, 1)
+        move = tiny & has
+        if not move.any():
+            break
+        mv = move[reg]
+        wl[mv] = tgt[reg[mv]]
+    return wl[inv]

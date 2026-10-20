@@ -164,6 +164,10 @@ class Hero:
                                         iters=sp.get('iters', 50), sigma=sp.get('sigma', 18.0), keep=sp.get('keep', 0.22))
         else:
             lab = np.array([default[i] for i in self.pv])
+        # nettoyage « cartoon » des taches de projection (désactivable par héros : clean=False)
+        cl = sp.get('clean', {})
+        if cl is not False and sp.get('project', True):
+            lab = labelprop.clean_labels(self.V, self.F, lab, self.pv, len(self.palette), **cl)
         # parts forced to a single label
         for i in range(len(self.parts)):
             if len(sp['parts'][i]) > 2 and sp['parts'][i][2] == 'solid':

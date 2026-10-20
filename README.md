@@ -86,7 +86,7 @@ Le détail (dépannage, ordre conseillé, vérifications) est dans [docs/GUIDE.m
   cinématique d'arrivée, objectif guidé.
 - **Langues** : textes source en français ; langue « Auto » (celle du compte Roblox) par défaut. Une table de
   localisation Roblox (`src/LocalizationService/Interface.csv`, générée par `tools/localization/make_csv.py`) traduit
-  243 textes d'interface et messages en anglais, espagnol et portugais ; le reste (phrases construites, descriptions
+  244 textes d'interface et messages en anglais, espagnol et portugais ; le reste (phrases construites, descriptions
   de héros) passe par la traduction automatique de Roblox à activer dans le Creator Hub (voir le guide).
 
 ## Tests
