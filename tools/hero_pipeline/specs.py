@@ -273,7 +273,8 @@ SPECS['Helius'] = dict(
            12: ('navy', 'Legs', ['navy', 'black', 'gold']), 13: ('gold', 'Belt', ['gold', 'bronze', 'sun']), 14: ('cream', 'Scarf 3', ['cream', 'navy', 'gold'])},
     groups={0: 'Halo', 1: 'Head', 4: 'Orbit', 7: 'ArmR', 11: 'ArmL', 9: 'Weapon', 2: 'LegL', 3: 'LegR', 6: 'Cape', 10: 'Cape', 14: 'Cape'},
     parents={'Halo': 'Head', 'Weapon': 'ArmL'},
-    overrides=[],
+    # visage sombre sous la capuche (planche) : trop petit pour survivre au nettoyage des îlots
+    overrides=[dict(shape='ellipsoid', c=(-0.012, -0.16, 0.77), r=(0.04, 0.05, 0.05), label='black', parts=[1], front=0.25)],
     decals=[dict(kind='glow', part=1, c=(0.007, 0.772), r=(0.013, 0.013), color='#FAD246', front=0.2)],
     glow={4: '#FAD246'},
 )
