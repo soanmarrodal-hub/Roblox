@@ -160,6 +160,7 @@ function StormService:RunStorm(stormId: string, isGreat: boolean)
 	Ann:Announce("Storm", (if isGreat then "La GRANDE TEMPÊTE" else "La tempête « " .. def.name .. " »") .. " frappe le serveur !", { storm = stormId })
 	Registry.Get("SpawnService"):OnStormStart(stormId)
 	Registry.Get("BossService"):WakeFor(stormId, isGreat)
+	Registry.Get("IslandEventService"):OnStorm(stormId)
 	local ticks = math.max(1, math.floor(duration / 60))
 	for _ = 1, ticks do
 		task.wait(duration / ticks)
@@ -168,6 +169,7 @@ function StormService:RunStorm(stormId: string, isGreat: boolean)
 	-- 3. Retombée
 	setAttrs("Fallout", now() + Storms.FalloutTime, stormId)
 	Registry.Get("BossService"):StormEnded()
+	Registry.Get("IslandEventService"):OnStormEnd()
 	for _, p in Players:GetPlayers() do
 		Net.Event("StormRecap"):FireClient(p, recap[p] or { mutations = 0, steals = 0, bossDamage = 0 })
 	end

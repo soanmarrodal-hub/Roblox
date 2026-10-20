@@ -69,6 +69,14 @@ H.IntroDone = function(p)
 	return true, nil
 end
 
+H.SetTitle = function(p, a)
+	local t = if typeof(a.title) == "string" then a.title else nil
+	if not t then
+		return false, nil
+	end
+	return Registry.Get("IndexService"):SetTitle(p, t)
+end
+
 -- Mur des légendes : derniers exploits du serveur, classements du serveur et de la saison
 H.Legends = function(_p)
 	return true, Registry.Get("AnnouncementService"):LegendsData()
@@ -324,7 +332,7 @@ H.DebugGrant = function(p)
 end
 
 -- ============================================================================ Bouton contextuel
-local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true, Monorail = true }
+local WORLD_KINDS = { Collect = true, Beacon = true, Gate = true, Deposit = true, EtherTree = true, Terminal = true, Menhir = true, TreasureRoom = true, Rift = true, MagmaCrystal = true, Monorail = true, SecretChest = true, Stag = true, Zipline = true }
 local monorailWaiting: { [Player]: boolean } = {}
 
 local function interact(p: Player, kind: string, target: Instance?, extra: any)
@@ -466,6 +474,20 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 					Registry.Get("ProgressionService"):TeleportTo(p, CFrame.new(dest + Vector3.new(0, 4, 0)))
 				end
 			end)
+		end
+	elseif kind == "Zipline" then
+		-- tyrolienne : le client fait la descente (son personnage lui appartient), le serveur valide
+		local from, to = target and target:GetAttribute("From"), target and target:GetAttribute("To")
+		if target and near(p, target, 6) and typeof(from) == "Vector3" and typeof(to) == "Vector3" then
+			Net.Event("PlayerFx"):FireClient(p, { kind = "Zipline", from = from, to = to, duration = (to - from).Magnitude / 55 })
+		end
+	elseif kind == "Stag" then
+		if target and near(p, target, 10) then
+			Registry.Get("IslandEventService"):TouchStag(p)
+		end
+	elseif kind == "SecretChest" then
+		if target and near(p, target, 10) then
+			Registry.Get("IslandEventService"):OpenSecretChest(p, target :: BasePart)
 		end
 	elseif kind == "MagmaCrystal" then
 		if target and near(p, target, 10) then

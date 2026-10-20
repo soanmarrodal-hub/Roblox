@@ -28,7 +28,7 @@ function DataTemplate.New(): { [string]: any }
 		beacons = {} :: { [string]: boolean },
 		rank = 1,
 		xp = 0,
-		index = { heroes = {} :: { [string]: boolean }, mutations = {} :: { [string]: boolean }, milestones = {} :: { [string]: boolean }, title = "" },
+		index = { heroes = {} :: { [string]: boolean }, mutations = {} :: { [string]: boolean }, milestones = {} :: { [string]: boolean }, title = "", titles = {} :: { [string]: boolean } },
 		pity = {} :: { [string]: { legendary: number, mythic: number, stars: number } },
 		quests = {
 			guided = 1,

@@ -300,7 +300,8 @@ function StealService:EndDuel(duel: any, outcome: string)
 	local tier: string? = nil
 	if outcome == "win" then
 		local t = os.clock() - duel.startedAt
-		local crit = math.random() < (Steal.CriticalChance + (if Storm:IsActive() then Storms.Effects.criticalStealBonus else 0))
+		-- chance (bénédiction du cerf de cristal) : +5 points de vol critique
+		local crit = math.random() < (Steal.CriticalChance + (if Storm:IsActive() then Storms.Effects.criticalStealBonus else 0) + State.Buff(attacker, "luck"))
 		tier = StealLogic.Tier(t, duel.refTime, duel.atkPower, duel.defPower, crit, duel.camp ~= nil)
 		if tier == "Gold" and victim then
 			local vd = data(victim)
@@ -516,6 +517,10 @@ function StealService:OnIntercept(interceptor: Player, thief: Player)
 	local d = data(interceptor)
 	if d then
 		d.stats.intercepts += 1
+		-- points « Justicier » (bible §15) : le titre s'obtient après 5 interceptions
+		if d.stats.intercepts >= Steal.JusticierIntercepts then
+			Registry.Get("IndexService"):GrantTitle(interceptor, "Justicier")
+		end
 	end
 	Registry.Get("ProgressionService"):Grant(interceptor, { shards = Steal.InterceptBounty, island = "Forest", xp = Economy.Xp.Intercept }, "intercept")
 	Registry.Get("QuestService"):Track(interceptor, "Intercept", {})

@@ -22,7 +22,7 @@ Quests.Guided = {
 	{ id = "G5", npc = "Astra", text = "Capture un héros sauvage et ramène-le à ta base.", event = "Capture", goal = 1, reward = { gems = 30 } },
 	{ id = "G6", npc = "Vex", text = "Rejoins Capitaine Vex au camp des Pilleurs de la Forêt et réussis ton premier vol.", event = "StealSuccess", goal = 1, filter = { npc = true }, reward = { gems = 40, crystals = 1 } },
 	{ id = "G7", npc = "Vex", text = "Invoque un héros à l'Autel d'invocation.", event = "Summon", goal = 1, reward = { energy = 800 } },
-	{ id = "G8", npc = "Vex", text = "Monte un héros au niveau 5 à la Forge des étoiles.", event = "LevelUp", goal = 4, reward = { energy = 1000 } },
+	{ id = "G8", npc = "Vex", text = "Améliore tes héros 4 fois (niveaux) à la Forge des étoiles.", event = "LevelUp", goal = 4, reward = { energy = 1000 } },
 	{ id = "G9", npc = "Vex", text = "Bats Etherion, gardien du Sanctuaire de la Source.", event = "GuardianKill", goal = 1, filter = { island = "Forest" }, reward = { shards = 60, gems = 30 } },
 	{ id = "G10", npc = "Vex", text = "Atteins le rang 10 et achète la porte du Désert Solaire.", event = "GateOpen", goal = 1, filter = { island = "Desert" }, reward = { gems = 100, crystals = 2 } },
 }

@@ -26,6 +26,7 @@ Steal.RevengeWindow = 10 * 60
 Steal.RevengeBonus = 1.35
 Steal.DefendBonus = 1.6
 Steal.GuardianBonus = 1.15
+Steal.JusticierIntercepts = 5 -- interceptions pour le titre « Justicier »
 Steal.FailedDefenderBuff = 1.2
 Steal.FailedDefenderBuffTime = 5 * 60
 Steal.CriticalChance = 0.05

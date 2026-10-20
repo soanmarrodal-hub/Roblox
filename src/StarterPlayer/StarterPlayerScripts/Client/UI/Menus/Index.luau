@@ -36,7 +36,21 @@ function Page.Build(body: Frame, ctx: any)
 	local selected: string? = nil
 	local left = Kit.new("Frame", { Size = UDim2.new(0.62, -6, 1, 0), BackgroundTransparency = 1, Parent = body })
 	local right = Kit.Panel(body, { Size = UDim2.new(0.38, -6, 1, 0), Position = UDim2.new(0.62, 6, 0, 0), Color = Theme.Color.PanelDark })
-	local header = Kit.Label(left, { Text = "", Size = UDim2.new(1, 0, 0, 26), Font = Theme.Font.Title, AlignX = Enum.TextXAlignment.Left })
+	local header = Kit.Label(left, { Text = "", Size = UDim2.new(1, -170, 0, 26), Font = Theme.Font.Title, AlignX = Enum.TextXAlignment.Left })
+	-- choix du titre porté (paliers d'Index, « Justicier »…) : un appui passe au suivant
+	local _, titleLabel = Kit.Button(left, { Text = "Titre : —", Size = UDim2.fromOffset(164, 26), Position = UDim2.new(1, 0, 0, 0), AnchorPoint = Vector2.new(1, 0), Color = Theme.Color.ButtonGold, MaxSize = 14, OnClick = function()
+		local d = C.Data.profile
+		if not d then
+			return
+		end
+		local owned = { "" }
+		for t in d.index.titles or {} do
+			table.insert(owned, t)
+		end
+		table.sort(owned)
+		local i = table.find(owned, d.index.title) or 1
+		C.Data.Action("SetTitle", { title = owned[i % #owned + 1] }, true)
+	end })
 	local milestones = Kit.new("Frame", { Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 28), BackgroundTransparency = 1, Parent = left })
 	Kit.List(milestones, true, 6)
 	local scroll = Kit.Scroll(left, { Size = UDim2.new(1, 0, 1, -78), Position = UDim2.fromOffset(0, 78) })
@@ -73,7 +87,12 @@ function Page.Build(body: Frame, ctx: any)
 				count += 1
 			end
 		end
-		header.Text = string.format("Héros découverts : %d / %d%s", count, #Heroes.Order, if d.index.title ~= "" then "  ·  Titre : " .. d.index.title else "")
+		header.Text = string.format("Héros découverts : %d / %d", count, #Heroes.Order)
+		local ownedCount = 0
+		for _ in d.index.titles or {} do
+			ownedCount += 1
+		end
+		titleLabel.Text = "Titre : " .. (if d.index.title ~= "" then d.index.title else "aucun") .. (if ownedCount > 0 then " ▸" else "")
 		Kit.Clear(milestones)
 		for i, m in Quests.IndexMilestones do
 			local claimed = d.index.milestones[tostring(i)] or d.index.milestones[i]

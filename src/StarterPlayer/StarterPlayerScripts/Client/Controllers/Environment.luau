@@ -14,6 +14,7 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Islands = require(Shared.Config.Islands)
+local Heroes = require(Shared.Config.Heroes)
 local Locale = require(Shared.Locale)
 local Storms = require(Shared.Config.Storms)
 local Economy = require(Shared.Config.Economy)
@@ -405,7 +406,6 @@ local ANIM_TAGS = {
 	PyramidBeam = "Pulse",
 	MagmaHeart = "Pulse",
 	EtherTreeHeart = "Pulse",
-	DragonEye = "Pulse",
 	PrismScreen = "Prism",
 	NPC = "NPC",
 	DuelArena = "Arena",
@@ -432,11 +432,83 @@ local function setNightLights(night: boolean)
 			end
 		end
 	end
-	for _, g in CollectionService:GetTagged("Glyph") do
-		if g:IsA("BasePart") then
-			g.Transparency = if night then 0 else 0.6
+end
+
+-- Monuments liés à la collection du joueur (bible §6 et §8) :
+-- glyphes de l'Allée des Obélisques (un par héros du Désert découvert), glace des statues gelées
+-- (fond quand le joueur possède le héros), yeux du dragon sous le Lac Miroir (Aurore polaire).
+local function refreshCollection()
+	local d = C and C.Data and C.Data.profile
+	local desert, total = 0, 0
+	for _, h in Heroes.ByIsland("Desert") do
+		total += 1
+		if d and d.index.heroes[h.id] then
+			desert += 1
 		end
 	end
+	local lit = if total > 0 then math.floor(desert * 8 / total + 0.001) else 0
+	for _, g in CollectionService:GetTagged("Glyph") do
+		if g:IsA("BasePart") then
+			local on = (g:GetAttribute("Index") or 99) <= lit
+			g.Transparency = if on then 0 else 0.75
+			g.Material = if on then Enum.Material.Neon else Enum.Material.SmoothPlastic
+		end
+	end
+	local owned: { [string]: boolean } = {}
+	if d then
+		for _, h in d.heroes do
+			owned[h.id] = true
+		end
+	end
+	for _, st in CollectionService:GetTagged("FrozenStatue") do
+		if st:IsA("BasePart") then
+			local id = st:GetAttribute("HeroId")
+			st.Transparency = if id and owned[id] then 0.92 else 0.22
+		end
+	end
+	local aurora = Workspace:GetAttribute("StormState") == "Active" and Workspace:GetAttribute("StormType") == "PolarAurora"
+	for _, eye in CollectionService:GetTagged("DragonEye") do
+		if eye:IsA("BasePart") then
+			eye.Transparency = if aurora then 0 else 0.85
+			eye.Material = if aurora then Enum.Material.Neon else Enum.Material.Glass
+		end
+	end
+end
+
+-- Cadran de l'Éclipse : pendant la tempête « Éclipse », son ombre pointe vers le coffre secret.
+local eclipseShadow: Part? = nil
+local function refreshEclipseShadow()
+	local angle = Workspace:GetAttribute("EclipseChestAngle")
+	local dial = nil
+	for _, p in CollectionService:GetTagged("EclipseDial") do
+		if p:IsA("BasePart") then
+			dial = p
+		end
+	end
+	if not angle or not dial then
+		if eclipseShadow then
+			eclipseShadow:Destroy()
+			eclipseShadow = nil
+		end
+		return
+	end
+	if not eclipseShadow then
+		local sh = Instance.new("Part")
+		sh.Name = "EclipseShadow"
+		sh.Anchored = true
+		sh.CanCollide = false
+		sh.CanQuery = false
+		sh.Material = Enum.Material.SmoothPlastic
+		sh.Color = Color3.fromRGB(20, 10, 40)
+		sh.Transparency = 0.25
+		sh.Size = Vector3.new(3, 0.12, 16)
+		sh.Parent = Workspace
+		eclipseShadow = sh
+	end
+	local dir = Vector3.new(math.cos(angle), 0, math.sin(angle))
+	local top = dial.Position + Vector3.new(0, dial.Size.X / 2 + 0.1, 0)
+	local center = top + dir * 8
+	;(eclipseShadow :: Part).CFrame = CFrame.lookAt(center, center + dir)
 end
 
 local function refreshRunes()
@@ -648,6 +720,8 @@ function Environment.Start()
 	local function onStorm()
 		refreshStormParticles()
 		refreshRunes()
+		refreshCollection()
+		refreshEclipseShadow()
 	end
 	Workspace:GetAttributeChangedSignal("StormState"):Connect(onStorm)
 	Workspace:GetAttributeChangedSignal("StormType"):Connect(onStorm)
@@ -666,6 +740,11 @@ function Environment.Start()
 	end)
 	refreshBarriers()
 	C.Data.Changed:Connect(refreshBeacons)
+	C.Data.Changed:Connect(refreshCollection)
+	for _, tag in { "Glyph", "FrozenStatue", "DragonEye" } do
+		CollectionService:GetInstanceAddedSignal(tag):Connect(refreshCollection)
+	end
+	Workspace:GetAttributeChangedSignal("EclipseChestAngle"):Connect(refreshEclipseShadow)
 	dayClock = Workspace:GetAttribute("DayClock") or 9
 	shownClock = dayClock
 	RunService.RenderStepped:Connect(step)

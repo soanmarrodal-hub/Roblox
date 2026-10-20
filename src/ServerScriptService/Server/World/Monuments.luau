@@ -1,6 +1,10 @@
 --!nonstrict
 -- Monuments de chaque île (bible §5 à §9), construits en pièces stylisées.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Heroes = require(ReplicatedStorage.Shared.Config.Heroes)
+local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
 local Build = require(script.Parent.Build)
 local Common = require(script.Parent.IslandCommon)
 
@@ -205,7 +209,8 @@ function Monuments.Desert(ctx: Common.Ctx)
 	end
 	-- Le Cadran de l'Éclipse
 	local dcf = Common.GroundCF(ctx, core.X - 40, core.Z - 90)
-	Build.Cylinder(m, (dcf * CFrame.new(0, 0.4, 0)).Position, 0.8, 34, rgb(220, 190, 140), Enum.Material.Marble, "EclipseDial")
+	local dial = Build.Cylinder(m, (dcf * CFrame.new(0, 0.4, 0)).Position, 0.8, 34, rgb(220, 190, 140), Enum.Material.Marble, "EclipseDial")
+	dial:AddTag("EclipseDial")
 	Build.Wedge(m, dcf * CFrame.new(0, 7, 0), Vector3.new(1.4, 14, 10), gold, Enum.Material.Metal, "Gnomon")
 	ctx.info.special.EclipseDial = dcf
 	-- Le Bazar en ruines
@@ -238,6 +243,7 @@ function Monuments.Neon(ctx: Common.Ctx)
 	local neon = { rgb(255, 61, 203), rgb(35, 213, 255), rgb(170, 90, 255), rgb(120, 255, 170), rgb(255, 210, 80) }
 	local R = ctx.island.radius
 	local terminals = 0
+	local roofs: { Vector3 } = {} -- toits hauts (départs de tyroliennes)
 	-- grille d'immeubles abandonnés aux enseignes toujours allumées
 	for gx = -5, 5 do
 		for gz = -5, 5 do
@@ -259,6 +265,9 @@ function Monuments.Neon(ctx: Common.Ctx)
 				sign.CanCollide = false
 				-- toit-terrasse accessible + terminal caché sur 5 toits
 				Build.Box(city, b.CFrame * CFrame.new(0, h / 2 + 0.6, 0), Vector3.new(w + 1, 1.2, b.Size.Z + 1), rgb(30, 28, 40), Enum.Material.Metal, "Roof")
+				if h > 40 then
+					table.insert(roofs, (b.CFrame * CFrame.new(0, h / 2 + 1.2, 0)).Position)
+				end
 				local hasTerminal = false
 				if terminals < 5 and h > 45 and rng:NextNumber() < 0.5 then
 					terminals += 1
@@ -278,6 +287,44 @@ function Monuments.Neon(ctx: Common.Ctx)
 					local pad = Build.Cylinder(city, (cf * CFrame.new(0, 0.4, -b.Size.Z / 2 - 6)).Position, 0.8, 6, rgb(255, 61, 203), Enum.Material.Neon, "JumpPad")
 					pad:AddTag("JumpPad")
 					pad:SetAttribute("Power", h * 2.2 + 60)
+				end
+			end
+		end
+	end
+	-- Tyroliennes entre toits voisins (bible §7) : routes de fuite pour les voleurs, points d'embuscade
+	local zipFolder = Build.Model(city, "Ziplines")
+	local used: { [number]: boolean } = {}
+	local lines = 0
+	for i, a in roofs do
+		if lines >= 7 then
+			break
+		end
+		if not used[i] then
+			local best, bestD = nil, math.huge
+			for j, b in roofs do
+				local dd = (Vector3.new(a.X, 0, a.Z) - Vector3.new(b.X, 0, b.Z)).Magnitude
+				if j ~= i and not used[j] and dd > 55 and dd < 150 and dd < bestD then
+					best, bestD = j, dd
+				end
+			end
+			if best then
+				used[i], used[best] = true, true
+				lines += 1
+				local b = roofs[best]
+				local p1, p2 = a + Vector3.new(0, 7, 0), b + Vector3.new(0, 7, 0)
+				for _, endPos in { p1, p2 } do
+					Build.Box(zipFolder, CFrame.new(endPos - Vector3.new(0, 3.5, 0)), Vector3.new(0.8, 7, 0.8), rgb(40, 36, 52), Enum.Material.Metal, "ZipPole")
+				end
+				local mid = (p1 + p2) / 2
+				local cable = Build.Part(zipFolder, { Name = "ZipCable", Size = Vector3.new(0.25, 0.25, (p2 - p1).Magnitude), CFrame = CFrame.lookAt(mid, p2), Color = rgb(35, 213, 255), Material = Enum.Material.Neon, CanCollide = false, CanQuery = false })
+				local _ = cable
+				for _, pair in { { p1, p2 }, { p2, p1 } } do
+					local start = Build.Part(zipFolder, { Name = "Interact", Size = Vector3.new(6, 6, 6), CFrame = CFrame.new(pair[1] - Vector3.new(0, 4, 0)), Transparency = 1, CanCollide = false })
+					start:AddTag("Interactable")
+					start:SetAttribute("Kind", "Zipline")
+					start:SetAttribute("Label", "Tyrolienne")
+					start:SetAttribute("From", pair[1])
+					start:SetAttribute("To", pair[2])
 				end
 			end
 		end
@@ -439,15 +486,31 @@ function Monuments.Glacier(ctx: Common.Ctx)
 	-- zone glissante (glace du lac)
 	local slick = Build.Part(m, { Name = "SlickIce", Size = Vector3.new(130, 6, 130), CFrame = lcf * CFrame.new(0, 2, 0), Transparency = 1, CanCollide = false, CanQuery = false })
 	slick:AddTag("SlickZone")
-	-- L'Allée des Héros gelés
+	-- L'Allée des Héros gelés : deux héros (les plus rares) de chacune des quatre autres îles, pris dans
+	-- la glace ; la glace fond chez le joueur qui possède le héros (effet côté client)
+	local statueHeroes = {}
+	for _, islandId in { "Forest", "Desert", "Neon", "Volcano" } do
+		local list = table.clone(Heroes.ByIsland(islandId))
+		table.sort(list, function(a, b)
+			return Rarities.Index(a.rarity) > Rarities.Index(b.rarity)
+		end)
+		for k = 1, 2 do
+			if list[k] then
+				table.insert(statueHeroes, list[k].id)
+			end
+		end
+	end
 	local acf = Common.GroundCF(ctx, core.X - 80, core.Z + 80, 90)
 	for i = 0, 7 do
 		local scf = acf * CFrame.new(i * 10 - 35, 0, 0)
 		Build.Box(m, scf * CFrame.new(0, 1, 0), Vector3.new(5, 2, 5), snow, Enum.Material.Snow, "Plinth")
-		local st = Build.Ball(m, (scf * CFrame.new(0, 5, 0)).Position, 5, rgb(200, 235, 255), Enum.Material.Ice, "IceStatue")
+		local st = Build.Ball(m, (scf * CFrame.new(0, 5, 0)).Position, 5.6, rgb(200, 235, 255), Enum.Material.Ice, "IceStatue" .. (i + 1))
 		st.Transparency = 0.25
-		st:AddTag("FrozenStatue")
+		st.CanCollide = false
 		st:SetAttribute("Index", i + 1)
+		st:SetAttribute("HeroId", statueHeroes[i + 1])
+		st:SetAttribute("TopY", scf.Position.Y + 2)
+		st:AddTag("FrozenStatue")
 	end
 	-- Les Sources chaudes
 	local hcf = Common.GroundCF(ctx, core.X + 90, core.Z + 60, 0, -0.6)

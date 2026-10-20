@@ -7,6 +7,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Quests = require(Shared.Config.Quests)
 local Rarities = require(Shared.Config.Rarities)
+local Islands = require(Shared.Config.Islands)
+local Economy = require(Shared.Config.Economy)
 local Registry = require(script.Parent.Parent.Registry)
 
 local QuestService = {}
@@ -67,8 +69,11 @@ function QuestService:Refresh(player: Player)
 	-- calendrier de connexion
 	local login = q.login
 	if login.lastDay ~= today() then
-		if login.lastDay == today() - 1 then
+		if login.lastDay == today() - 1 and login.claimedDay == login.lastDay then
+			-- hier réclamé : récompense suivante du calendrier
 			login.streak = login.streak % #Quests.LoginCalendar + 1
+		elseif login.lastDay == today() - 1 and login.streak > 0 then
+			-- venu hier sans réclamer : la récompense en attente n'est pas sautée
 		else
 			login.streak = 1
 		end
@@ -187,9 +192,12 @@ function QuestService:NewContract(player: Player)
 	if not d then
 		return
 	end
+	-- seulement des bases réellement attaquables (pas de nouveau joueur protégé ni de bouclier actif)
 	local candidates = {}
+	local DS = Registry.Get("DataService")
 	for _, other in Players:GetPlayers() do
-		if other ~= player and other:GetAttribute("PlotIndex") then
+		local od = other ~= player and DS:Get(other)
+		if od and other:GetAttribute("PlotIndex") and DS:Playtime(other) >= Economy.NewPlayerProtection and od.shield.untilTime <= os.time() then
 			table.insert(candidates, other)
 		end
 	end
@@ -209,7 +217,14 @@ function QuestService:OnSteal(player: Player, victim: Player?, tier: string)
 	end
 	local c = d.quests.contract
 	if c and c.target == victim.UserId and (tier == "Gold" or tier == "Silver") then
-		Registry.Get("ProgressionService"):Grant(player, { gems = Quests.ContractBounty.gems, shards = Quests.ContractBounty.shards, island = "Forest" }, "contract")
+		-- prime en éclats de la plus haute île débloquée par le chasseur
+		local best = "Forest"
+		for _, id in Islands.Order do
+			if d.gates[id] then
+				best = id
+			end
+		end
+		Registry.Get("ProgressionService"):Grant(player, { gems = Quests.ContractBounty.gems, shards = Quests.ContractBounty.shards, island = best }, "contract")
 		Registry.Get("AnnouncementService"):Notify(player, "Contrat de Capitaine Vex rempli : prime versée !", "Quest")
 		d.quests.contract = nil
 	end

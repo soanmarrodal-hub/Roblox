@@ -232,6 +232,153 @@ local function environmentTick()
 	end
 end
 
+-- ============================================================================ Coffre secret de l'Éclipse
+-- Pendant la tempête « Éclipse », l'ombre du Cadran (Désert) indique un coffre secret (bible §6).
+local secretChest: BasePart? = nil
+local chestTaken: { [Player]: number } = {}
+
+function IslandEventService:OnStorm(stormId: string)
+	if stormId ~= "Eclipse" then
+		return
+	end
+	local info = Registry.Get("WorldService"):Island("Desert")
+	local dial: CFrame? = info and info.special and info.special.EclipseDial
+	if not dial then
+		return
+	end
+	local angle = math.random() * math.pi * 2
+	local dist = 32 + math.random() * 16
+	local ground = Motion.Ground(dial.Position + Vector3.new(math.cos(angle) * dist, 0, math.sin(angle) * dist), 30) or dial.Position
+	local chest = Instance.new("Part")
+	chest.Name = "SecretChest"
+	chest.Size = Vector3.new(4, 3, 3)
+	chest.CFrame = CFrame.new(ground + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, -angle, 0)
+	chest.Anchored = true
+	chest.Color = Color3.fromRGB(230, 180, 60)
+	chest.Material = Enum.Material.Metal
+	chest:SetAttribute("Kind", "SecretChest")
+	chest:SetAttribute("Label", "Coffre de l'Éclipse")
+	chest:AddTag("Interactable")
+	chest.Parent = crystalFolder
+	secretChest = chest
+	Workspace:SetAttribute("EclipseChestAngle", angle)
+end
+
+function IslandEventService:OnStormEnd()
+	if secretChest then
+		secretChest:Destroy()
+		secretChest = nil
+	end
+	Workspace:SetAttribute("EclipseChestAngle", nil)
+end
+
+function IslandEventService:OpenSecretChest(player: Player, part: BasePart)
+	if part ~= secretChest then
+		return
+	end
+	local idx = Registry.Get("StormService"):StormIndex()
+	if chestTaken[player] == idx then
+		Registry.Get("AnnouncementService"):Notify(player, "Tu as déjà ouvert ce coffre pendant cette Éclipse.", "Info")
+		return
+	end
+	chestTaken[player] = idx
+	Registry.Get("ProgressionService"):Grant(player, { gems = 50, crystals = 1, shards = 120, island = "Desert", xp = 20 }, "eclipse")
+	Registry.Get("AnnouncementService"):Announce("Chest", player.DisplayName .. " a trouvé le coffre secret du Cadran de l'Éclipse !")
+end
+
+-- ============================================================================ Cerf de cristal (Forêt)
+-- Ambiance rare (bible §5) : un grand cerf blanc aux bois de cristal apparaît de temps en temps ;
+-- le toucher donne une bénédiction de chance (vol critique, mutation d'invocation) pendant 10 min.
+local STAG_LUCK = 0.05
+local STAG_LUCK_TIME = 600
+local stagBlessed: { [Player]: boolean } = {}
+
+local function buildStag(at: Vector3): Model
+	local m = Instance.new("Model")
+	m.Name = "CrystalStag"
+	local white = Color3.fromRGB(245, 248, 245)
+	local function part(name: string, size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material?): Part
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.CFrame = cf
+		p.Anchored = true
+		p.CanCollide = false
+		p.Color = color
+		p.Material = mat or Enum.Material.SmoothPlastic
+		p.Parent = m
+		return p
+	end
+	local base = CFrame.new(at)
+	local body = part("Body", Vector3.new(2.6, 2.6, 6), base * CFrame.new(0, 4.6, 0), white)
+	m.PrimaryPart = body
+	part("Neck", Vector3.new(1.4, 3, 1.4), base * CFrame.new(0, 6.6, -2.6) * CFrame.Angles(math.rad(-25), 0, 0), white)
+	part("Head", Vector3.new(1.5, 1.5, 2.6), base * CFrame.new(0, 8, -3.6), white)
+	for _, x in { -0.9, 0.9 } do
+		for _, z in { -2.2, 2.2 } do
+			part("Leg", Vector3.new(0.6, 3.6, 0.6), base * CFrame.new(x, 1.8, z), white)
+		end
+		-- bois de cristal vert
+		part("Antler", Vector3.new(0.3, 3.4, 0.3), base * CFrame.new(x * 0.8, 9.9, -3.4) * CFrame.Angles(0, 0, math.rad(x * 25)), Color3.fromRGB(120, 255, 150), Enum.Material.Neon)
+		part("AntlerTip", Vector3.new(0.25, 1.8, 0.25), base * CFrame.new(x * 1.7, 11, -3.2) * CFrame.Angles(math.rad(-30), 0, math.rad(x * 50)), Color3.fromRGB(150, 255, 180), Enum.Material.Neon)
+	end
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(150, 255, 180)
+	light.Range = 14
+	light.Parent = body
+	local inter = part("Interact", Vector3.new(6, 8, 8), base * CFrame.new(0, 4, 0), white)
+	inter.Transparency = 1
+	inter:SetAttribute("Kind", "Stag")
+	inter:SetAttribute("Label", "Cerf de cristal")
+	inter:AddTag("Interactable")
+	return m
+end
+
+local function runStag()
+	local info = Registry.Get("WorldService"):Island("Forest")
+	local pts = {}
+	for _, sub in { "Core", "Summit" } do
+		for _, p in (info and info.mobSpawns and info.mobSpawns[sub]) or {} do
+			table.insert(pts, p)
+		end
+	end
+	if #pts == 0 then
+		return
+	end
+	local home = pts[math.random(1, #pts)]
+	local stag = buildStag(home)
+	stag.Parent = crystalFolder
+	table.clear(stagBlessed)
+	local pos, target, t0 = home, home, os.clock()
+	while os.clock() - t0 < 120 and stag.Parent do
+		if (target - pos).Magnitude < 1 then
+			local a = math.random() * math.pi * 2
+			target = Motion.Ground(home + Vector3.new(math.cos(a), 0, math.sin(a)) * math.random() * 25, 20) or home
+		end
+		local step = (target - pos)
+		local flat = Vector3.new(step.X, 0, step.Z)
+		if flat.Magnitude > 0.05 then
+			local nextPos = pos + flat.Unit * math.min(flat.Magnitude, 0.8)
+			local g = Motion.Ground(nextPos, 10)
+			pos = Vector3.new(nextPos.X, if g then g.Y else pos.Y, nextPos.Z)
+			stag:PivotTo(CFrame.lookAt(pos + Vector3.new(0, 4.6, 0), pos + Vector3.new(0, 4.6, 0) - flat.Unit) * CFrame.Angles(0, math.pi, 0))
+		end
+		task.wait(0.2)
+	end
+	stag:Destroy()
+end
+
+function IslandEventService:TouchStag(player: Player)
+	if stagBlessed[player] then
+		Registry.Get("AnnouncementService"):Notify(player, "Le cerf t'a déjà béni.", "Info")
+		return
+	end
+	stagBlessed[player] = true
+	State.Get(player).buffs.luck = { amount = STAG_LUCK, untilTime = os.clock() + STAG_LUCK_TIME }
+	player:SetAttribute("Buff_luck", Workspace:GetServerTimeNow() + STAG_LUCK_TIME)
+	Registry.Get("AnnouncementService"):Notify(player, "Bénédiction du cerf de cristal : chance accrue pendant 10 min (vol critique, mutations).", "Success")
+end
+
 -- Ramassage d'un cristal de magma (ActionService → Interact « MagmaCrystal »).
 function IslandEventService:PickCrystal(player: Player, part: BasePart)
 	if not part.Parent or part:GetAttribute("Kind") ~= "MagmaCrystal" then
@@ -250,6 +397,8 @@ function IslandEventService:Init()
 	crystalFolder.Parent = Workspace
 	Players.PlayerRemoving:Connect(function(p)
 		heat[p] = nil
+		chestTaken[p] = nil
+		stagBlessed[p] = nil
 	end)
 end
 
@@ -268,6 +417,13 @@ function IslandEventService:Start()
 		while true do
 			task.wait(1)
 			environmentTick()
+		end
+	end)
+	-- cerf de cristal : une apparition toutes les 8 à 14 minutes, pendant 2 minutes
+	task.spawn(function()
+		while true do
+			task.wait(480 + math.random() * 360)
+			runStag()
 		end
 	end)
 	-- Forge des Titans : le marteau fantôme frappe toutes les 30 s (heure serveur, comme l'animation

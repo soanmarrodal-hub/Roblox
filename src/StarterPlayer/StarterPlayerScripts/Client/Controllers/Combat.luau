@@ -323,6 +323,30 @@ local function onPlayerFx(p)
 		local force = p.force or 40
 		impulse(p.dir, force * 0.35, 0.22, force * 0.4)
 		Combat.Shake(0.6)
+	elseif p.kind == "Zipline" and typeof(p.from) == "Vector3" and typeof(p.to) == "Vector3" then
+		-- descente en tyrolienne : le personnage suit le câble, suspendu 3 studs sous lui
+		local char = player.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not hrp then
+			return
+		end
+		C.Sound.Play("Whoosh")
+		local dur = math.clamp(p.duration or 2, 0.5, 4)
+		local dir = Vector3.new(p.to.X - p.from.X, 0, p.to.Z - p.from.Z)
+		hrp.Anchored = true
+		task.spawn(function()
+			local t0 = os.clock()
+			while os.clock() - t0 < dur and hrp.Parent do
+				local k = (os.clock() - t0) / dur
+				local pos = p.from:Lerp(p.to, k) - Vector3.new(0, 3, 0)
+				hrp.CFrame = CFrame.lookAt(pos, pos + (if dir.Magnitude > 0.1 then dir.Unit else hrp.CFrame.LookVector))
+				RunService.RenderStepped:Wait()
+			end
+			if hrp.Parent then
+				hrp.CFrame = CFrame.new(p.to - Vector3.new(0, 4, 0))
+				hrp.Anchored = false
+			end
+		end)
 	end
 end
 

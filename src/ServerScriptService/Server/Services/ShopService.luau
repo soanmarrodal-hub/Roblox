@@ -38,10 +38,12 @@ function ShopService:CheckPasses(player: Player)
 			end
 		end
 	end
+	-- achats simulés en Studio : appliqués uniquement en Studio (sinon tester contre le vrai DataStore
+	-- donnerait des gamepasses gratuits sur les serveurs publics)
 	local d = data(player)
-	if d then
+	if d and RunService:IsStudio() then
 		for key in Shop.Gamepasses do
-			if d.purchases["pass_" .. key] then
+			if d.purchases["studio_pass_" .. key] or d.purchases["pass_" .. key] then
 				applyPass(player, key)
 			end
 		end
@@ -120,7 +122,7 @@ function ShopService:Buy(player: Player, kind: string, key: string): (boolean, s
 		end
 		if RunService:IsStudio() and Shop.TestPurchasesInStudio then
 			local d = data(player)
-			d.purchases["pass_" .. key] = true
+			d.purchases["studio_pass_" .. key] = true
 			applyPass(player, key)
 			Registry.Get("DataService"):Sync(player)
 			return true, "Achat simulé (Studio) : " .. pass.name

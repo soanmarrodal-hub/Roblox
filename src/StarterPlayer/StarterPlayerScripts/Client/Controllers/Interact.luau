@@ -44,6 +44,9 @@ local RANGE = {
 	Pedestal = 9,
 	MagmaCrystal = 10,
 	Monorail = 9,
+	SecretChest = 10,
+	Stag = 10,
+	Zipline = 6,
 }
 
 local function root(): BasePart?
@@ -161,6 +164,18 @@ local function describe(inst: Instance): (string?, Color3?, (() -> ())?, string?
 	elseif kind == "Deposit" then
 		return "Miner le gisement", Theme.Color.ButtonGold, function()
 			send("Deposit", inst)
+		end
+	elseif kind == "Zipline" then
+		return "Tyrolienne", Theme.Color.Button, function()
+			send("Zipline", inst)
+		end
+	elseif kind == "Stag" then
+		return "Toucher le cerf", Theme.Color.Crystal, function()
+			send("Stag", inst)
+		end
+	elseif kind == "SecretChest" then
+		return "Ouvrir le coffre", Theme.Color.ButtonGold, function()
+			send("SecretChest", inst)
 		end
 	elseif kind == "Monorail" then
 		return "Prendre le monorail", Theme.Color.Button, function()

@@ -85,8 +85,17 @@ local function rewardBoss(e: any, bossDef: any, isGuardian: boolean, slept: bool
 	end
 end
 
-local function participants(): number
-	return math.max(1, #Players:GetPlayers())
+-- Joueurs qui peuvent réellement combattre le boss (île débloquée) : ses PV ne montent pas avec
+-- les débutants qui n'ont pas accès à l'île.
+local function participants(island: string): number
+	local n = 0
+	for _, p in Players:GetPlayers() do
+		local d = Registry.Get("DataService"):Get(p)
+		if d and d.gates[island] then
+			n += 1
+		end
+	end
+	return math.max(1, n)
 end
 
 -- Spectre Prisme : se fragmente en clones de verre à chaque changement de phase (bible §7).
@@ -130,8 +139,8 @@ function BossService:SpawnBoss(bossId: string, cf: CFrame, scale: number?, mod: 
 	local Combat = Registry.Get("CombatService")
 	local s = scale or 1
 	local shard = s < 1
-	local hpMult = (1 + 0.5 * (participants() - 1)) * s * (mod or 1)
 	local isl = Islands.Get(def.island)
+	local hpMult = (1 + 0.5 * (participants(if s < 1 then "Forest" else def.island) - 1)) * s * (mod or 1)
 	-- Éclat de tempête : statistiques et récompenses calées sur le palier de la Forêt (joueurs débutants)
 	local statDef = if shard then Enemies.Bosses[Islands.Get("Forest").boss] else def
 	local statIsl = if shard then Islands.Get("Forest") else isl

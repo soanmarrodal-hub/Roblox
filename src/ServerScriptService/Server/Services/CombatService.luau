@@ -449,6 +449,21 @@ local function inShape(shape: string, origin: Vector3, dir: Vector3, pos: Vector
 end
 CombatService.InShape = inShape
 
+-- Zones où les attaques ennemies sont figées (Aurore sacrée d'Aurélis : « projectiles gelés »).
+local frozenZones: { { pos: Vector3, radius: number, untilTime: number } } = {}
+local function inFrozenZone(pos: Vector3): boolean
+	local now = os.clock()
+	for i = #frozenZones, 1, -1 do
+		local z = frozenZones[i]
+		if z.untilTime < now then
+			table.remove(frozenZones, i)
+		elseif (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(z.pos.X, 0, z.pos.Z)).Magnitude <= z.radius then
+			return true
+		end
+	end
+	return false
+end
+
 -- Annonce une attaque ennemie (zone rouge), puis applique les dégâts après le délai.
 function CombatService:Telegraph(t: { [string]: any })
 	telegraphId += 1
@@ -470,6 +485,11 @@ function CombatService:Telegraph(t: { [string]: any })
 	end
 	task.delay(delay, function()
 		if t.source and t.source.dead then
+			return
+		end
+		if t.source and inFrozenZone(payload.origin) then
+			-- attaque ennemie figée dans la glace : aucun impact
+			self:HitFx(payload.origin + Vector3.new(0, 2, 0), 0, "dodge")
 			return
 		end
 		-- noDamage : seul l'avertissement est affiché, l'appelant gère l'impact (météores)
@@ -734,6 +754,62 @@ function CombatService:RunEffects(player: Player, effects: { any }, origin: Vect
 			wall.Parent = Workspace
 			task.delay(eff.duration or 3, function()
 				wall:Destroy()
+			end)
+		elseif kind == "freezeProjectiles" then
+			table.insert(frozenZones, { pos = o, radius = eff.radius or 25, untilTime = os.clock() + (eff.duration or 4) })
+		elseif kind == "spirits" then
+			-- esprits de la forêt (Verdantis) : orbes qui tournent autour du lanceur et frappent l'ennemi le plus proche
+			local orbs = {}
+			for i = 1, eff.count or 3 do
+				local orb = Instance.new("Part")
+				orb.Name = "ForestSpirit"
+				orb.Shape = Enum.PartType.Ball
+				orb.Size = Vector3.new(1.6, 1.6, 1.6)
+				orb.Anchored = true
+				orb.CanCollide = false
+				orb.CanQuery = false
+				orb.Material = Enum.Material.Neon
+				orb.Color = Color3.fromRGB(140, 255, 160)
+				orb.Parent = folder
+				orbs[i] = orb
+			end
+			local power0 = power
+			task.spawn(function()
+				local t0 = os.clock()
+				local nextHit = 0
+				while os.clock() - t0 < (eff.duration or 6) and player.Parent do
+					local r = rootOf(player)
+					if not r then
+						break
+					end
+					local tt = os.clock() - t0
+					for i, orb in orbs do
+						local a = tt * 2 + i / #orbs * math.pi * 2
+						orb.CFrame = CFrame.new(r.Position + Vector3.new(math.cos(a) * 5, 2 + math.sin(tt * 3 + i) * 0.6, math.sin(a) * 5))
+					end
+					if tt >= nextHit then
+						nextHit = tt + 1
+						for _, orb in orbs do
+							local best, bestD = nil, eff.radius or 26
+							for _, e in entities do
+								if not e.dead and (not e.attackableBy or e.attackableBy(player)) then
+									local dd = (e.anchor.Position - orb.Position).Magnitude
+									if dd < bestD then
+										best, bestD = e, dd
+									end
+								end
+							end
+							if best then
+								self:DamageEntity(best, power0 * (eff.mult or 0.5), player, false, true)
+								self:SkillFx(player, "Burst", best.anchor.Position, Vector3.new(0, 0, -1), orb.Color, 4)
+							end
+						end
+					end
+					task.wait(0.05)
+				end
+				for _, orb in orbs do
+					orb:Destroy()
+				end
 			end)
 		elseif kind == "resetCooldowns" then
 			for _, p in nearbyPlayers(o, eff.radius or 20) do

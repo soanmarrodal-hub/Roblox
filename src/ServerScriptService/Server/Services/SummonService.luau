@@ -15,6 +15,7 @@ local GachaLogic = require(Shared.Logic.GachaLogic)
 local Net = require(Shared.Net)
 local Format = require(Shared.Util.Format)
 local Registry = require(script.Parent.Parent.Registry)
+local State = require(script.Parent.Parent.State)
 
 local SummonService = {}
 local rng = Random.new()
@@ -78,7 +79,7 @@ function SummonService:Summon(player: Player, bannerId: string, count: number): 
 	for _ = 1, count do
 		local heroId, rarity = GachaLogic.Roll(bannerId, d.gates, pity, rng)
 		local mut = nil
-		if Storm:IsActive() and rng:NextNumber() < Storm:MutationChance() then
+		if Storm:IsActive() and rng:NextNumber() < Storm:MutationChance() + State.Buff(player, "luck") then
 			local m = Storm:FavoredMutation()
 			mut = m and { m } or nil
 		end

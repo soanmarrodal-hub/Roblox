@@ -73,12 +73,57 @@ function IndexService:ClaimMilestone(player: Player, i: number): (boolean, strin
 		return false, m.count .. " héros requis"
 	end
 	d.index.milestones[key] = true
+	d.index.titles[m.title] = true
 	d.index.title = m.title
 	Registry.Get("ProgressionService"):Grant(player, m.reward, "index")
 	Registry.Get("BaseService"):RefreshSign(player)
 	return true, "Titre obtenu : " .. m.title
 end
 
-function IndexService:Init() end
+-- Titre gagné hors Index (ex. « Justicier ») : ajouté à la collection, porté s'il n'y en avait aucun.
+function IndexService:GrantTitle(player: Player, title: string)
+	local d = data(player)
+	if not d or d.index.titles[title] then
+		return
+	end
+	d.index.titles[title] = true
+	if d.index.title == "" then
+		d.index.title = title
+	end
+	Registry.Get("ProgressionService"):Mirror(player)
+	Registry.Get("BaseService"):RefreshSign(player)
+	Registry.Get("AnnouncementService"):Notify(player, "Nouveau titre : « " .. title .. " » (Index > Titre)", "Success")
+	Registry.Get("DataService"):Sync(player)
+end
+
+-- Choix du titre affiché au-dessus de l'avatar ("" = aucun).
+function IndexService:SetTitle(player: Player, title: string): (boolean, string?)
+	local d = data(player)
+	if not d then
+		return false, nil
+	end
+	if title ~= "" and not d.index.titles[title] then
+		return false, "Titre non obtenu"
+	end
+	d.index.title = title
+	Registry.Get("ProgressionService"):Mirror(player)
+	Registry.Get("BaseService"):RefreshSign(player)
+	Registry.Get("DataService"):Sync(player)
+	return true, nil
+end
+
+function IndexService:Init()
+	-- anciens profils : les titres des paliers déjà réclamés rejoignent la collection
+	Registry.Get("DataService").Loaded:Connect(function(_p: Player, d: any)
+		for i, m in Quests.IndexMilestones do
+			if d.index.milestones[tostring(i)] then
+				d.index.titles[m.title] = true
+			end
+		end
+		if d.index.title ~= "" then
+			d.index.titles[d.index.title] = true
+		end
+	end)
+end
 
 return IndexService

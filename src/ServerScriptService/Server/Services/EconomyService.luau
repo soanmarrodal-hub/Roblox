@@ -140,7 +140,11 @@ function EconomyService:Init()
 		local lastProd = d.stats.lastProduction or 0
 		if last > 0 and lastProd > 0 then
 			local elapsed = math.clamp(os.time() - last, 0, Economy.OfflineMaxSeconds)
-			local gain = math.floor(lastProd * elapsed * Economy.OfflineRate)
+			-- lastProduction est enregistrée sans le bonus de rattrapage : le x2 ne s'applique qu'à la
+			-- part de l'absence qui tombe encore dans les 3 premiers jours
+			local boostEnd = d.stats.firstJoin + Economy.NewbieBoostDays * 86400
+			local boosted = math.clamp(boostEnd - (os.time() - elapsed), 0, elapsed)
+			local gain = math.floor(lastProd * Economy.OfflineRate * (elapsed + boosted * (Economy.NewbieBoost - 1)))
 			if gain > 0 then
 				d.collector += gain
 				task.delay(6, function()
@@ -152,7 +156,11 @@ function EconomyService:Init()
 		end
 	end)
 	Registry.Get("DataService").Releasing:Connect(function(player: Player, d: any)
-		d.stats.lastProduction = self:Production(player)
+		local prod = self:Production(player)
+		if os.time() - d.stats.firstJoin < Economy.NewbieBoostDays * 86400 then
+			prod /= Economy.NewbieBoost
+		end
+		d.stats.lastProduction = prod
 	end)
 end
 
