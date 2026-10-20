@@ -2,6 +2,7 @@
 -- Monuments de chaque île (bible §5 à §9), construits en pièces stylisées.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Heroes = require(ReplicatedStorage.Shared.Config.Heroes)
 local Rarities = require(ReplicatedStorage.Shared.Config.Rarities)
@@ -139,8 +140,9 @@ function Monuments.Desert(ctx: Common.Ctx)
 	local summit = ctx.island.subzones[3].offset
 	local sand = rgb(226, 186, 120)
 	local gold = rgb(255, 200, 70)
-	-- La Grande Pyramide (90 studs) aux arêtes dorées, cristal solaire au sommet
-	local pcf = Common.GroundCF(ctx, summit.X, summit.Z - 40, 0, -3)
+	-- La Grande Pyramide (90 studs) aux arêtes dorées, cristal solaire au sommet. Sa porte (face -Z du
+	-- repère) regarde l'intérieur de l'île et l'allée des obélisques : dalles et boss restent sur la terre ferme.
+	local pcf = Common.GroundCF(ctx, summit.X, summit.Z - 40, 180, -3)
 	local pyr = Build.Model(m, "GreatPyramid")
 	local layers = 9
 	for k = 0, layers - 1 do
@@ -159,7 +161,8 @@ function Monuments.Desert(ctx: Common.Ctx)
 	door:SetAttribute("Label", "Salle des trésors")
 	-- Énigme : quatre dalles à symboles devant la porte, à activer dans l'ordre de la devinette du jour
 	for i, sym in { "☀", "☾", "★", "✦" } do
-		local pcf2 = pcf * CFrame.new(-21 + (i - 1) * 14, 0.4, -66)
+		-- chaque dalle posée sur son propre sol (repère de la pyramide tourné de 180° : x et z inversés)
+		local pcf2 = Common.GroundCF(ctx, summit.X + 21 - (i - 1) * 14, summit.Z - 40 + 66, 180, 0.4)
 		local plate = Build.Box(pyr, pcf2, Vector3.new(7, 0.8, 7), rgb(200, 160, 90), Enum.Material.Sandstone, "GlyphPlate")
 		local sg = Instance.new("SurfaceGui")
 		sg.Face = Enum.NormalId.Top
@@ -266,7 +269,9 @@ function Monuments.Neon(ctx: Common.Ctx)
 	local neon = { rgb(255, 61, 203), rgb(35, 213, 255), rgb(170, 90, 255), rgb(120, 255, 170), rgb(255, 210, 80) }
 	local R = ctx.island.radius
 	local terminals = 0
-	local roofs: { Vector3 } = {} -- toits hauts (départs de tyroliennes)
+	local roofs: { Vector3 } = {} -- toits hauts (apparitions de Kaïro)
+	-- toits hauts sans terminal (départs de tyroliennes) : centre du toit et demi-largeur utilisable
+	local zipRoofs: { { pos: Vector3, half: number } } = {}
 	-- emplacements à laisser libres (repère local de l'île) : arène du boss, sanctuaire, camp, balises,
 	-- Tour Prisme, jardin, stations du monorail
 	local coreO, entryO, summitO = ctx.island.subzones[2].offset, ctx.island.subzones[1].offset, ctx.island.subzones[3].offset
@@ -313,8 +318,9 @@ function Monuments.Neon(ctx: Common.Ctx)
 				sign.CanCollide = false
 				-- toit-terrasse accessible + terminal caché sur 5 toits
 				Build.Box(city, b.CFrame * CFrame.new(0, h / 2 + 0.6, 0), Vector3.new(w + 1, 1.2, b.Size.Z + 1), rgb(30, 28, 40), Enum.Material.Metal, "Roof")
+				local roofTop = (b.CFrame * CFrame.new(0, h / 2 + 1.2, 0)).Position
 				if h > 40 then
-					table.insert(roofs, (b.CFrame * CFrame.new(0, h / 2 + 1.2, 0)).Position)
+					table.insert(roofs, roofTop)
 				end
 				local hasTerminal = false
 				if terminals < 5 and h > 45 and rng:NextNumber() < 0.5 then
@@ -328,6 +334,10 @@ function Monuments.Neon(ctx: Common.Ctx)
 					term:SetAttribute("Kind", "Terminal")
 					term:SetAttribute("Index", terminals)
 					term:SetAttribute("Label", "Terminal " .. terminals)
+				end
+				-- pas de tyrolienne sur un toit à terminal : son invite masquerait celle du terminal
+				if h > 40 and not hasTerminal then
+					table.insert(zipRoofs, { pos = roofTop, half = math.min(b.Size.X, b.Size.Z) / 2 })
 				end
 				-- tremplin sur les auvents pour monter sur les toits (toujours un sous chaque terminal)
 				local padRoll = rng:NextNumber() < 0.25
@@ -344,13 +354,15 @@ function Monuments.Neon(ctx: Common.Ctx)
 	local zipFolder = Build.Model(city, "Ziplines")
 	local used: { [number]: boolean } = {}
 	local lines = 0
-	for i, a in roofs do
+	for i, ra in zipRoofs do
 		if lines >= 7 then
 			break
 		end
+		local a = ra.pos
 		if not used[i] then
 			local best, bestD = nil, math.huge
-			for j, b in roofs do
+			for j, rb in zipRoofs do
+				local b = rb.pos
 				local dd = (Vector3.new(a.X, 0, a.Z) - Vector3.new(b.X, 0, b.Z)).Magnitude
 				if j ~= i and not used[j] and dd > 55 and dd < 150 and dd < bestD then
 					best, bestD = j, dd
@@ -359,21 +371,29 @@ function Monuments.Neon(ctx: Common.Ctx)
 			if best then
 				used[i], used[best] = true, true
 				lines += 1
-				local b = roofs[best]
-				local p1, p2 = a + Vector3.new(0, 7, 0), b + Vector3.new(0, 7, 0)
+				local rb = zipRoofs[best]
+				local b = rb.pos
+				-- poteaux près du bord, côté du toit d'en face ; arrivée 4 studs avant le poteau, vers le centre
+				local flat = Vector3.new(b.X - a.X, 0, b.Z - a.Z).Unit
+				local endA = a + flat * math.max(ra.half - 2, 0)
+				local endB = b - flat * math.max(rb.half - 2, 0)
+				local landA = endA - flat * math.min(4, math.max(ra.half - 2, 0)) + Vector3.new(0, 3, 0)
+				local landB = endB + flat * math.min(4, math.max(rb.half - 2, 0)) + Vector3.new(0, 3, 0)
+				local p1, p2 = endA + Vector3.new(0, 7, 0), endB + Vector3.new(0, 7, 0)
 				for _, endPos in { p1, p2 } do
 					Build.Box(zipFolder, CFrame.new(endPos - Vector3.new(0, 3.5, 0)), Vector3.new(0.8, 7, 0.8), rgb(40, 36, 52), Enum.Material.Metal, "ZipPole")
 				end
 				local mid = (p1 + p2) / 2
 				local cable = Build.Part(zipFolder, { Name = "ZipCable", Size = Vector3.new(0.25, 0.25, (p2 - p1).Magnitude), CFrame = CFrame.lookAt(mid, p2), Color = rgb(35, 213, 255), Material = Enum.Material.Neon, CanCollide = false, CanQuery = false })
 				local _ = cable
-				for _, pair in { { p1, p2 }, { p2, p1 } } do
+				for _, pair in { { p1, p2, landB }, { p2, p1, landA } } do
 					local start = Build.Part(zipFolder, { Name = "Interact", Size = Vector3.new(6, 6, 6), CFrame = CFrame.new(pair[1] - Vector3.new(0, 4, 0)), Transparency = 1, CanCollide = false })
 					start:AddTag("Interactable")
 					start:SetAttribute("Kind", "Zipline")
 					start:SetAttribute("Label", "Tyrolienne")
 					start:SetAttribute("From", pair[1])
 					start:SetAttribute("To", pair[2])
+					start:SetAttribute("Land", pair[3])
 				end
 			end
 		end
@@ -457,6 +477,11 @@ function Monuments.Neon(ctx: Common.Ctx)
 	for i, inter in stations do
 		inter:SetAttribute("Next", stations[i % #stations + 1].Position)
 	end
+	-- angle monde de la station 1 : le wagon (animé côté client à l'heure serveur) y passe quand
+	-- GetServerTimeNow() % 120 == 0, puis à la station suivante toutes les 40 s, au moment des départs
+	local c0 = ctx.frame.Position
+	local s1 = stations[1].Position
+	wagon:SetAttribute("Phase", math.atan2(s1.Z - c0.Z, s1.X - c0.X))
 	-- Jardin suspendu (seul îlot de verdure)
 	local gcf = Common.GroundCF(ctx, core.X + 60, core.Z + 70, 0, 18)
 	Build.Box(m, gcf, Vector3.new(40, 2, 40), rgb(70, 60, 50), Enum.Material.Concrete, "Garden")
@@ -579,6 +604,7 @@ function Monuments.Glacier(ctx: Common.Ctx)
 	Build.Cylinder(m, (pcf * CFrame.new(0, 25, 0)).Position, 50, 10, rgb(210, 230, 250), Enum.Material.Glacier, "Lighthouse")
 	local lamp = Build.Ball(m, (pcf * CFrame.new(0, 53, 0)).Position, 7, rgb(160, 255, 220), Enum.Material.Neon, "Lamp")
 	lamp:AddTag("Lighthouse")
+	Workspace:SetAttribute("LighthousePos", lamp.Position)
 	local spot = Build.Light(lamp, rgb(160, 255, 220), 60, 6, "Spot") :: SpotLight
 	spot.Angle = 30
 	ctx.info.special.Lighthouse = pcf

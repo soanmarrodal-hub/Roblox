@@ -45,20 +45,29 @@ local menuColumn: Frame
 -- ============================================================================ Porteurs masqués
 -- Tempête de sable (Désert) : icône d'un porteur invisible au-delà de 50 studs.
 -- Blizzard (Glacier) : icônes masquées, sauf dans le faisceau du Phare boréal.
+
+-- Orientation du faisceau du phare, calée sur l'heure serveur : identique pour tous les joueurs,
+-- que le phare soit chargé (streaming) ou non. Environment anime la lampe avec la même valeur.
+function HUD.LighthouseYaw(): number
+	return (Workspace:GetServerTimeNow() * 0.6) % (math.pi * 2)
+end
+
 function HUD.CarrierConcealed(pos: Vector3, viewer: Vector3?): boolean
 	local loc = Islands.Locate(pos)
 	if loc == "Desert" and Workspace:GetAttribute("IslEvt_Desert") then
 		return viewer == nil or (viewer - pos).Magnitude > 50
 	end
 	if loc == "Glacier" and Workspace:GetAttribute("IslEvt_Glacier") then
-		for _, lamp in CollectionService:GetTagged("Lighthouse") do
-			if lamp:IsA("BasePart") then
-				local to = Vector3.new(pos.X - lamp.Position.X, 0, pos.Z - lamp.Position.Z)
-				local look = Vector3.new(lamp.CFrame.LookVector.X, 0, lamp.CFrame.LookVector.Z)
-				if to.Magnitude < 520 and to.Magnitude > 0.1 and look.Magnitude > 0.1 and to.Unit:Dot(look.Unit) > math.cos(math.rad(16)) then
-					return false
-				end
-			end
+		local lamp = Workspace:GetAttribute("LighthousePos")
+		if typeof(lamp) ~= "Vector3" then
+			return true
+		end
+		local yaw = HUD.LighthouseYaw()
+		-- LookVector de CFrame.Angles(0, yaw, 0)
+		local look = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
+		local to = Vector3.new(pos.X - lamp.X, 0, pos.Z - lamp.Z)
+		if to.Magnitude < 520 and to.Magnitude > 0.1 and to.Unit:Dot(look) > math.cos(math.rad(16)) then
+			return false
 		end
 		return true
 	end

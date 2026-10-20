@@ -507,7 +507,8 @@ local function interact(p: Player, kind: string, target: Instance?, extra: any)
 		if target and near(p, target, 6) and typeof(from) == "Vector3" and typeof(to) == "Vector3" and os.clock() >= (ziplineUntil[p] or 0) then
 			local duration = (to - from).Magnitude / 55
 			ziplineUntil[p] = os.clock() + duration
-			Net.Event("PlayerFx"):FireClient(p, { kind = "Zipline", from = from, to = to, duration = duration })
+			local land = target:GetAttribute("Land")
+			Net.Event("PlayerFx"):FireClient(p, { kind = "Zipline", from = from, to = to, land = if typeof(land) == "Vector3" then land else nil, duration = duration })
 		end
 	elseif kind == "Stag" then
 		if target and near(p, target, 10) then

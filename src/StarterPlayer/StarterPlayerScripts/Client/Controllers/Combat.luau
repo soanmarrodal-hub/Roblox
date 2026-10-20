@@ -33,6 +33,7 @@ local lastAttack = 0
 local lastDodge = 0
 local ATTACK_CD = Skills.Get("BasicAttack").cooldown
 local held = { button = false, mouse = false, pad = false }
+local ziplining = false -- descente en tyrolienne en cours
 local DODGE_CD = Skills.DodgeCooldown
 local lockedId: number? = nil
 local lockMarker: BillboardGui
@@ -291,13 +292,23 @@ local function impulse(dir: Vector3, distance: number, duration: number, up: num
 	local lv = Instance.new("LinearVelocity")
 	lv.Attachment0 = att
 	lv.MaxForce = 1e6
-	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World
 	local flat = Vector3.new(dir.X, 0, dir.Z)
 	if flat.Magnitude < 0.01 then
 		flat = Vector3.new(0, 0, -1)
 	end
-	lv.VectorVelocity = flat.Unit * (distance / duration) + Vector3.new(0, up or 0, 0)
+	local speed = flat.Unit * (distance / duration)
+	if up then
+		-- projection : vitesse imposée sur les trois axes
+		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+		lv.VectorVelocity = speed + Vector3.new(0, up, 0)
+	else
+		-- dash / esquive : seul le plan horizontal est contraint, un saut en cours n'est pas coupé
+		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+		lv.PrimaryTangentAxis = Vector3.xAxis
+		lv.SecondaryTangentAxis = Vector3.zAxis
+		lv.PlaneVelocity = Vector2.new(speed.X, speed.Z)
+	end
 	lv.Parent = r
 	task.delay(duration, function()
 		lv:Destroy()
@@ -327,29 +338,39 @@ local function onPlayerFx(p)
 		local force = p.force or 40
 		impulse(p.dir, force * 0.35, 0.22, force * 0.4)
 		Combat.Shake(0.6)
-	elseif p.kind == "Zipline" and typeof(p.from) == "Vector3" and typeof(p.to) == "Vector3" then
-		-- descente en tyrolienne : le personnage suit le câble, suspendu 3 studs sous lui
+	elseif p.kind == "Zipline" and typeof(p.from) == "Vector3" and typeof(p.to) == "Vector3" and not ziplining then
+		-- descente en tyrolienne : le personnage suit le câble, suspendu 3 studs sous lui. Le HRP reste
+		-- non ancré (un ancrage local n'est pas répliqué) : le serveur et les autres joueurs voient la descente.
 		local char = player.Character
 		local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if not hrp then
+		local hum = humanoid()
+		if not hrp or not hum then
 			return
 		end
 		C.Sound.Play("Whoosh")
 		local dur = math.clamp(p.duration or 2, 0.5, 4)
 		local dir = Vector3.new(p.to.X - p.from.X, 0, p.to.Z - p.from.Z)
-		hrp.Anchored = true
+		local vel = (p.to - p.from) / dur
+		local land = if typeof(p.land) == "Vector3" then p.land else p.to - Vector3.new(0, 4, 0)
+		ziplining = true
+		hum.PlatformStand = true
 		task.spawn(function()
 			local t0 = os.clock()
-			while os.clock() - t0 < dur and hrp.Parent do
+			while os.clock() - t0 < dur and hrp.Parent and hum.Health > 0 do
 				local k = (os.clock() - t0) / dur
 				local pos = p.from:Lerp(p.to, k) - Vector3.new(0, 3, 0)
 				hrp.CFrame = CFrame.lookAt(pos, pos + (if dir.Magnitude > 0.1 then dir.Unit else hrp.CFrame.LookVector))
+				hrp.AssemblyLinearVelocity = vel
+				hrp.AssemblyAngularVelocity = Vector3.zero
 				RunService.RenderStepped:Wait()
 			end
-			if hrp.Parent then
-				hrp.CFrame = CFrame.new(p.to - Vector3.new(0, 4, 0))
-				hrp.Anchored = false
+			if hrp.Parent and hum.Health > 0 then
+				local look = if dir.Magnitude > 0.1 then dir.Unit else Vector3.new(0, 0, -1)
+				hrp.CFrame = CFrame.lookAt(land, land + look)
+				hrp.AssemblyLinearVelocity = Vector3.zero
 			end
+			hum.PlatformStand = false
+			ziplining = false
 		end)
 	end
 end

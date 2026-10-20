@@ -324,7 +324,8 @@ local function stepAnim(a: Anim, t: number, dt: number)
 	elseif k == "Monorail" then
 		local center = inst:GetAttribute("Center") or a.base.Position
 		local r = inst:GetAttribute("Radius") or 60
-		local ang = (Workspace:GetServerTimeNow() % 120) / 120 * math.pi * 2 -- un tour en 2 min : une station toutes les 40 s
+		-- un tour en 2 min : une station toutes les 40 s (Phase = angle de la station 1, cf. départs serveur)
+		local ang = (inst:GetAttribute("Phase") or 0) + (Workspace:GetServerTimeNow() % 120) / 120 * math.pi * 2
 		local pos = center + Vector3.new(math.cos(ang) * r, 0, math.sin(ang) * r)
 		local tangent = Vector3.new(-math.sin(ang), 0, math.cos(ang))
 		setPivot(inst, CFrame.lookAt(pos, pos + tangent))
@@ -351,7 +352,8 @@ local function stepAnim(a: Anim, t: number, dt: number)
 		if spot then
 			spot.Face = Enum.NormalId.Front
 		end
-		setPivot(inst, CFrame.new(a.base.Position) * CFrame.Angles(0, t * 0.6, 0))
+		-- même angle pour tous les joueurs (heure serveur) : le HUD s'en sert pour les porteurs dans le faisceau
+		setPivot(inst, CFrame.new(a.base.Position) * CFrame.Angles(0, C.HUD.LighthouseYaw(), 0))
 	elseif k == "Pulse" then
 		if inst:IsA("BasePart") then
 			inst.Transparency = 0.15 + (math.sin(t * 2 + a.phase) + 1) * 0.12
@@ -745,6 +747,8 @@ function Environment.Start()
 		CollectionService:GetInstanceAddedSignal(tag):Connect(refreshCollection)
 	end
 	Workspace:GetAttributeChangedSignal("EclipseChestAngle"):Connect(refreshEclipseShadow)
+	-- le cadran peut n'arriver (streaming) qu'après le début de l'Éclipse
+	CollectionService:GetInstanceAddedSignal("EclipseDial"):Connect(refreshEclipseShadow)
 	dayClock = Workspace:GetAttribute("DayClock") or 9
 	shownClock = dayClock
 	RunService.RenderStepped:Connect(step)
