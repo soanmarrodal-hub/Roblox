@@ -146,5 +146,9 @@ des ancres invisibles portant des attributs ; le client les représente.
 - [ ] Identifiants de gamepasses et produits renseignés.
 - [ ] 30 héros importés dans `Assets/HeroModels`.
 - [ ] Musiques choisies dans `Config/Audio.luau`.
+- [ ] Localisation (Creator Hub > Localization) : langue source **français**, langues **anglais, espagnol, portugais**,
+  activer « Capture automatique des textes » et « Traduction automatique ». La table `Interface.csv` (243 textes
+  relus) a priorité ; le reste est traduit automatiquement. Pour ajouter un texte relu : compléter
+  `tools/localization/strings.py` puis lancer `python3 tools/localization/make_csv.py`.
 - [ ] Questionnaire d'expérience (classement d'âge) et taux d'invocation affichés (déjà visibles dans le menu Invocation).
 - [ ] Test à plusieurs joueurs sur un serveur Roblox privé.

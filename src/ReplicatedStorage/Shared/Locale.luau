@@ -77,8 +77,16 @@ function Locale.t(key: string): string
 	return e[Locale.Current] or e.fr or key
 end
 
+-- Langue choisie ; « auto » suit la langue du compte Roblox (et la traduction automatique de l'interface
+-- par la LocalizationTable reste active).
+Locale.Mode = "auto"
 function Locale.Set(lang: string)
-	if table.find(Locale.Languages, lang) then
+	if lang == "auto" then
+		Locale.Mode = "auto"
+		local lp = game:GetService("Players").LocalPlayer
+		Locale.Current = if lp then Locale.FromLocaleId(lp.LocaleId) else "fr"
+	elseif table.find(Locale.Languages, lang) then
+		Locale.Mode = lang
 		Locale.Current = lang
 	end
 end
@@ -90,6 +98,11 @@ function Locale.FromLocaleId(id: string): string
 		return code
 	end
 	return "fr"
+end
+
+-- Côté client, langue du compte dès le chargement (avant l'arrivée du profil).
+if game:GetService("RunService"):IsClient() then
+	Locale.Set("auto")
 end
 
 return Locale

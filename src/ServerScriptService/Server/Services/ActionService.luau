@@ -246,7 +246,7 @@ H.Settings = function(p, a)
 		return false, nil
 	end
 	local v = a.value
-	if key == "lang" and typeof(v) == "string" and table.find(Locale.Languages, v) then
+	if key == "lang" and typeof(v) == "string" and (v == "auto" or table.find(Locale.Languages, v)) then
 		d.settings.lang = v
 	elseif key == "shake" and typeof(v) == "boolean" then
 		d.settings.shake = v

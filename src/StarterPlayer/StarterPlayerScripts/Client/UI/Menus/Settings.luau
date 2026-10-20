@@ -43,8 +43,12 @@ function Page.Build(body: Frame, ctx: any)
 		Kit.Clear(scroll)
 		local s = d.settings
 		local langs = row(1, Locale.t("language"))
+		-- « Auto » : langue du compte Roblox (par défaut)
+		Kit.Button(langs, { Text = "Auto", Size = UDim2.fromOffset(90, 44), Color = if s.lang == "auto" then Theme.Color.Accent else Theme.Color.ButtonGray, LayoutOrder = 0, MaxSize = 18, OnClick = function()
+			set("lang", "auto")
+		end })
 		for i, l in Locale.Languages do
-			Kit.Button(langs, { Text = LANG_NAMES[l], Size = UDim2.fromOffset(110, 44), Color = if s.lang == l then Theme.Color.Accent else Theme.Color.ButtonGray, LayoutOrder = i, MaxSize = 18, OnClick = function()
+			Kit.Button(langs, { Text = LANG_NAMES[l], Size = UDim2.fromOffset(100, 44), Color = if s.lang == l then Theme.Color.Accent else Theme.Color.ButtonGray, LayoutOrder = i, MaxSize = 18, OnClick = function()
 				set("lang", l)
 			end })
 		end

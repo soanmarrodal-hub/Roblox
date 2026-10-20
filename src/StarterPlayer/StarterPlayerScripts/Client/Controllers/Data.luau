@@ -32,6 +32,16 @@ function Data.Init()
 		Data.profile = d
 		if d and d.settings and d.settings.lang then
 			Locale.Set(d.settings.lang)
+			-- traduction automatique Roblox (LocalizationService) seulement en mode « auto » : une langue
+			-- forcée ne doit pas être retraduite vers la langue du compte
+			local gui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+			if gui then
+				for _, sg in gui:GetChildren() do
+					if sg:IsA("LayerCollector") then
+						sg.AutoLocalize = Locale.Mode == "auto"
+					end
+				end
+			end
 		end
 		Data.Changed:Fire(d)
 		if first then

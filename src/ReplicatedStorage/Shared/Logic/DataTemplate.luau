@@ -55,7 +55,7 @@ function DataTemplate.New(): { [string]: any }
 			seasonId = "", -- saison en cours (mois UTC « AAAA-MM »)
 			seasonGold = 0, -- vols en Or de la saison (classement du Mur des légendes)
 		},
-		settings = { lang = "fr", shake = true, quality = "High", music = 0.6, sfx = 0.8, border = "#5BC8FF" },
+		settings = { lang = "auto", shake = true, quality = "High", music = 0.6, sfx = 0.8, border = "#5BC8FF" },
 		cosmetics = { owned = {} :: { [string]: boolean }, aura = "", trail = "", floor = "", pedestal = "" },
 		purchases = {} :: { [string]: boolean },
 		products = {} :: { [string]: number }, -- produits « une seule fois » déjà achetés

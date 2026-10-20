@@ -81,8 +81,11 @@ Le détail (dépannage, ordre conseillé, vérifications) est dans [docs/GUIDE.m
   monorail de la Ville Néon, Forge des Titans, cycle jour/nuit et éclairage propre à chaque île.
 - **Interface** : HUD mobile (colonne de menus de la bible, cibles tactiles agrandies), mini-carte et carte
   indépendantes du streaming, plaque pseudo/titre/rang au-dessus des avatars, notifications, annonces serveur,
-  cinématique d'arrivée, objectif guidé. Textes en français ; le module `Locale` contient la base fr/en/es/pt, la
-  traduction complète des menus et messages serveur reste à faire.
+  cinématique d'arrivée, objectif guidé.
+- **Langues** : textes source en français ; langue « Auto » (celle du compte Roblox) par défaut. Une table de
+  localisation Roblox (`src/LocalizationService/Interface.csv`, générée par `tools/localization/make_csv.py`) traduit
+  243 textes d'interface et messages en anglais, espagnol et portugais ; le reste (phrases construites, descriptions
+  de héros) passe par la traduction automatique de Roblox à activer dans le Creator Hub (voir le guide).
 
 ## Tests
 
