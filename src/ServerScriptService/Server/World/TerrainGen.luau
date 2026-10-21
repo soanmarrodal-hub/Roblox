@@ -194,31 +194,38 @@ local function writeIsland(islandId: string)
 			task.wait()
 		end
 	end
-	-- socle flottant effilé
+	-- socle flottant effilé. Les blocs restent sous yMin (le terrain est plein de yMin jusqu'à la surface) :
+	-- sinon les grosses boules du bord ressortent en bosses de roche au-dessus du sol de l'île.
 	for k = 0, 6 do
 		local f = 1 - k * 0.14
 		local y = yMin - 6 - k * 20
 		Terrain:FillCylinder(CFrame.new(c.X, y, c.Z), 26, isl.radius * f * 0.92, cliff)
+		local rb = isl.radius * f * 0.22
 		for a = 0, 7 do
 			local ang = a / 8 * math.pi * 2 + k
 			local r = isl.radius * f * 0.8
-			Terrain:FillBall(Vector3.new(c.X + math.cos(ang) * r, y - 6, c.Z + math.sin(ang) * r), isl.radius * f * 0.22, cliff)
+			Terrain:FillBall(Vector3.new(c.X + math.cos(ang) * r, math.min(y - 6, yMin - rb), c.Z + math.sin(ang) * r), rb, cliff)
 		end
 	end
 	Terrain:FillBall(Vector3.new(c.X, yMin - 150, c.Z), 40, cliff)
 end
 
--- Socle rocheux sous le hub (le hub lui-même est en pièces).
+-- Socle rocheux sous le hub (le hub lui-même est en pièces). Tout reste sous la dalle de l'anneau des bases
+-- (pièce « BaseRing » de c.Y - 14 à c.Y - 6) : le terrain ne doit recouvrir ni les sols des bases, ni les
+-- socles, ni les allées, et aucune boule ne doit percer le sol.
 function TerrainGen.HubBase()
 	local c = Islands.HubCenter
 	local R = Islands.HubRadius
+	local top = c.Y - 12 -- sommet du socle, caché dans l'épaisseur de la dalle BaseRing
 	for k = 0, 6 do
 		local f = 1 - k * 0.13
-		Terrain:FillCylinder(CFrame.new(c.X, c.Y - 14 - k * 18, c.Z), 22, R * f, Enum.Material.Slate)
+		local layerTop = top - k * 18
+		Terrain:FillCylinder(CFrame.new(c.X, layerTop - 11, c.Z), 22, R * f, Enum.Material.Slate)
+		local rb = R * f * 0.2
 		for a = 0, 9 do
 			local ang = a / 10 * math.pi * 2 + k * 0.7
 			local r = R * f * 0.86
-			Terrain:FillBall(Vector3.new(c.X + math.cos(ang) * r, c.Y - 20 - k * 18, c.Z + math.sin(ang) * r), R * f * 0.2, Enum.Material.Rock)
+			Terrain:FillBall(Vector3.new(c.X + math.cos(ang) * r, layerTop - rb, c.Z + math.sin(ang) * r), rb, Enum.Material.Rock)
 		end
 	end
 	Terrain:FillBall(Vector3.new(c.X, c.Y - 150, c.Z), 36, Enum.Material.Slate)
