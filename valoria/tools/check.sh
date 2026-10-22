@@ -13,6 +13,9 @@ echo "== Tests =="
 echo "== Interface et contrôleurs (banc d'essai Lune) =="
 "$(bin lune)" run tools/tests/ui_smoke.luau .
 
+echo "== Serveur : construction des mondes et session complète (banc d'essai Lune) =="
+"$(bin lune)" run tools/tests/world_smoke.luau .
+
 echo "== Analyse de types =="
 "$(bin rojo)" sourcemap default.project.json -o sourcemap.json >/dev/null
 "$(bin luau-lsp)" analyze --definitions="$TYPES" --sourcemap=sourcemap.json --no-strict-dm-types \
