@@ -10,6 +10,9 @@ TYPES="${ROBLOX_TYPES:-globalTypes.d.luau}"
 echo "== Tests =="
 "$(bin lune)" run tools/tests/run.luau .
 
+echo "== Interface et contrôleurs (banc d'essai Lune) =="
+"$(bin lune)" run tools/tests/ui_smoke.luau .
+
 echo "== Analyse de types =="
 "$(bin rojo)" sourcemap default.project.json -o sourcemap.json >/dev/null
 "$(bin luau-lsp)" analyze --definitions="$TYPES" --sourcemap=sourcemap.json --no-strict-dm-types \

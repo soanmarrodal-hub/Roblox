@@ -498,6 +498,8 @@ function HeroController.Init()
 			warn("[Héros] " .. tostring(err))
 		end
 	end)
+	-- équipes déjà connues au démarrage (attributs répliqués avant ce script)
+	task.defer(refreshAll)
 	task.spawn(function()
 		while true do
 			task.wait(2)

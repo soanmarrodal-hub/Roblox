@@ -48,7 +48,7 @@ local function accCard(parent: Instance, uid: string, acc: any, order: number, o
 	if acc.locked then
 		Kit.Icon(card, "Lock", 20, { pos = UDim2.new(1, -22, 0, 2), z = 13 })
 	end
-	Kit.Text(card, string.upper(string.sub(rar.name, 1, 4)), { pixel = true, size = 11, sizeUD = UDim2.new(1, 0, 0, 12), pos = UDim2.new(0, 0, 1, -14), z = 13 })
+	Kit.Text(card, Format.Upper(Format.Clip(rar.name, 4)), { pixel = true, size = 11, sizeUD = UDim2.new(1, 0, 0, 12), pos = UDim2.new(0, 0, 1, -14), z = 13 })
 	card.Activated:Connect(function()
 		Kit.Sound("Click")
 		onClick()
@@ -135,7 +135,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 		Kit.RarityFill(top, acc.rarity)
 		Kit.Icon(top, if t then t.icon else "Ring", 76, { pos = UDim2.fromOffset(8, 10), z = 13 })
 		Kit.Text(top, if t then t.name else acc.type, { size = 21, scaled = true, sizeUD = UDim2.new(1, -100, 0, 28), pos = UDim2.fromOffset(92, 8), alignX = Enum.TextXAlignment.Left, z = 13 })
-		Kit.Text(top, string.format("%s · %s", string.upper(rar.name), if t then string.upper(t.slot) else ""), { pixel = true, size = 13, sizeUD = UDim2.new(1, -100, 0, 16), pos = UDim2.fromOffset(92, 38), alignX = Enum.TextXAlignment.Left, z = 13 })
+		Kit.Text(top, string.format("%s · %s", Format.Upper(rar.name), if t then Format.Upper(t.slot) else ""), { pixel = true, size = 13, sizeUD = UDim2.new(1, -100, 0, 16), pos = UDim2.fromOffset(92, 38), alignX = Enum.TextXAlignment.Left, z = 13 })
 		local pol = Kit.Bar(top, { size = UDim2.new(1, -104, 0, 18), pos = UDim2.fromOffset(92, 62), color = C.teal, textSize = 11, z = 13 })
 		pol:Set(acc.polish / Accessories.MaxPolish, string.format("POLI %d/%d", acc.polish, Accessories.MaxPolish))
 		-- statistiques

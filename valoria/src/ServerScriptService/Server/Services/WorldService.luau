@@ -167,7 +167,7 @@ function WorldService.UpdateBoards(self: any, top: { [string]: { { name: string,
 					if i > 10 then
 						break
 					end
-					table.insert(lines, string.format("%2d. %s  -  %s %s", i, string.sub(e.name, 1, 16), Format.Short(e.value), def.unit))
+					table.insert(lines, string.format("%2d. %s  -  %s %s", i, Format.Clip(e.name, 16), Format.Short(e.value), def.unit))
 				end
 			end
 			list.Text = if #lines > 0 then table.concat(lines, "\n") else "Aucun record pour l'instant."

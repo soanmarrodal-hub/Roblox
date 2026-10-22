@@ -619,7 +619,7 @@ local function onRunState(msg: any)
 	else
 		local raid = Raids.List[msg.raid]
 		runTitle.Text = if msg.phase == "boss" then (msg.boss and msg.boss.name or "Boss") else string.format("Vague %d / %d", math.min(msg.wave, msg.waves), msg.waves)
-		runInfo.Text = string.format("%s  ENNEMIS %d", if raid then string.upper(raid.name) else "", msg.enemies or 0)
+		runInfo.Text = string.format("%s  ENNEMIS %d", if raid then Format.Upper(raid.name) else "", msg.enemies or 0)
 		if msg.phase == "victory" then
 			local entries = RewardView.FromGains(msg.gains or {})
 			local sub = "Le raid est terminé !"

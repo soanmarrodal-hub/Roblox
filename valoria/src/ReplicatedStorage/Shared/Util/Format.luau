@@ -93,4 +93,33 @@ function Format.Ordinal(n: number): string
 	return if n == 1 then "1er" else tostring(n) .. "e"
 end
 
+-- Majuscules, accents compris (string.upper ne connaît que l'ASCII).
+local UPPER: { [string]: string } = {
+	["à"] = "À", ["â"] = "Â", ["ä"] = "Ä", ["ç"] = "Ç", ["é"] = "É", ["è"] = "È", ["ê"] = "Ê", ["ë"] = "Ë",
+	["î"] = "Î", ["ï"] = "Ï", ["ô"] = "Ô", ["ö"] = "Ö", ["ù"] = "Ù", ["û"] = "Û", ["ü"] = "Ü", ["ÿ"] = "Ÿ", ["œ"] = "Œ", ["æ"] = "Æ",
+}
+
+function Format.Upper(s: string): string
+	local out = string.upper(s)
+	for lower, upper in UPPER do
+		out = string.gsub(out, lower, upper)
+	end
+	return out
+end
+
+-- Les `n` premiers caractères (UTF-8) d'un texte, sans couper un caractère accentué.
+function Format.Clip(s: string, n: number): string
+	if not utf8.len(s) then
+		return string.sub(s, 1, n)
+	end
+	local count = 0
+	for pos in utf8.codes(s) do
+		count += 1
+		if count > n then
+			return string.sub(s, 1, pos - 1)
+		end
+	end
+	return s
+end
+
 return Format

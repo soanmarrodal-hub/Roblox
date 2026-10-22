@@ -338,12 +338,12 @@ function Effects.Coins(pos: Vector3, count: number, color: Color3?)
 		local t0 = os.clock()
 		local delayT = 0.55 + i * 0.03
 		local conn: RBXScriptConnection
-		local p0 = coin.Position
+		local p0 = coin.CFrame.Position
 		conn = RunService.Heartbeat:Connect(function(dt)
 			local t = os.clock() - t0
 			if t < delayT then
 				v += Vector3.new(0, -55 * dt, 0)
-				local np = coin.Position + v * dt
+				local np = coin.CFrame.Position + v * dt
 				local floorY = pos.Y + 0.3
 				if np.Y < floorY then
 					np = Vector3.new(np.X, floorY, np.Z)

@@ -83,7 +83,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 		Kit.Portrait(head, def.id, 112, { pos = UDim2.fromOffset(4, 5), z = 13 })
 		Kit.Text(head, def.name, { size = 24, scaled = true, sizeUD = UDim2.new(1, -124, 0, 30), pos = UDim2.fromOffset(118, 6), alignX = Enum.TextXAlignment.Left, z = 13 })
 		Kit.Text(head, def.epithet, { size = 15, sizeUD = UDim2.new(1, -124, 0, 20), pos = UDim2.fromOffset(118, 36), alignX = Enum.TextXAlignment.Left, z = 13 })
-		Kit.Text(head, string.upper(rar.name) .. " · " .. string.upper(def.class), { pixel = true, size = 13, sizeUD = UDim2.new(1, -124, 0, 16), pos = UDim2.fromOffset(118, 58), alignX = Enum.TextXAlignment.Left, z = 13 })
+		Kit.Text(head, Format.Upper(rar.name) .. " · " .. Format.Upper(def.class), { pixel = true, size = 13, sizeUD = UDim2.new(1, -124, 0, 16), pos = UDim2.fromOffset(118, 58), alignX = Enum.TextXAlignment.Left, z = 13 })
 		Kit.Icon(head, ELEMENT_ICON[def.element] or "Fist", 26, { pos = UDim2.new(1, -32, 0, 6), z = 13 })
 		Kit.Stars(head, inst.stars, 18, { pos = UDim2.fromOffset(118, 78), z = 13 }).Size = UDim2.new(0, 120, 0, 18)
 		local maxLvl = Progression.MaxLevel(inst.stars)

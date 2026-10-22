@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Stations = require(Shared.Config.Stations)
 local Worlds = require(Shared.Config.Worlds)
+local Format = require(Shared.Util.Format)
 local Theme = require(script.Parent.Parent.UI.Theme)
 local Models = require(script.Parent.Models)
 
@@ -89,7 +90,7 @@ local function spawnNpc(folder: Folder, st: Stations.Station, cast: { model: str
 	role.FontFace = Theme.Pixel
 	role.TextScaled = true
 	role.TextColor3 = st.color
-	role.Text = string.upper(st.hint)
+	role.Text = Format.Upper(st.hint)
 	role.Parent = bb
 	local s2 = Instance.new("UIStroke")
 	s2.Thickness = 1.5

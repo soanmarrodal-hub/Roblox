@@ -131,7 +131,7 @@ function Kit.Icon(parent: Instance, name: string, size: number?, opts: { [string
 		Parent = parent,
 	})
 	if not Pixel.Apply(img, Pixel.Icon(name)) then
-		Kit.Text(img, string.sub(name, 1, 2), { scaled = true, size = s, pixel = true, z = o.z })
+		Kit.Text(img, Format.Clip(name, 2), { scaled = true, size = s, pixel = true, z = o.z })
 	end
 	return img
 end
@@ -679,7 +679,7 @@ function Kit.Portrait(parent: Instance, heroId: string, size: number, opts: { [s
 	})
 	if not Pixel.Apply(img, Pixel.Portrait(heroId, o.silhouette)) then
 		local def = Heroes.Get(heroId)
-		Kit.Text(img, if o.silhouette then "?" else (def and string.sub(def.name, 1, 1) or "?"), { scaled = true, size = size * 0.6, z = (o.z or 1) + 1 })
+		Kit.Text(img, if o.silhouette then "?" else (def and Format.Clip(def.name, 1) or "?"), { scaled = true, size = size * 0.6, z = (o.z or 1) + 1 })
 	end
 	return img
 end

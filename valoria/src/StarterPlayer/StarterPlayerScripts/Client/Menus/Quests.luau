@@ -73,7 +73,7 @@ local function board(ctx: MenuManager.Ctx): MenuManager.View
 						claimed(res)
 					end
 				end)
-				Kit.Text(row, string.upper(giver.name), { pixel = true, light = false, size = 11, color = C.blue, sizeUD = UDim2.fromOffset(120, 12), pos = UDim2.fromOffset(4, 82), z = 12 })
+				Kit.Text(row, Format.Upper(giver.name), { pixel = true, light = false, size = 11, color = C.blue, sizeUD = UDim2.fromOffset(120, 12), pos = UDim2.fromOffset(4, 82), z = 12 })
 			elseif d.worlds[tostring(w.id)] then
 				Kit.Text(list, string.format("%s : toutes les quêtes sont terminées !", w.name), { light = false, size = 17, color = C.green, sizeUD = UDim2.new(1, 0, 0, 26), order = 10 + w.id })
 			end
