@@ -1,3 +1,7 @@
+> **Nouveau : [Valoria Champions](valoria/README.md)** — jeu d'aventure chevaleresque façon Anime Champion
+> Simulator (héros voxel « petit pixel » à invoquer, village, deux mondes, Tour des Épreuves, deux raids,
+> interface façon Pet Simulator 99). Tout est dans le dossier `valoria/`.
+
 # Astral Heist
 
 Jeu Roblox d'aventure « anime cartoon semi-réaliste » : collectionne 30 héros sur cinq îles flottantes, expose-les
