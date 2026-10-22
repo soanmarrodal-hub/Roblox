@@ -1,0 +1,5 @@
+# Place construite : seule la version prête à ouvrir est versionnée
+build/*
+!build/ValoriaChampions.rbxl
+sourcemap.json
+__pycache__/
