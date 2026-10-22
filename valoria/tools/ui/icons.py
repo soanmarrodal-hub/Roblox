@@ -1,0 +1,1035 @@
+"""Icônes pixel art 16×16 de l'interface (style « petit pixel »).
+
+    python3 tools/ui/icons.py            → écrit src/StarterPlayer/StarterPlayerScripts/Client/UI/IconData.luau
+                                           et docs/images/icons.png (planche d'aperçu)
+Chaque icône est une grille de caractères ; '.' = transparent, les autres lettres renvoient à PALETTE.
+Les potions et éléments sont des variantes obtenues par substitution de couleurs.
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
+OUT = os.path.join(ROOT, 'src', 'StarterPlayer', 'StarterPlayerScripts', 'Client', 'UI', 'IconData.luau')
+DOC = os.path.join(ROOT, 'docs', 'images', 'icons.png')
+
+PALETTE = {
+    'k': '2a1c26',  # contour
+    'w': 'ffffff',
+    'y': 'ffe36e', 'Y': 'f5b51c', 'o': 'c47a12',  # or
+    'c': 'a8f4ff', 'C': '3cc8ff', 'b': '2074e0', 'B': '1a3c8c',  # bleu
+    'r': 'ff8a7a', 'R': 'e8423c', 'm': '98202c',  # rouge
+    'g': 'a6f26e', 'G': '46c046', 'd': '1f7a36',  # vert
+    'p': 'dca6ff', 'P': '9d52ff', 'q': '5a24aa',  # violet
+    's': 'eceff4', 'S': 'aeb6c4', 'z': '6c7484',  # argent / pierre
+    'n': 'd09454', 'N': '8e5c2c', 'h': '5a3418',  # bois / cuir
+    'e': 'fbeccb', 'E': 'd8bd84',  # parchemin
+    'f': 'f4cba2',  # peau
+    'l': 'ff9ad8',  # rose
+    'x': 'ff8a7a', 'X': 'e8423c',  # liquide (substitué)
+}
+
+ICONS: dict[str, list[str]] = {}
+
+ICONS['Coin'] = [
+    '.....kkkkkk.....',
+    '...kkyyyyyYkk...',
+    '..kyyyyyyyyYYk..',
+    '.kyywwYYYYyyYok.',
+    '.kywyYyyyyoyYok.',
+    'kyyyYyyyyyyoYYok',
+    'kyyyYyyyyyyoYYok',
+    'kyyyYyyyyyyoYYok',
+    'kyyyYyyyyyyoYYok',
+    'kyyyYyyyyyyoYYok',
+    'kYyyyoooooooYYok',
+    '.kYyyyyyyyyYYok.',
+    '.kYYYyyyyyYYYok.',
+    '..kooYYYYYYook..',
+    '...kkooooookk...',
+    '.....kkkkkk.....',
+]
+ICONS['Gem'] = [
+    '................',
+    '................',
+    '....kkkkkkkk....',
+    '...kwccccCCbk...',
+    '..kwcccccCCbbk..',
+    '.kwcccccCCCbbBk.',
+    'kkkkkkkkkkkkkkkk',
+    '.kccccwCCCbbBBk.',
+    '..kcccwCCCbBBk..',
+    '...kccCCCbBBk...',
+    '....kccCCbBk....',
+    '.....kcCCBk.....',
+    '......kCBk......',
+    '.......kk.......',
+    '................',
+    '................',
+]
+ICONS['Rune'] = [
+    '................',
+    '.....kkkkkk.....',
+    '....kzSSSSzk....',
+    '...kzSsssSSzk...',
+    '..kzSssPPPSSzk..',
+    '..kzSsSPpSSSzk..',
+    '..kzSSSPpPPSzk..',
+    '..kzSSSPpSSSzk..',
+    '..kzSSPPpPSSzk..',
+    '..kzSSSSPSSSzk..',
+    '..kzzSSSSSSzzk..',
+    '...kzzSSSSzzk...',
+    '....kkzzzzkk....',
+    '......kkkk......',
+    '................',
+    '................',
+]
+ICONS['Scroll'] = [
+    '................',
+    '.kkkkkkkkkkkkkk.',
+    'kNnnnnnnnnnnnnNk',
+    'kNhhhhhhhhhhhhNk',
+    '.kkeeeeeeeeeekk.',
+    '..keEEEEEEEEek..',
+    '..keeeeeeeeeek..',
+    '..keEEEEEEEEek..',
+    '..keeeeeeeeeek..',
+    '..keEEEEEEEeek..',
+    '..keeeeeeeeeek..',
+    '.kkeeeeeeeeeekk.',
+    'kNnnnnnnnnnnnnNk',
+    'kNhhhhhhhhhhhhNk',
+    '.kkkkkkkkkkkkkk.',
+    '................',
+]
+ICONS['Chest'] = [
+    '................',
+    '................',
+    '...kkkkkkkkkk...',
+    '..knnnnnnnnnnk..',
+    '.knnnnnnnnnnnnk.',
+    '.kYNNNNNNNNNNYk.',
+    'kkYkkkkkkkkkkYkk',
+    'kYNnnnkyykNnnNYk',
+    'kYNnnnkYokNnnNYk',
+    'kYNNNNNkkNNNNNYk',
+    'kYNNNNNNNNNNNNYk',
+    'kYNNNNNNNNNNNNYk',
+    'kYhhhhhhhhhhhhYk',
+    'kkkkkkkkkkkkkkkk',
+    '................',
+    '................',
+]
+ICONS['Anvil'] = [
+    '................',
+    '................',
+    '................',
+    '..kkkkkkkkkkkk..',
+    'kkSsssssssssSSk.',
+    'kSSSsssssssSSSSk',
+    '.kkkSSSSSSSSzkk.',
+    '....kzSSSSSzk...',
+    '.....kzSSSzk....',
+    '.....kzSSSzk....',
+    '....kzzSSSzzk...',
+    '...kzzzzzzzzzk..',
+    '...kkkkkkkkkkk..',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Star'] = [
+    '.......kk.......',
+    '......kyyk......',
+    '......kyYk......',
+    '.....kyyYYk.....',
+    'kkkkkkyyYYkkkkkk',
+    'kyyyyyyyyYYYYYok',
+    '.kyyyyyyyYYYYok.',
+    '..kyyyyyyYYYok..',
+    '...kyyyyYYYok...',
+    '...kyyyyYYYok...',
+    '..kyyyyokYYYok..',
+    '..kyyyok.kYYok..',
+    '.kyyok....kYYok.',
+    '.kyok......kook.',
+    '.kkk........kkk.',
+    '................',
+]
+ICONS['Ring'] = [
+    '................',
+    '......kkkk......',
+    '.....kcCCbk.....',
+    '.....kCwCbk.....',
+    '......kkkk......',
+    '....kkYYYYkk....',
+    '...kYyyYYYYok...',
+    '..kYyk....kYok..',
+    '..kYk......kok..',
+    '..kYk......kok..',
+    '..kYk......kok..',
+    '..kYyk....kYok..',
+    '...kYyyYYYYok...',
+    '....kkooookk....',
+    '......kkkk......',
+    '................',
+]
+ICONS['Portal'] = [
+    '................',
+    '.....kkkkkk.....',
+    '...kkzSSSSzkk...',
+    '..kzSkkkkkkSzk..',
+    '..kSkcCCCCbkSk..',
+    '.kzSkcwcCCbkSzk.',
+    '.kSkcCwcCbbbkSk.',
+    '.kSkcCCwCbBbkSk.',
+    '.kSkcCCCwbBbkSk.',
+    '.kSkcCCCbBBbkSk.',
+    '.kSkcCCbbBBbkSk.',
+    '.kSkcCbbBBBbkSk.',
+    '.kzkkkkkkkkkkzk.',
+    'kzzSSSSSSSSSSzzk',
+    'kkkkkkkkkkkkkkkk',
+    '................',
+]
+ICONS['Skull'] = [
+    '................',
+    '.....kkkkkk.....',
+    '...kksssssSkk...',
+    '..kssssssssSSk..',
+    '.kssssssssssSSk.',
+    '.kssssssssssSSk.',
+    '.kskkksssskkkSk.',
+    '.kskkksssskkkSk.',
+    '.kssksssssskSSk.',
+    '..kssssksssSSk..',
+    '...kssskksSSk...',
+    '...kSsssssSSk...',
+    '...kSkSkSkSkk...',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+]
+ICONS['Wave'] = [
+    '................',
+    '................',
+    '.......kkkk.....',
+    '.....kkcccCk....',
+    '....kcwccCCbk...',
+    '...kcwckkkCbk...',
+    '..kcwck...kbk...',
+    '..kcck.....k....',
+    '.kccCk..........',
+    '.kcCCbkk....kk..',
+    'kcCCbbbBkkkkcCk.',
+    'kCCbbbBBBBBbbBk.',
+    'kbbBBBBBBBBBBBk.',
+    'kkkkkkkkkkkkkkk.',
+    '................',
+    '................',
+]
+ICONS['Tower'] = [
+    '.......kk.......',
+    '......kRRk......',
+    '.....kRRRmk.....',
+    '....kRRRRmmk....',
+    '...kRRRRRmmmk...',
+    '..kkkkkkkkkkkk..',
+    '...kSSSSSSSzk...',
+    '...kSSkkkSSzk...',
+    '...kSSkykSSzk...',
+    '...kSSkkkSSzk...',
+    '...kSSSSSSSzk...',
+    '...kSSSkkSSzk...',
+    '...kSSkhhkSzk...',
+    '..kkSSkhhkSzkk..',
+    '..kzzzkhhkzzzk..',
+    '..kkkkkkkkkkkk..',
+]
+ICONS['Book'] = [
+    '................',
+    '..kkkkkkkkkkk...',
+    '.kRRRRRRRRRRmk..',
+    '.kRrrrrrrrrRmk..',
+    '.kRrYYYYYYrRmk..',
+    '.kRrYyyyyYrRmk..',
+    '.kRrYYYYYYrRmk..',
+    '.kRrrrrrrrrRmk..',
+    '.kRRRRRRRRRRmk..',
+    '.kRRRRRRRRRRmk..',
+    '.kRRRRRRRRRRmk..',
+    '.kmmmmmmmmmmmk..',
+    '.kweeeeeeeeeek..',
+    '.kkkkkkkkkkkkk..',
+    '................',
+    '................',
+]
+ICONS['Summon'] = [
+    '................',
+    '.....kkkkkk.....',
+    '....kpwppPPk....',
+    '...kpwppPPPqk...',
+    '...kppppPPPqk...',
+    '...kpppPPPqqk...',
+    '....kpPPPqqk....',
+    '.....kkkkkk.....',
+    '....kYyyyYok....',
+    '...kYyyyyYYok...',
+    '..kkkkkkkkkkkk..',
+    '..kNnnnnnnnNNk..',
+    '..khhhhhhhhhhk..',
+    '...kkkkkkkkkk...',
+    '................',
+    '................',
+]
+ICONS['Sword'] = [
+    '.............kk.',
+    '............kssk',
+    '...........ksSk.',
+    '..........ksSk..',
+    '.........ksSk...',
+    '........ksSk....',
+    '.......ksSk.....',
+    '..kk..ksSk......',
+    '..kYkksSk.......',
+    '...kYkSk........',
+    '....kYYk........',
+    '...kNkYYk.......',
+    '..kNk.kYYk......',
+    '.kNk...kk.......',
+    '.kk.............',
+    '................',
+]
+ICONS['Boot'] = [
+    '................',
+    '...kkkkkk.......',
+    '..kwkNnnNk......',
+    '.kwskNnnNk......',
+    '..kkkNnnNk......',
+    '....kNnnNk......',
+    '....kNnnNk......',
+    '....kNnnNkkkk...',
+    '....kNnnnnnnNkk.',
+    '....kNnnnnnnnnNk',
+    '....kNNNNNNNNNNk',
+    '....khhhhhhhhhhk',
+    '....kkkkkkkkkkkk',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Wing'] = [
+    '................',
+    '.kk.............',
+    'kwwk............',
+    'kwwsk...........',
+    '.kwwskk.........',
+    '.kwwwssk........',
+    '..kwwwwsskk.....',
+    '..kwwwwwwssk....',
+    '...kwwwwwwwsk...',
+    '...kkwwwwwwwsk..',
+    '....kskwwwwwwsk.',
+    '.....kskkwwwwwk.',
+    '......kkskkwwsk.',
+    '........kkskkk..',
+    '..........kk....',
+    '................',
+]
+ICONS['Eye'] = [
+    '................',
+    '................',
+    '................',
+    '.....kkkkkk.....',
+    '...kkwwwwwwkk...',
+    '..kwwwkkkkwwwk..',
+    '.kwwwkCCbbkwwwk.',
+    'kwwwkCwCbBbkwwwk',
+    'kwwwkCCbbBbkwwwk',
+    '.kwwwkbbBBkwwwk.',
+    '..kwwwkkkkwwwk..',
+    '...kkwwwwwwkk...',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Clover'] = [
+    '................',
+    '.....kk..kk.....',
+    '....kGGkkGGk....',
+    '...kGggGGggGk...',
+    '...kGgGGGGgGk...',
+    '....kGGGGGGk....',
+    '.kkkkGGGGGGkkkk.',
+    'kGggGGGGGGGGggGk',
+    'kGgGGGGddGGGGgGk',
+    '.kGGGGkddkGGGGk.',
+    '..kkkk.kdk.kkk..',
+    '.......kdk......',
+    '......kdk.......',
+    '......kk........',
+    '................',
+    '................',
+]
+ICONS['Team'] = [
+    '................',
+    '......kkkk......',
+    '.....kffffk.....',
+    '.....kffffk.....',
+    '..kk..kffk..kk..',
+    '.kffk.kkkk.kffk.',
+    '.kffkkbbbbkkffk.',
+    '..kkkbbbbbbkkk..',
+    '.kRRkbbbbbbkGGk.',
+    'kRRRRkbbbbkGGGGk',
+    'kRRRRkbbbbkGGGGk',
+    'kRRRRkkkkkkGGGGk',
+    'kkkkkk....kkkkkk',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Crown'] = [
+    '................',
+    '................',
+    '.k.....kk.....k.',
+    'kYk...kYYk...kYk',
+    'kYYk..kYYk..kYYk',
+    'kYyYk.kyyk.kYyYk',
+    'kYyyYkyyyykYyyYk',
+    'kYyyyYyyyyYyyyYk',
+    'kYyRyyyCCyyyRyYk',
+    'kYyyyyyyyyyyyyYk',
+    'kYYYYYYYYYYYYYYk',
+    'kooooooooooooook',
+    'kkkkkkkkkkkkkkkk',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Potion'] = [
+    '.......kk.......',
+    '......kNNk......',
+    '......kkkk......',
+    '.......kwk......',
+    '.......kwk......',
+    '.....kkwskk.....',
+    '....kwssssSk....',
+    '...kwxxxxxxXk...',
+    '..kwxwxxxxxXXk..',
+    '..kxwxxxxxxXXk..',
+    '..kxxxxxxxXXXk..',
+    '..kxxxxxxXXXXk..',
+    '...kxxXXXXXXk...',
+    '....kkXXXXkk....',
+    '......kkkk......',
+    '................',
+]
+ICONS['Helm'] = [
+    '................',
+    '.......kk.......',
+    '......kRRk......',
+    '.....kRRk.......',
+    '....kkkkkkkk....',
+    '...kssssssSSk...',
+    '..kssssssssSSk..',
+    '..ksskkkkkkkSk..',
+    '..ksSSSSSSSSSk..',
+    '..kskkskkskkSk..',
+    '..ksSSSSSSSSSk..',
+    '..kssSSSSSSSzk..',
+    '...kssSSSSSzk...',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+]
+ICONS['Amulet'] = [
+    '................',
+    '..kk........kk..',
+    '..kYk......kYk..',
+    '...kYk....kYk...',
+    '....kYk..kYk....',
+    '.....kYkkYk.....',
+    '......kkkk......',
+    '.....kYYYYk.....',
+    '....kYgGGdYk....',
+    '....kYGwGdYk....',
+    '....kYGGddYk....',
+    '....kYddddYk....',
+    '.....kYYYYk.....',
+    '......kkkk......',
+    '................',
+    '................',
+]
+ICONS['Pearl'] = [
+    '................',
+    '................',
+    '.....kkkkkk.....',
+    '....kwwwssSk....',
+    '...kwwwwsssSk...',
+    '..kwwwlwwsssSk..',
+    '..kwwwwwwsssSk..',
+    '..kswwwwssssSk..',
+    '..ksswwsssssSk..',
+    '..kSsssssssSSk..',
+    '...kSSsssSSSk...',
+    '....kSSSSSSk....',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Cape'] = [
+    '................',
+    '....kkkkkkkk....',
+    '...kYYYYYYYYk...',
+    '...kRRRRRRRRk...',
+    '..kRrRRRRRRmRk..',
+    '..kRrRRRRRRmRk..',
+    '.kRrRRRRRRRmmRk.',
+    '.kRrRRRRRRRmmRk.',
+    '.kRrRRRRRRRmmRk.',
+    'kRrRRRRRRRRmmmRk',
+    'kRrRRRRRRRRmmmRk',
+    'kRRRRRRRRRRmmmRk',
+    'kRkRRkRRkRRkmmRk',
+    'kk.kk.kk.kk.kkkk',
+    '................',
+    '................',
+]
+ICONS['Gear'] = [
+    '................',
+    '......kkkk......',
+    '...kk.kSSk.kk...',
+    '..kSSkkSSkkSSk..',
+    '..kSSSSSSSSSSk..',
+    '...kSSzkkzSSk...',
+    '.kkSSzk..kzSSkk.',
+    '.kSSSk....kSSSk.',
+    '.kSSSk....kSSSk.',
+    '.kkSSzk..kzSSkk.',
+    '...kSSzkkzSSk...',
+    '..kSSSSSSSSSSk..',
+    '..kSSkkSSkkSSk..',
+    '...kk.kSSk.kk...',
+    '......kkkk......',
+    '................',
+]
+ICONS['Gift'] = [
+    '................',
+    '....kk....kk....',
+    '...kRRk..kRRk...',
+    '....kRRkkRRk....',
+    '.kkkkkkRRkkkkkk.',
+    '.kGgGGGkRkGGGdk.',
+    '.kGGGGGkRkGGGdk.',
+    '.kkkkkkkRkkkkkk.',
+    '..kGgGGkRkGGdk..',
+    '..kGgGGkRkGGdk..',
+    '..kGgGGkRkGGdk..',
+    '..kGGGGkRkGGdk..',
+    '..kdddddRdddddk.',
+    '..kkkkkkkkkkkkk.',
+    '................',
+    '................',
+]
+ICONS['Bag'] = [
+    '................',
+    '......kkkk......',
+    '.....kNkkNk.....',
+    '.....kNkkNk.....',
+    '....kkkkkkkk....',
+    '...knnnnnnnNk...',
+    '..knnnYYYnnNNk..',
+    '..knnnYoYnnNNk..',
+    '.knnnnnnnnnNNNk.',
+    '.knnnnnnnnnNNNk.',
+    '.knnnnnnnnNNNNk.',
+    '.kNnnnnnnNNNNNk.',
+    '..kNNNNNNNNNNk..',
+    '...kkkkkkkkkk...',
+    '................',
+    '................',
+]
+ICONS['Close'] = [
+    '................',
+    '................',
+    '..kkk......kkk..',
+    '..kwwk....kwwk..',
+    '..kwwwk..kwwwk..',
+    '...kwwwkkwwwk...',
+    '....kwwwwwwk....',
+    '.....kwwwwk.....',
+    '.....kwwwwk.....',
+    '....kwwwwwwk....',
+    '...kwwwkkwwwk...',
+    '..kwwwk..kwwwk..',
+    '..kwwk....kwwk..',
+    '..kkk......kkk..',
+    '................',
+    '................',
+]
+ICONS['Check'] = [
+    '................',
+    '................',
+    '.............kk.',
+    '............kwwk',
+    '...........kwwwk',
+    '..........kwwwk.',
+    '.kk......kwwwk..',
+    'kwwk....kwwwk...',
+    'kwwwk..kwwwk....',
+    '.kwwwkkwwwk.....',
+    '..kwwwwwwk......',
+    '...kwwwwk.......',
+    '....kwwk........',
+    '.....kk.........',
+    '................',
+    '................',
+]
+ICONS['Lock'] = [
+    '................',
+    '.....kkkkkk.....',
+    '....kSSSSSSk....',
+    '...kSkkkkkkSk...',
+    '...kSk....kSk...',
+    '...kSk....kSk...',
+    '..kkkkkkkkkkkk..',
+    '..kYyyyyyyyyok..',
+    '..kYyyykkyyyok..',
+    '..kYyyykkyyyok..',
+    '..kYyyyykyyyok..',
+    '..kYyyyyyyyyok..',
+    '..kooooooooook..',
+    '..kkkkkkkkkkkk..',
+    '................',
+    '................',
+]
+ICONS['Trash'] = [
+    '................',
+    '......kkkk......',
+    '..kkkkkSSkkkkk..',
+    '..kSSSSSSSSSSk..',
+    '..kkkkkkkkkkkk..',
+    '...kSsSsSsSzk...',
+    '...kSsSsSsSzk...',
+    '...kSsSsSsSzk...',
+    '...kSsSsSsSzk...',
+    '...kSsSsSsSzk...',
+    '...kSsSsSsSzk...',
+    '...kSzSzSzSzk...',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Home'] = [
+    '................',
+    '.......kk.......',
+    '......kRRk..kk..',
+    '.....kRRRRk.kNk.',
+    '....kRRRRRRkkNk.',
+    '...kRRRRRRRRkNk.',
+    '..kRRRRRRRRRRkk.',
+    '.kkkkkkkkkkkkkk.',
+    '..keeeeeeeeeek..',
+    '..kekkkeekNNek..',
+    '..kekykeekNNek..',
+    '..kekkkeekNNek..',
+    '..keeeeeekNNek..',
+    '..kkkkkkkkkkkk..',
+    '................',
+    '................',
+]
+ICONS['Bolt'] = [
+    '................',
+    '.........kkkk...',
+    '........kyyYk...',
+    '.......kyyYk....',
+    '......kyyYk.....',
+    '.....kyyYkkkk...',
+    '....kyyyyyyYk...',
+    '...kkkkyyYYk....',
+    '......kyyYk.....',
+    '.....kyYYk......',
+    '....kyYok.......',
+    '...kyok.........',
+    '...kok..........',
+    '...kk...........',
+    '................',
+    '................',
+]
+ICONS['Heart'] = [
+    '................',
+    '................',
+    '..kkkk...kkkk...',
+    '.kRrrRk.kRRRmk..',
+    'kRrwrRRkRRRRmmk.',
+    'kRrrRRRRRRRRmmk.',
+    'kRRRRRRRRRRRmmk.',
+    '.kRRRRRRRRRmmk..',
+    '..kRRRRRRRmmk...',
+    '...kRRRRRmmk....',
+    '....kRRRmmk.....',
+    '.....kRmmk......',
+    '......kkk.......',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Trophy'] = [
+    '................',
+    '..kkkkkkkkkkkk..',
+    '.kkyyyyyyyYYokk.',
+    'kYkyyyyyyyYYokYk',
+    'kYkyyyyyyYYYokYk',
+    '.kkyyyyyyYYYokk.',
+    '..kyyyyyyYYYok..',
+    '...kyyyyYYYok...',
+    '....kkyYYokk....',
+    '......kYok......',
+    '......kYok......',
+    '.....kYYYok.....',
+    '....kNNNNNNk....',
+    '....khhhhhhk....',
+    '....kkkkkkkk....',
+    '................',
+]
+ICONS['Quest'] = [
+    '................',
+    '......kkkk......',
+    '.....kyyYYk.....',
+    '.....kyyYok.....',
+    '.....kyyYok.....',
+    '.....kyyYok.....',
+    '.....kyyYok.....',
+    '......kyok......',
+    '......kyok......',
+    '......kkkk......',
+    '................',
+    '......kkkk......',
+    '.....kyyYok.....',
+    '.....kYYook.....',
+    '......kkkk......',
+    '................',
+]
+ICONS['Shield'] = [
+    '................',
+    '..kkkkkkkkkkkk..',
+    '..kSssssssssSk..',
+    '..kSbbbbYbbbSk..',
+    '..kSbbbbYbbBSk..',
+    '..kSYYYYYYYYSk..',
+    '..kSbbbbYbbBSk..',
+    '..kSbbbbYbBBSk..',
+    '...kSbbbYbBSk...',
+    '...kSbbbYBBSk...',
+    '....kSbbYBSk....',
+    '.....kSbYSk.....',
+    '......kSSk......',
+    '.......kk.......',
+    '................',
+    '................',
+]
+ICONS['Hourglass'] = [
+    '................',
+    '..kkkkkkkkkkkk..',
+    '..kNNNNNNNNNNk..',
+    '...kccccccccsk..',
+    '...kcyyyyyycsk..',
+    '....kcyyyycsk...',
+    '.....kcyyck.....',
+    '......kcck......',
+    '.....kcyyck.....',
+    '....kccyyccsk...',
+    '...kccyyyyccsk..',
+    '...kcyyyyyycsk..',
+    '..kNNNNNNNNNNk..',
+    '..kkkkkkkkkkkk..',
+    '................',
+    '................',
+]
+ICONS['Plus'] = [
+    '................',
+    '................',
+    '......kkkk......',
+    '......kwwk......',
+    '......kwwk......',
+    '......kwwk......',
+    '..kkkkkwwkkkkk..',
+    '..kwwwwwwwwwwk..',
+    '..kwwwwwwwwwwk..',
+    '..kkkkkwwkkkkk..',
+    '......kwwk......',
+    '......kwwk......',
+    '......kwwk......',
+    '......kkkk......',
+    '................',
+    '................',
+]
+ICONS['Map'] = [
+    '................',
+    '..kkk..kkk..kkk.',
+    '.keEkkkeEkkkeEk.',
+    '.keEeEkeEeEkeEk.',
+    '.keEeEkeEeEkeEk.',
+    '.keEGGkeEeRkeEk.',
+    '.keGGGkeEeRkeEk.',
+    '.keEGEkeEeEkeEk.',
+    '.keEeEkeCCEkeEk.',
+    '.keEeEkCCCEkeEk.',
+    '.keEeEkeCeEkeEk.',
+    '.keEeEkeEeEkeEk.',
+    '.kkkeEkkkeEkkkk.',
+    '....kkk..kkk....',
+    '................',
+    '................',
+]
+ICONS['Fire'] = [
+    '.......k........',
+    '......kRk.......',
+    '......kRRk......',
+    '.....kRRRk..k...',
+    '....kRRYRRk.kk..',
+    '...kRRYYRRkkRk..',
+    '...kRYYyYRRRRk..',
+    '..kRRYyyYYRRRk..',
+    '..kRYyyyyYRRmk..',
+    '..kRYywyyYRRmk..',
+    '..kRYyyyyYRmmk..',
+    '...kRYyyYRRmk...',
+    '....kRRRRRmk....',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+]
+ICONS['Drop'] = [
+    '.......kk.......',
+    '......kcCk......',
+    '......kcCk......',
+    '.....kcCCbk.....',
+    '.....kcCCbk.....',
+    '....kcwCCbBk....',
+    '...kcwCCCbBBk...',
+    '...kcwCCCbBBk...',
+    '..kcwCCCCbbBBk..',
+    '..kccCCCCbbBBk..',
+    '..kcCCCCbbBBBk..',
+    '...kCCCbbBBBk...',
+    '....kkbbBBkk....',
+    '......kkkk......',
+    '................',
+    '................',
+]
+ICONS['Leaf'] = [
+    '................',
+    '..........kkkk..',
+    '........kkgGGk..',
+    '......kkggGGGk..',
+    '.....kggGGGGdk..',
+    '....kgGGGkGGdk..',
+    '...kgGGGkGGGdk..',
+    '...kgGGkGGGdk...',
+    '..kgGGkGGGddk...',
+    '..kGGkGGGddk....',
+    '..kGkGGdddk.....',
+    '..kkkkkkkk......',
+    '.kdk............',
+    'kdk.............',
+    'kk..............',
+    '................',
+]
+ICONS['Sun'] = [
+    '.......kk.......',
+    '..k....kk....k..',
+    '...k........k...',
+    '.....kkkkkk.....',
+    '....kyyyyyYk....',
+    '...kyywyyyYok...',
+    'kk.kyyyyyyYok.kk',
+    'kk.kyyyyyYYok.kk',
+    '...kyyyyYYYok...',
+    '....kYYYYYok....',
+    '.....kkkkkk.....',
+    '...k........k...',
+    '..k....kk....k..',
+    '.......kk.......',
+    '................',
+    '................',
+]
+ICONS['Moon'] = [
+    '................',
+    '.....kkkkk......',
+    '...kkpPPqk......',
+    '..kpPPqkk.......',
+    '.kpPPqk.........',
+    '.kpPPk..........',
+    'kpPPqk..........',
+    'kpPPqk..........',
+    'kpPPqk.......k..',
+    'kpPPPqk.....kqk.',
+    '.kpPPPqkkkkkqk..',
+    '.kkpPPPPPqqqqk..',
+    '...kkqqqqqqkk...',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+]
+ICONS['Spark'] = [
+    '................',
+    '.......kk.......',
+    '.......kck......',
+    '......kccbk.....',
+    '......kcCbk.....',
+    '.kkkkkkcCbkkkkk.',
+    '.kcccccwwCCCCbk.',
+    '..kkkkkcCbkkkk..',
+    '......kcCbk.....',
+    '......kccbk.....',
+    '.......kck......',
+    '.......kk.......',
+    '................',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Fist'] = [
+    '................',
+    '................',
+    '....kkkkkkkk....',
+    '...kfkfkfkffk...',
+    '..kfffffffffSk..',
+    '..kfkfkfkfffSk..',
+    '..kffffffffSSk..',
+    '..kffffffffSSk..',
+    '..kfffffffSSk...',
+    '...kffffffSSk...',
+    '....kfffffSk....',
+    '....kNNNNNNk....',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+    '................',
+]
+ICONS['Target'] = [
+    '................',
+    '.....kkkkkk.....',
+    '...kkRRRRRRkk...',
+    '..kRRwwwwwwRRk..',
+    '..kRwwRRRRwwRk..',
+    '.kRwwRRwwRRwwRk.',
+    '.kRwRRwwwwRRwRk.',
+    '.kRwRwwRRwwRwRk.',
+    '.kRwRwwRRwwRwRk.',
+    '.kRwRRwwwwRRwRk.',
+    '.kRwwRRwwRRwwRk.',
+    '..kRwwRRRRwwRk..',
+    '..kRRwwwwwwRRk..',
+    '...kkRRRRRRkk...',
+    '.....kkkkkk.....',
+    '................',
+]
+ICONS['Arrow'] = [
+    '................',
+    '................',
+    '......kk........',
+    '......kwk.......',
+    '......kwwk......',
+    '.kkkkkkwwwk.....',
+    '.kwwwwwwwwwk....',
+    '.kwwwwwwwwwwk...',
+    '.kwwwwwwwwwk....',
+    '.kkkkkkwwwk.....',
+    '......kwwk......',
+    '......kwk.......',
+    '......kk........',
+    '................',
+    '................',
+    '................',
+]
+
+VARIANTS = {
+    'PotionRed': ('Potion', {'x': 'ff8a7a', 'X': 'e8423c'}),
+    'PotionGold': ('Potion', {'x': 'ffe36e', 'X': 'f5b51c'}),
+    'PotionGreen': ('Potion', {'x': 'a6f26e', 'X': '46c046'}),
+    'PotionBlue': ('Potion', {'x': 'a8f4ff', 'X': '3cc8ff'}),
+    'PotionPurple': ('Potion', {'x': 'dca6ff', 'X': '9d52ff'}),
+}
+
+
+def resolve(name):
+    if name in VARIANTS:
+        base, subs = VARIANTS[name]
+        return ICONS[base], {**PALETTE, **subs}
+    return ICONS[name], PALETTE
+
+
+def all_names():
+    return [n for n in ICONS if n != 'Potion'] + list(VARIANTS)
+
+
+def check():
+    bad = False
+    for n, rows in ICONS.items():
+        if len(rows) != 16:
+            print('lignes', n, len(rows)); bad = True
+        for i, r in enumerate(rows):
+            if len(r) != 16:
+                print('largeur', n, i, len(r), repr(r)); bad = True
+            for ch in r:
+                if ch != '.' and ch not in PALETTE:
+                    print('couleur', n, i, ch); bad = True
+    return not bad
+
+
+def export():
+    lines = ['--!nolint', '-- Généré par tools/ui/icons.py — icônes pixel art 16×16 de l\'interface.',
+             '-- Chaque icône : palette (hex, 6 caractères par couleur) et 256 index (base 36, 0 = transparent).',
+             'return {']
+    for name in all_names():
+        rows, pal = resolve(name)
+        used = []
+        for r in rows:
+            for ch in r:
+                if ch != '.' and ch not in used:
+                    used.append(ch)
+        idx = ''.join('0' if ch == '.' else '0123456789abcdefghijklmnopqrstuvwxyz'[used.index(ch) + 1] for r in rows for ch in r)
+        lines.append('\t%s = { pal = "%s", px = "%s" },' % (name, ''.join(pal[c] for c in used), idx))
+    lines.append('}')
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    with open(OUT, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+
+
+def sheet():
+    from PIL import Image, ImageDraw
+    names = all_names()
+    cols = 10
+    cell = 16 * 6
+    rows_n = (len(names) + cols - 1) // cols
+    img = Image.new('RGB', (cols * (cell + 8) + 8, rows_n * (cell + 22) + 8), (44, 48, 62))
+    d = ImageDraw.Draw(img)
+    for i, name in enumerate(names):
+        rows, pal = resolve(name)
+        x0 = 8 + (i % cols) * (cell + 8)
+        y0 = 8 + (i // cols) * (cell + 22)
+        d.rectangle([x0, y0, x0 + cell - 1, y0 + cell - 1], fill=(70, 76, 96))
+        for y, r in enumerate(rows):
+            for x, ch in enumerate(r):
+                if ch != '.':
+                    c = pal[ch]
+                    d.rectangle([x0 + x * 6, y0 + y * 6, x0 + x * 6 + 5, y0 + y * 6 + 5], fill=tuple(int(c[j:j + 2], 16) for j in (0, 2, 4)))
+        d.text((x0, y0 + cell + 4), name, fill=(230, 230, 230))
+    img.save(sys.argv[1] if len(sys.argv) > 1 else DOC)
+
+
+if __name__ == '__main__':
+    if not check():
+        sys.exit(1)
+    export()
+    sheet()
+    print('%d icônes' % len(all_names()))

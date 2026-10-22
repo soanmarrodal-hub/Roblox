@@ -212,6 +212,28 @@ function TowerService.Start(self: any)
 end
 
 function TowerService.Init(self: any)
+	Router.Register("TowerShop", function(player: Player, key: any, count: any)
+		local k = Router.Str(key)
+		local n = Router.Int(count or 1, 1, 50) or 1
+		local offer = nil
+		for _, o in Tower.Shop do
+			if o.key == k then
+				offer = o
+			end
+		end
+		if not offer then
+			return false, "Article inconnu."
+		end
+		if not R.PlayerService:Spend(player, "token:Tower", offer.cost * n) then
+			return false, "Pas assez de jetons de la Tour."
+		end
+		if offer.item == "Gems" then
+			R.PlayerService:AddGems(player, offer.amount * n)
+		else
+			R.PlayerService:AddItem(player, offer.item, offer.amount * n)
+		end
+		return true, n
+	end)
 	Router.Register("TowerStart", function(player: Player, wanted: any)
 		local data = R.DataService:Get(player)
 		if runs[player] then

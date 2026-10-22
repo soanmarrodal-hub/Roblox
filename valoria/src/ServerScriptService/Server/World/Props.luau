@@ -65,11 +65,13 @@ local function build(name: string): Model?
 			end
 		end
 	end
-	-- les grands décors bloquent le passage : collisions sur le tronc / la base seulement
+	-- les grands décors bloquent le passage : collisions sur le tronc / la base seulement (Collider) ;
+	-- le feuillage est ignoré des lancers de rayon (sol des héros, ciblage)
 	for _, d in model:GetChildren() do
 		if d:IsA("BasePart") then
 			d.CanCollide = false
-			d.CanQuery = true
+			d.CanQuery = false
+			d.CanTouch = false
 		end
 	end
 	local pivot = Instance.new("Part")

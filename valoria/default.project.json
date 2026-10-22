@@ -32,10 +32,6 @@
         "Client": {
           "$path": "src/StarterPlayer/StarterPlayerScripts/Client"
         }
-      },
-      "StarterCharacterScripts": {
-        "$className": "StarterCharacterScripts",
-        "$path": "src/StarterPlayer/StarterCharacterScripts"
       }
     },
     "StarterGui": {
@@ -72,8 +68,16 @@
         "EnvironmentDiffuseScale": 1,
         "EnvironmentSpecularScale": 0.6,
         "ShadowSoftness": 0.2,
-        "OutdoorAmbient": [0.47, 0.44, 0.42],
-        "Ambient": [0.22, 0.2, 0.22]
+        "OutdoorAmbient": [
+          0.47,
+          0.44,
+          0.42
+        ],
+        "Ambient": [
+          0.22,
+          0.2,
+          0.22
+        ]
       }
     },
     "SoundService": {

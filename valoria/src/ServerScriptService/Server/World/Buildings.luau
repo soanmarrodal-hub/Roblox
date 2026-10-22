@@ -635,6 +635,7 @@ function Buildings.Lighthouse(parent: Instance, cf: CFrame): Model
 	local pivot = Block(beams, Vector3.new(0.5, 0.5, 0.5), top * CFrame.new(0, 4, 0), C.iron, M.Metal)
 	pivot.Transparency = 1
 	beams.PrimaryPart = pivot
+	beams:SetAttribute("Axis", "Y")
 	tag(beams, "SpinModel", 0.5)
 	local roofR = 5
 	local y = 7.5
