@@ -102,6 +102,7 @@ local function template(): { [string]: any }
 			quality = 3,
 		},
 		tutorial = 1,
+		purchases = {} :: { string },
 		nextUid = 1,
 	}
 end
@@ -121,6 +122,7 @@ local OPAQUE = {
 	list = true,
 	progress = true,
 	claimed = true,
+	purchases = true,
 }
 
 local function fill(target: { [string]: any }, source: { [string]: any })

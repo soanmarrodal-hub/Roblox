@@ -23,14 +23,15 @@ Net.Events = {
 	"Stun", -- (userId, durée) : héros étourdis par une attaque de boss
 	"LevelUp", -- (genre, infos) : rang joueur, niveau de héros
 	"Reveal", -- (résultats) : révélation d'invocation
+	"Hits", -- (zoneKey, lot) : attaques des héros { propriétaire, emplacement, cible, dégâts, pv restants, drapeaux }
+	"EnemyMove", -- (zoneKey, lot { id, x, y, z }) : nouvelles destinations des ennemis
+	"Lobby", -- (état) : salle d'attente de raid
 	-- client -> serveur
 	"Target", -- (enemyId | nil)
 }
 
 Net.Unreliable = {
-	"Hits", -- (lot d'attaques de héros : propriétaire, emplacement, cible, dégâts, critique, spécial)
-	"EnemyHp", -- (zoneKey, lot { id, pv })
-	"EnemyMove", -- (zoneKey, lot { id, x, y, z, vitesse })
+	"EnemyHp", -- (zoneKey, lot { id, pv }) : soins, saignements, régénération
 }
 
 Net.Functions = {
