@@ -21,25 +21,8 @@ local Hub = {}
 local G = Worlds.Hub.ground
 local C = Kit.C
 
-local function paved(x: number, z: number): boolean
-	local r = math.sqrt(x * x + z * z)
-	if r < 50 then
-		return true
-	end
-	if math.abs(x) < 5.5 and z > -100 and z < 150 then
-		return true
-	end
-	if math.abs(z) < 5.5 and math.abs(x) < 165 then
-		return true
-	end
-	if math.sqrt((x - 140) ^ 2 + z * z) < 40 or math.sqrt((x + 140) ^ 2 + z * z) < 42 then
-		return true
-	end
-	if math.sqrt(x * x + (z - 142) ^ 2) < 26 then
-		return true
-	end
-	return false
-end
+-- place, rues et quartiers pavés (partagé avec les aperçus)
+local paved = Relief.HubPaved
 
 local function facing(pos: Vector3, target: Vector3): CFrame
 	local flat = Vector3.new(target.X, pos.Y, target.Z)

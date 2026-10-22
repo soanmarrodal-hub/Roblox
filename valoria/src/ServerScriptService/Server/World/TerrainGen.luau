@@ -57,15 +57,15 @@ TerrainGen.Palettes = {
 	},
 	W1 = {
 		flat = Enum.Material.LeafyGrass,
-		flat2 = Enum.Material.Ground,
+		flat2 = Enum.Material.Grass,
 		slope = Enum.Material.Ground,
-		cliff = Enum.Material.Sandstone,
+		cliff = Enum.Material.Rock,
 		path = Enum.Material.Ground,
 		shore = Enum.Material.Mud,
 		bed = Enum.Material.Mud,
 		high = Enum.Material.Snow,
 		snowline = 270,
-		deep = Enum.Material.Sandstone,
+		deep = Enum.Material.Rock,
 	},
 	W2 = {
 		flat = Enum.Material.Grass,

@@ -200,6 +200,18 @@ function Common.Fireplace(folder: Instance, cf: CFrame)
 	end
 end
 
+-- Profondeur de fondation : écart entre le sol au centre et le point le plus bas sous une emprise de rayon `r`
+-- (pour qu'un bâtiment posé au bord d'une pente ne flotte pas au-dessus du vide).
+function Common.Footing(ground: (number, number) -> number, x: number, z: number, r: number): number
+	local h = ground(x, z)
+	local low = h
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2
+		low = math.min(low, ground(x + math.cos(a) * r, z + math.sin(a) * r))
+	end
+	return h - low
+end
+
 -- Palissade en arc de cercle (centre local, rayon, angles en radians, `ground(x, z)` monde).
 function Common.PalisadeArc(folder: Instance, o: Vector3, cx: number, cz: number, r: number, a0: number, a1: number, ground: (number, number) -> number)
 	local n = math.max(2, math.floor(r * (a1 - a0) / 9))

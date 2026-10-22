@@ -114,6 +114,44 @@ Quêtes en chaîne par monde, 3 quêtes du jour, coffre de connexion (7 jours), 
 (`VALORIA`, `CHEVALIER`, `DRAGON`, `LANTERNE`), potions (force, or, chance, savoir), marché en gemmes, produits et
 passes Robux (Or ×2, Chance royale, Escouade royale, Invocation éclair, Grandes écuries, VIP).
 
+## Galerie
+
+Vues en perspective rendues hors de Roblox à partir des pièces et du terrain réellement construits par le serveur
+(banc d'essai), avec les héros et les monstres voxel en situation.
+
+### Le village
+
+| | |
+| --- | --- |
+| ![Bourg-Lanterne vu du ciel](docs/images/vues/01_village_panorama.jpg)<br>Bourg-Lanterne vu du ciel | ![La place et sa fontaine](docs/images/vues/02_village_place.jpg)<br>La place et sa fontaine |
+| ![Le Cercle des Runes (téléporteur)](docs/images/vues/03_cercle_des_runes.jpg)<br>Le Cercle des Runes (téléporteur) | ![Le Quartier de la Forge](docs/images/vues/04_quartier_forge.jpg)<br>Le Quartier de la Forge |
+| ![La Salle des raids](docs/images/vues/05_salle_des_raids.jpg)<br>La Salle des raids | ![La Tour des Épreuves](docs/images/vues/06_tour_des_epreuves.jpg)<br>La Tour des Épreuves |
+
+### Val d'Automne
+
+| | |
+| --- | --- |
+| ![Le Camp du Val](docs/images/vues/07_val_camp.jpg)<br>Le Camp du Val | ![Le Val d'Automne](docs/images/vues/08_val_panorama.jpg)<br>Le Val d'Automne |
+| ![Les Champs de Citrouilles](docs/images/vues/09_champs_citrouilles.jpg)<br>Les Champs de Citrouilles | ![Les Prés de la Ferme](docs/images/vues/10_pres_ferme.jpg)<br>Les Prés de la Ferme |
+| ![Les Ruines du Guet](docs/images/vues/11_ruines_du_guet.jpg)<br>Les Ruines du Guet | ![Le Plateau des Ogres](docs/images/vues/12_plateau_des_ogres.jpg)<br>Le Plateau des Ogres |
+| ![Arène des Moissons : le Roi-Citrouille](docs/images/vues/13_arene_des_moissons.jpg)<br>Arène des Moissons : le Roi-Citrouille |  |
+
+### Falaises des Wyvernes
+
+| | |
+| --- | --- |
+| ![Brisecôte et son phare](docs/images/vues/14_brisecote.jpg)<br>Brisecôte et son phare | ![Les Falaises des Wyvernes](docs/images/vues/15_falaises_panorama.jpg)<br>Les Falaises des Wyvernes |
+| ![La Crique des Épaves](docs/images/vues/16_crique_des_epaves.jpg)<br>La Crique des Épaves | ![Le Port Englouti](docs/images/vues/17_port_englouti.jpg)<br>Le Port Englouti |
+| ![Les Aiguilles Marines](docs/images/vues/18_aiguilles_marines.jpg)<br>Les Aiguilles Marines | ![La Grotte de Corail](docs/images/vues/19_grotte_de_corail.jpg)<br>La Grotte de Corail |
+| ![Le Bastion Noyé](docs/images/vues/20_bastion_noye.jpg)<br>Le Bastion Noyé | ![Nid de la Tempête : Vyrmax](docs/images/vues/21_nid_de_la_tempete.jpg)<br>Nid de la Tempête : Vyrmax |
+
+### Tour et raids
+
+| | |
+| --- | --- |
+| ![Une salle de la Tour des Épreuves](docs/images/vues/22_salle_des_epreuves.jpg)<br>Une salle de la Tour des Épreuves | ![Raid : la Crypte du Roi Déchu](docs/images/vues/23_crypte_du_roi_dechu.jpg)<br>Raid : la Crypte du Roi Déchu |
+| ![Raid : le Temple Englouti](docs/images/vues/24_temple_englouti.jpg)<br>Raid : le Temple Englouti |  |
+
 ## À configurer avant publication
 
 - **Passes et produits** : renseigner les identifiants Roblox dans `src/ReplicatedStorage/Shared/Config/Shop.luau`
@@ -146,9 +184,9 @@ src/
     Controllers/   héros, ennemis, effets, stations, ambiance, décor animé, PNJ, sons
   ReplicatedFirst/ écran de chargement
 tools/
-  voxel/           modélisation voxel (Python) : héros, ennemis, décors, portraits, aperçus, plans
+  voxel/           modélisation voxel (Python) : héros, ennemis, décors, portraits, aperçus, plans, vues 3D
   ui/icons.py      icônes pixel art 16×16 de l'interface
-  preview/         aperçus Lune (animations, reliefs)
+  preview/         aperçus Lune (animations, reliefs, export du terrain)
   tests/           tests unitaires et bancs d'essai
 ```
 
@@ -171,8 +209,10 @@ TOOLS=/chemin/vers/outils ROBLOX_TYPES=/chemin/globalTypes.d.luau ./tools/check.
    boss, gravit la Tour, gagne un raid, polit un accessoire, fait évoluer un héros et se déconnecte.
 4. **Analyse de types** stricte (luau-lsp) et **construction** de la place (Rojo).
 
-Les plans vus de dessus de ce document sont produits à partir des pièces réellement construites par le banc
-d'essai du serveur (`WORLD_DUMP=parts.json`, puis `tools/voxel/site_render.py`).
+Les plans vus de dessus et les vues de la galerie sont produits à partir des pièces réellement construites par le
+banc d'essai du serveur (`WORLD_DUMP=parts.json`), puis `tools/voxel/site_render.py` (plans) et
+`tools/voxel/game_views.py` (vues 3D : petit moteur de rendu logiciel avec ombres portées, `tools/voxel/scene_render.py`,
+terrain exporté par `tools/preview/terrain_dump.luau`).
 
 ## Régénérer les ressources
 

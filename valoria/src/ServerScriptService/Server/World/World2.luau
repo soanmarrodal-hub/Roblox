@@ -157,9 +157,11 @@ function World2.Build(root: Instance): Result
 	local s = w.spawn
 	table.insert(reserved, { x = s.x, z = s.z, r = 56 })
 	Buildings.Lighthouse(town, at(s.x + 14, s.z + 40, -1))
-	Buildings.House(town, face(s.x - 22, s.z - 46, s.x, s.z, -0.8), { w = 16, d = 12, floors = 2, seed = 201, roof = SEA_ROOF })
-	Buildings.House(town, face(s.x + 30, s.z - 44, s.x, s.z, -0.8), { w = 14, d = 12, floors = 1, seed = 203, roof = SEA_ROOF, sign = "L'Ancre Rouillée" })
-	Buildings.House(town, face(s.x - 55, s.z - 39, s.x, s.z, -0.8), { w = 14, d = 12, floors = 1, seed = 205, roof = C.roofSlate })
+	Buildings.House(town, face(s.x - 22, s.z - 46, s.x, s.z, -0.8), { w = 16, d = 12, floors = 2, seed = 201, roof = SEA_ROOF, footing = Common.Footing(ground, s.x - 22, s.z - 46, 10) })
+	Buildings.House(town, face(s.x + 30, s.z - 44, s.x, s.z, -0.8), {
+		w = 14, d = 12, floors = 1, seed = 203, roof = SEA_ROOF, sign = "L'Ancre Rouillée", footing = Common.Footing(ground, s.x + 30, s.z - 44, 10),
+	})
+	Buildings.House(town, face(s.x - 55, s.z - 39, s.x, s.z, -0.8), { w = 14, d = 12, floors = 1, seed = 205, roof = C.roofSlate, footing = Common.Footing(ground, s.x - 55, s.z - 39, 10) })
 	Common.Fireplace(town, at(s.x - 14, s.z + 6))
 	Buildings.Banner(town, at(s.x - 10, s.z - 28), Color3.fromRGB(40, 90, 150), Color3.fromRGB(240, 240, 230))
 	Buildings.Banner(town, at(s.x + 10, s.z - 28), Color3.fromRGB(40, 90, 150), Color3.fromRGB(240, 240, 230))
@@ -284,10 +286,20 @@ function World2.Build(root: Instance): Result
 		local x, z = bz.x + math.cos(a) * r, bz.z + math.sin(a) * r
 		if Common.PathDist(w, x, z) > 13 then
 			local cf = CFrame.lookAt(at(x, z, -2).Position, Vector3.new(o.X + bz.x, ground(x, z) - 2, o.Z + bz.z))
+			-- le pan de mur descend jusqu'au point le plus bas sous lui (bord de falaise)
+			local low = cf.Position.Y
+			for _, t in { -14, -7, 7, 14 } do
+				local p = cf * Vector3.new(t, 0, 0)
+				low = math.min(low, ground(p.X - o.X, p.Z - o.Z) - 2)
+			end
+			local sink = cf.Position.Y - low
 			local h = rng:Range(6, 16)
-			Kit.Block(bastion, Vector3.new(28, h, 4), cf * CFrame.new(0, h / 2, 0), wall:Lerp(Color3.fromRGB(80, 110, 90), rng:Float() * 0.4), M.Slate)
+			Kit.Block(bastion, Vector3.new(28, h + sink, 4), cf * CFrame.new(0, (h - sink) / 2, 0), wall:Lerp(Color3.fromRGB(80, 110, 90), rng:Float() * 0.4), M.Slate)
 			if i % 3 == 0 then
-				Buildings.Tower(bastion, cf * CFrame.new(0, 0, 4), { radius = 6, height = rng:Range(20, 30), color = wall, crenels = true, door = false, segments = 10 })
+				local tp = cf * Vector3.new(0, 0, 4)
+				local tx, tz = tp.X - o.X, tp.Z - o.Z
+				local drop = math.max(0, cf.Position.Y - (ground(tx, tz) - Common.Footing(ground, tx, tz, 6) - 2))
+				Buildings.Tower(bastion, cf * CFrame.new(0, -drop, 4), { radius = 6, height = rng:Range(20, 30) + drop, color = wall, crenels = true, door = false, segments = 10 })
 			end
 		end
 	end

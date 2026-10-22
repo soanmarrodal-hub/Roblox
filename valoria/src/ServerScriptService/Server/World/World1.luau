@@ -89,8 +89,8 @@ function World1.Build(root: Instance): Result
 
 	-- Prés de la Ferme : ferme, clôtures
 	local farm = Kit.Folder(folder, "Ferme")
-	Buildings.House(farm, face(-245, 345, -170, 290, -0.8), { w = 18, d = 14, floors = 1, seed = 101, roof = Kit.C.thatch })
-	Buildings.House(farm, face(-112, 362, -170, 290, -0.8), { w = 22, d = 16, floors = 1, seed = 103, roof = Kit.C.roofRed })
+	Buildings.House(farm, face(-245, 345, -170, 290, -0.8), { w = 18, d = 14, floors = 1, seed = 101, roof = Kit.C.thatch, footing = Common.Footing(ground, -245, 345, 12) })
+	Buildings.House(farm, face(-112, 362, -170, 290, -0.8), { w = 22, d = 16, floors = 1, seed = 103, roof = Kit.C.roofRed, footing = Common.Footing(ground, -112, 362, 14) })
 	Buildings.Well(farm, face(-200, 358, -170, 290, 0, 6))
 	-- clôture autour du pré, ouverte là où passent les chemins
 	local fz = w.zones[1]
@@ -113,7 +113,7 @@ function World1.Build(root: Instance): Result
 	local fields = Kit.Folder(folder, "Citrouilles")
 	local cz = w.zones[2]
 	Buildings.Windmill(fields, face(cz.x + 58, cz.z + 52, cz.x, cz.z, -0.5, 16))
-	Buildings.House(fields, face(cz.x - 40, cz.z + 70, cz.x, cz.z, -0.8), { w = 16, d = 12, floors = 1, seed = 111, roof = Kit.C.thatch })
+	Buildings.House(fields, face(cz.x - 40, cz.z + 70, cz.x, cz.z, -0.8), { w = 16, d = 12, floors = 1, seed = 111, roof = Kit.C.thatch, footing = Common.Footing(ground, cz.x - 40, cz.z + 70, 10) })
 
 	-- Gorge du Torrent : camp gobelin
 	local gorge = Kit.Folder(folder, "Gorge")

@@ -83,7 +83,7 @@ Buildings.SteppedRoof = steppedRoof
 
 ------------------------------------------------------------------ maisons
 
-export type HouseOpts = { w: number?, d: number?, floors: number?, roof: Color3?, seed: number?, chimney: boolean?, sign: string?, lamp: boolean? }
+export type HouseOpts = { w: number?, d: number?, floors: number?, roof: Color3?, seed: number?, chimney: boolean?, sign: string?, lamp: boolean?, footing: number? }
 
 function Buildings.House(parent: Instance, cf: CFrame, o: HouseOpts?): Model
 	local opts: HouseOpts = o or {}
@@ -93,8 +93,9 @@ function Buildings.House(parent: Instance, cf: CFrame, o: HouseOpts?): Model
 	local floors = opts.floors or r:NextInteger(1, 2)
 	local fh = 9
 	local m = Kit.Model(parent, "Maison")
-	-- soubassement de pierre
-	Block(m, Vector3.new(w + 1, 3, d + 1), cf * CFrame.new(0, 0.5, 0), C.stoneDark, M.Cobblestone)
+	-- soubassement de pierre, prolongé sous le sol de `footing` sur un terrain en pente
+	local sink = math.max(opts.footing or 0, 0)
+	Block(m, Vector3.new(w + 1, 3 + sink, d + 1), cf * CFrame.new(0, 0.5 - sink / 2, 0), C.stoneDark, M.Cobblestone)
 	-- murs crépis + colombages
 	local wallH = floors * fh
 	Block(m, Vector3.new(w, wallH, d), cf * CFrame.new(0, 2 + wallH / 2, 0), C.plaster, M.SmoothPlastic)

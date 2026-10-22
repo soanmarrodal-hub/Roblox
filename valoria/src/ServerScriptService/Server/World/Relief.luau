@@ -266,6 +266,27 @@ local function zonesAsPlateaus(w: Worlds.World): { any }
 	return out
 end
 
+-- Bourg-Lanterne : place, rues et quartiers pavés (coordonnées locales du village).
+function Relief.HubPaved(x: number, z: number): boolean
+	local r = math.sqrt(x * x + z * z)
+	if r < 50 then
+		return true
+	end
+	if math.abs(x) < 5.5 and z > -100 and z < 150 then
+		return true
+	end
+	if math.abs(z) < 5.5 and math.abs(x) < 165 then
+		return true
+	end
+	if math.sqrt((x - 140) ^ 2 + z * z) < 40 or math.sqrt((x + 140) ^ 2 + z * z) < 42 then
+		return true
+	end
+	if math.sqrt(x * x + (z - 142) ^ 2) < 26 then
+		return true
+	end
+	return false
+end
+
 function Relief.HubSpec(): Spec
 	local G = Worlds.Hub.ground
 	return {
@@ -317,6 +338,11 @@ end
 
 function Relief.WorldSpec(w: Worlds.World): Spec
 	if w.id == 1 then
+		local plateaus = zonesAsPlateaus(w)
+		-- cour de la ferme au niveau du pré (maisons et puits posés dans World1)
+		for _, yard in { { x = -245, z = 345, r = 20 }, { x = -190, z = 356, r = 16 }, { x = -112, z = 362, r = 22 } } do
+			table.insert(plateaus, { x = yard.x, z = yard.z, h = 25, r = yard.r, blend = 24 })
+		end
 		return {
 			key = w.key,
 			half = w.half,
@@ -329,7 +355,7 @@ function Relief.WorldSpec(w: Worlds.World): Spec
 			end,
 			terrace = { step = 16, sharp = 0.35 },
 			edge = { from = 0.8, height = 170 },
-			plateaus = zonesAsPlateaus(w),
+			plateaus = plateaus,
 			paths = w.paths,
 			pathWidth = 10,
 			pathBlend = 14,
@@ -357,6 +383,10 @@ function Relief.WorldSpec(w: Worlds.World): Spec
 				{ x = -330, z = -430, h = 260, r = 130 },
 				{ x = 380, z = -360, h = 240, r = 120 },
 			},
+			-- plancher doux : les creux du relief deviennent des combes, pas des fosses sèches
+			extra = function(_x: number, _z: number, h: number): number
+				return if h < 16 then 16 - (16 - h) * 0.25 else h
+			end,
 		}
 	end
 	-- Monde 2 : la mer au sud et à l'est, des falaises et des aiguilles rocheuses
