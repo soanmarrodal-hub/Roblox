@@ -349,6 +349,10 @@ local R
 local t0 = os.clock()
 step("démarrage du serveur", function()
 	R = req(serverNode.Registry)
+	if process.env.WORLD_DUMP then
+		-- pour le plan : décors en boîtes (pas d'unions simulées)
+		req(serverNode.World.Union).Disabled = true
+	end
 	req(serverNode.Main)
 end)
 
@@ -369,6 +373,41 @@ step("construction", function()
 	end
 end)
 print(string.format("Monde : %d écritures de voxels (%d cellules), %d étiquettes", voxelWrites, voxelCells, (tags.Spin or 0) + (tags.Bob or 0) + (tags.Pulse or 0) + (tags.SpinModel or 0)))
+
+-- export facultatif des pièces construites (plan vu de dessus : tools/voxel/site_render.py)
+if process.env.WORLD_DUMP then
+	step("export des pièces", function()
+		waitAttr("Ready_Decor", 400)
+		local serde = require("@lune/serde")
+		local fs = require("@lune/fs")
+		local monde = H.unwrap(ws:FindFirstChild("Monde"))
+		local out = {}
+		for _, d in monde:GetDescendants() do
+			if d:IsA("BasePart") and d.Transparency < 0.95 then
+				local cf = d.CFrame
+				local x, y, z, r00, r01, r02, r10, r11, r12, r20, r21, r22 = cf:GetComponents()
+				local shape = "Block"
+				if d:IsA("Part") then
+					shape = d.Shape.Name
+				elseif d:IsA("WedgePart") then
+					shape = "Wedge"
+				end
+				local c = d.Color
+				table.insert(out, {
+					p = { math.floor(x * 10) / 10, math.floor(y * 10) / 10, math.floor(z * 10) / 10 },
+					s = { math.floor(d.Size.X * 100) / 100, math.floor(d.Size.Y * 100) / 100, math.floor(d.Size.Z * 100) / 100 },
+					r = { r00, r01, r02, r10, r11, r12, r20, r21, r22 },
+					c = string.format("%02x%02x%02x", math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255)),
+					t = math.floor(d.Transparency * 100) / 100,
+					k = shape,
+					m = d.Material.Name,
+				})
+			end
+		end
+		fs.writeFile(process.env.WORLD_DUMP, serde.encode("json", out))
+		print(string.format("Monde : %d pièces exportées vers %s", #out, process.env.WORLD_DUMP))
+	end)
+end
 
 -- un joueur rejoint
 local player = newPlayer(101, "Chevalier")

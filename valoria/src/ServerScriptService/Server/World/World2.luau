@@ -160,13 +160,25 @@ function World2.Build(root: Instance): Result
 	Buildings.House(town, face(s.x - 22, s.z - 46, s.x, s.z, -0.8), { w = 16, d = 12, floors = 2, seed = 201, roof = SEA_ROOF })
 	Buildings.House(town, face(s.x + 30, s.z - 44, s.x, s.z, -0.8), { w = 14, d = 12, floors = 1, seed = 203, roof = SEA_ROOF, sign = "L'Ancre Rouillée" })
 	Buildings.House(town, face(s.x - 55, s.z - 39, s.x, s.z, -0.8), { w = 14, d = 12, floors = 1, seed = 205, roof = C.roofSlate })
-	Buildings.Campfire(town, at(s.x, s.z - 4))
+	Common.Fireplace(town, at(s.x - 14, s.z + 6))
 	Buildings.Banner(town, at(s.x - 10, s.z - 28), Color3.fromRGB(40, 90, 150), Color3.fromRGB(240, 240, 230))
 	Buildings.Banner(town, at(s.x + 10, s.z - 28), Color3.fromRGB(40, 90, 150), Color3.fromRGB(240, 240, 230))
 	Buildings.Barrels(town, face(s.x + 38, s.z - 10, s.x, s.z, 0, 5), 4)
-	for i = -2, 2 do
-		Buildings.LanternPost(town, face(s.x + i * 13, s.z + 30, s.x, s.z, 0, 3))
+	for _, sx in { -20, 20 } do
+		Buildings.LanternPost(town, face(s.x + sx, s.z - 34, s.x, s.z, 0, 3))
 	end
+	-- vie du port : barques retournées, séchoirs à filets, poteau indicateur
+	Buildings.Boat(town, face(s.x - 26, s.z + 32, s.x, s.z, 0, 6), Color3.fromRGB(70, 110, 160), true)
+	Buildings.Boat(town, face(s.x + 28, s.z + 26, s.x + 40, s.z, 0, 6), Color3.fromRGB(170, 70, 60), true)
+	Buildings.NetRack(town, face(s.x - 42, s.z + 12, s.x, s.z, 0, 6))
+	Buildings.NetRack(town, face(s.x + 40, s.z + 12, s.x, s.z, 0, 6))
+	local zc = w.zones[1]
+	local zp = w.zones[3]
+	Buildings.Signpost(town, at(s.x, s.z - 38), {
+		{ text = zc.name, angle = Common.ArrowAngle(s.x, s.z - 38, zc.x, zc.z) },
+		{ text = zp.name, angle = Common.ArrowAngle(s.x, s.z - 38, zp.x, zp.z) },
+		{ text = "Phare de Brisecôte", angle = Common.ArrowAngle(s.x, s.z - 38, s.x + 14, s.z + 40) },
+	})
 	local altar = Stations.Get("Altar2") :: Stations.Station
 	Buildings.Altar(town, face(altar.pos.X - o.X - 10, altar.pos.Z - o.Z - 8, s.x, s.z), altar.color)
 	local gate = Stations.Get("Gate2") :: Stations.Station

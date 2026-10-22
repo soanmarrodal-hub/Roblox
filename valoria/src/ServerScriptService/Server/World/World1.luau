@@ -40,22 +40,42 @@ function World1.Build(root: Instance): Result
 		return CFrame.lookAt(p, Vector3.new(o.X + tx, p.Y, o.Z + tz))
 	end
 
-	-- camp du Val (arrivée)
+	-- camp du Val (arrivée) : feu et rondins, tentes, palissade et tours de guet au sud, poteau
+	-- indicateur vers les zones, râtelier et mannequins d'entraînement, charrette et provisions
 	local camp = Kit.Folder(folder, "Camp")
 	local s = w.spawn
-	Buildings.Tent(camp, face(s.x - 26, s.z + 10, s.x, s.z), Color3.fromRGB(170, 60, 50), 0.9)
-	Buildings.Tent(camp, face(s.x + 26, s.z + 12, s.x, s.z), Color3.fromRGB(60, 90, 160), 0.9)
-	Buildings.Campfire(camp, at(s.x, s.z - 2))
-	table.insert(reserved, { x = s.x, z = s.z, r = 60 })
+	table.insert(reserved, { x = s.x, z = s.z, r = 62 })
+	Common.Fireplace(camp, at(s.x - 14, s.z + 6))
+	Buildings.Tent(camp, face(s.x - 32, s.z + 14, s.x, s.z), Color3.fromRGB(170, 60, 50), 0.9)
+	Buildings.Tent(camp, face(s.x + 32, s.z + 14, s.x, s.z), Color3.fromRGB(60, 90, 160), 0.9)
+	Buildings.Tent(camp, face(s.x - 16, s.z + 32, s.x, s.z), Color3.fromRGB(70, 120, 60), 0.7)
+	Buildings.Tent(camp, face(s.x + 16, s.z + 32, s.x, s.z), Color3.fromRGB(200, 160, 60), 0.7)
+	Common.PalisadeArc(camp, o, s.x, s.z, 47, math.rad(18), math.rad(162), ground)
+	for _, a in { math.rad(32), math.rad(148) } do
+		local x, z = s.x + math.cos(a) * 42, s.z + math.sin(a) * 42
+		Buildings.Watchtower(camp, face(x, z, s.x, s.z, -0.3))
+	end
 	Buildings.Banner(camp, at(s.x - 10, s.z - 30), Color3.fromRGB(200, 120, 40), Kit.C.gold)
 	Buildings.Banner(camp, at(s.x + 10, s.z - 30), Color3.fromRGB(200, 120, 40), Kit.C.gold)
+	local zp = w.zones[1]
+	local zc = w.zones[2]
+	Buildings.Signpost(camp, at(s.x, s.z - 38), {
+		{ text = zp.name, angle = Common.ArrowAngle(s.x, s.z - 38, zp.x, zp.z) },
+		{ text = zc.name, angle = Common.ArrowAngle(s.x, s.z - 38, zc.x, zc.z) },
+		{ text = "Arène des Moissons", angle = Common.ArrowAngle(s.x, s.z - 38, w.boss.x, w.boss.z) },
+	})
 	local altar = Stations.Get("Altar1") :: Stations.Station
 	Buildings.Altar(camp, face(altar.pos.X - o.X - 10, altar.pos.Z - o.Z - 8, s.x, s.z), altar.color)
 	local gate = Stations.Get("Gate1") :: Stations.Station
 	Buildings.RuneCircle(camp, at(gate.pos.X - o.X, gate.pos.Z - o.Z), 6, gate.color)
-	Buildings.Barrels(camp, face(s.x + 16, s.z - 20, s.x, s.z), 3)
-	for i = -2, 2 do
-		Buildings.LanternPost(camp, face(s.x + i * 14, s.z + 32, s.x, s.z))
+	Buildings.WeaponRack(camp, face(s.x + 42, s.z - 4, s.x, s.z))
+	Buildings.Dummy(camp, face(s.x + 48, s.z + 8, s.x, s.z))
+	Buildings.Dummy(camp, face(s.x + 50, s.z - 14, s.x, s.z))
+	Buildings.Cart(camp, face(s.x - 44, s.z - 4, s.x + 10, s.z - 30), 3)
+	Buildings.Barrels(camp, face(s.x - 44, s.z + 22, s.x, s.z), 3)
+	Buildings.Barrels(camp, face(s.x + 44, s.z + 24, s.x, s.z), 2)
+	for _, sx in { -20, 20 } do
+		Buildings.LanternPost(camp, face(s.x + sx, s.z - 34, s.x, s.z))
 	end
 	-- pastilles des stations du monde
 	for _, st in Stations.List do

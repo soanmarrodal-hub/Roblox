@@ -223,6 +223,39 @@ LAND2 = {
 STACKS2 = { { 335, -20, 72 }, { 318, -138, 44 }, { 262, -258, 50 }, { 170, -340, 74 }, { 420, 70, 36 }, { 400, -250, 30 }, { 120, -470, 40 } }
 
 
+-- Rivière naturelle : rééchantillonne une polyligne tous les `step` studs et la fait onduler
+-- latéralement (méandres), sans toucher aux extrémités.
+local function meander(points: { { x: number, z: number, h: number } }, amp: number, wave: number, step: number): { { x: number, z: number, h: number } }
+	local total = 0
+	local lens = {}
+	for i = 1, #points - 1 do
+		local a, b = points[i], points[i + 1]
+		lens[i] = math.sqrt((b.x - a.x) ^ 2 + (b.z - a.z) ^ 2)
+		total += lens[i]
+	end
+	local out = {}
+	local d = 0
+	local seg = 1
+	local acc = 0
+	while d <= total do
+		while seg < #points - 1 and d > acc + lens[seg] do
+			acc += lens[seg]
+			seg += 1
+		end
+		local a, b = points[seg], points[seg + 1]
+		local t = math.clamp((d - acc) / lens[seg], 0, 1)
+		local x, z, h = a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t, a.h + (b.h - a.h) * t
+		local nx, nz = -(b.z - a.z) / lens[seg], (b.x - a.x) / lens[seg]
+		local env = smoothstep(0, 120, d) * smoothstep(0, 120, total - d)
+		local off = (math.sin(d / wave * math.pi * 2) + 0.45 * math.sin(d / wave * math.pi * 5.3 + 1.7)) * amp * env
+		table.insert(out, { x = x + nx * off, z = z + nz * off, h = h })
+		d += step
+	end
+	table.insert(out, points[#points])
+	return out
+end
+Relief.Meander = meander
+
 local function zonesAsPlateaus(w: Worlds.World): { any }
 	local out = {}
 	table.insert(out, { x = w.spawn.x, z = w.spawn.z, h = w.spawn.h, r = 46, blend = 26 })
@@ -301,7 +334,7 @@ function Relief.WorldSpec(w: Worlds.World): Spec
 			pathWidth = 10,
 			pathBlend = 14,
 			river = {
-				points = {
+				points = meander({
 					{ x = -560, z = -380, h = 128 },
 					{ x = -430, z = -250, h = 96 },
 					{ x = -330, z = -120, h = 70 },
@@ -312,7 +345,7 @@ function Relief.WorldSpec(w: Worlds.World): Spec
 					{ x = 120, z = 330, h = 19 },
 					{ x = 250, z = 430, h = 18 },
 					{ x = 430, z = 560, h = 16 },
-				},
+				}, 26, 210, 20),
 				width = 11,
 				bank = 12,
 				depth = 7,

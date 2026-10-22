@@ -742,4 +742,233 @@ function Buildings.Board(parent: Instance, cf: CFrame, title: string): (Model, S
 	return m, gui
 end
 
+------------------------------------------------------------------ vie du village
+
+-- Charrette à bras : caisse, ridelles, deux roues à rayons, brancards, chargement varié.
+function Buildings.Cart(parent: Instance, cf: CFrame, seed: number?): Model
+	local m = Kit.Model(parent, "Charrette")
+	local r = rng(seed or 1)
+	local bed = cf * CFrame.new(0, 2.6, 0)
+	Block(m, Vector3.new(4.6, 0.5, 7), bed, C.woodLight, M.WoodPlanks)
+	for _, sx in { -1, 1 } do
+		Block(m, Vector3.new(0.4, 1.4, 7), bed * CFrame.new(sx * 2.3, 0.9, 0), C.wood, M.WoodPlanks)
+		-- roue
+		local wheel = Cyl(m, 0.5, 3.6, bed * CFrame.new(sx * 2.8, -0.8, 0.6) * CFrame.Angles(0, 0, math.pi / 2), C.timber, M.Wood)
+		wheel.Name = "Roue"
+		Cyl(m, 0.6, 1, bed * CFrame.new(sx * 2.85, -0.8, 0.6) * CFrame.Angles(0, 0, math.pi / 2), C.iron, M.Metal)
+		-- brancards
+		Block(m, Vector3.new(0.35, 0.35, 5), bed * CFrame.new(sx * 1.6, -0.6, -5.4) * CFrame.Angles(0.25, 0, 0), C.timber, M.Wood)
+	end
+	Block(m, Vector3.new(4.6, 1.4, 0.4), bed * CFrame.new(0, 0.9, 3.3), C.wood, M.WoodPlanks)
+	-- chargement : citrouilles, sacs ou tonneau
+	local load = r:NextInteger(1, 3)
+	if load == 1 then
+		for i = 0, 3 do
+			local p = Kit.Ball(m, 1.6, (bed * CFrame.new(-1 + (i % 2) * 2, 1.2, -1.6 + (i // 2) * 2.4)).Position, Color3.fromRGB(230, 120, 40), M.SmoothPlastic)
+			p.Name = "Citrouille"
+		end
+	elseif load == 2 then
+		for i = 0, 2 do
+			Block(m, Vector3.new(1.8, 1.4, 1.4), bed * CFrame.new(-1.1 + i * 1.1, 1, -1 + i) * CFrame.Angles(0, r:NextNumber(-0.4, 0.4), 0), Color3.fromRGB(214, 196, 150), M.Fabric)
+		end
+	else
+		Cyl(m, 2.6, 2.2, bed * CFrame.new(0, 1.5, 0), C.wood, M.Wood)
+	end
+	return m
+end
+
+-- Potager clôturé : bordure de piquets, rangs de terre et de légumes.
+function Buildings.Garden(parent: Instance, cf: CFrame, w: number, d: number, seed: number?): Model
+	local m = Kit.Model(parent, "Jardin")
+	local r = rng(seed or 1)
+	Block(m, Vector3.new(w - 1, 0.4, d - 1), cf * CFrame.new(0, 0.1, 0), Color3.fromRGB(96, 70, 46), M.Ground)
+	local rows = math.floor((d - 2) / 2.4)
+	for i = 0, rows - 1 do
+		local z = -d / 2 + 1.8 + i * 2.4
+		Block(m, Vector3.new(w - 2.4, 0.5, 1), cf * CFrame.new(0, 0.45, z), Color3.fromRGB(80, 56, 36), M.Ground)
+		local crop = ({ Color3.fromRGB(90, 160, 60), Color3.fromRGB(120, 180, 70), Color3.fromRGB(230, 120, 40) })[r:NextInteger(1, 3)]
+		for x = -w / 2 + 2, w / 2 - 2, 1.8 do
+			if r:NextNumber() < 0.85 then
+				local s = r:NextNumber(0.6, 1)
+				Block(m, Vector3.new(s, s * 0.9, s), cf * CFrame.new(x, 0.9 + s * 0.3, z), crop, M.Grass)
+			end
+		end
+	end
+	-- piquets et lisses
+	local function side(a: Vector3, b: Vector3)
+		local len = (b - a).Magnitude
+		local n = math.max(1, math.floor(len / 2.5))
+		for i = 0, n do
+			local p = a:Lerp(b, i / n)
+			Block(m, Vector3.new(0.4, 1.8, 0.4), cf * CFrame.new(p + Vector3.new(0, 0.9, 0)), C.wood, M.Wood)
+		end
+		local mid = (a + b) / 2
+		Block(m, Vector3.new(0.25, 0.25, len), cf * CFrame.lookAt(mid + Vector3.new(0, 1.3, 0), b + Vector3.new(0, 1.3, 0)), C.woodLight, M.Wood)
+	end
+	local hw, hd = w / 2, d / 2
+	side(Vector3.new(-hw, 0, -hd), Vector3.new(-2, 0, -hd)) -- portillon au milieu de la façade
+	side(Vector3.new(2, 0, -hd), Vector3.new(hw, 0, -hd))
+	side(Vector3.new(hw, 0, -hd), Vector3.new(hw, 0, hd))
+	side(Vector3.new(hw, 0, hd), Vector3.new(-hw, 0, hd))
+	side(Vector3.new(-hw, 0, hd), Vector3.new(-hw, 0, -hd))
+	-- épouvantail, parfois
+	if r:NextNumber() < 0.5 then
+		local p = cf * CFrame.new(hw - 2.5, 0, hd - 2.5)
+		Block(m, Vector3.new(0.4, 5, 0.4), p * CFrame.new(0, 2.5, 0), C.timber, M.Wood)
+		Block(m, Vector3.new(3.4, 0.35, 0.35), p * CFrame.new(0, 3.8, 0), C.timber, M.Wood)
+		Block(m, Vector3.new(1.6, 1.8, 0.8), p * CFrame.new(0, 3.4, 0), Color3.fromRGB(150, 70, 60), M.Fabric)
+		Block(m, Vector3.new(1, 1, 1), p * CFrame.new(0, 4.9, 0), C.thatch, M.Fabric)
+		Block(m, Vector3.new(1.8, 0.3, 1.8), p * CFrame.new(0, 5.5, 0), Color3.fromRGB(120, 90, 50), M.Fabric)
+	end
+	return m
+end
+
+------------------------------------------------------------------ camps
+
+-- Palissade de pieux taillés en pointe entre deux points au sol (hauteur suivant le terrain : a et b).
+function Buildings.Palisade(parent: Instance, a: Vector3, b: Vector3): Model
+	local m = Kit.Model(parent, "Palissade")
+	local len = (Vector3.new(b.X, 0, b.Z) - Vector3.new(a.X, 0, a.Z)).Magnitude
+	local n = math.max(1, math.floor(len / 1.6))
+	local r = rng(math.floor(a.X * 3 + a.Z))
+	for i = 0, n - 1 do
+		local p = a:Lerp(b, (i + 0.5) / n)
+		local h = r:NextNumber(6.5, 8)
+		local stake = Block(m, Vector3.new(1.5, h, 1.5), CFrame.new(p + Vector3.new(0, h / 2 - 1, 0)) * CFrame.Angles(0, r:NextNumber(0, 0.6), r:NextNumber(-0.04, 0.04)), C.wood:Lerp(C.timber, r:NextNumber(0, 0.5)), M.Wood)
+		Wedge(m, Vector3.new(1.5, 1.2, 0.75), stake.CFrame * CFrame.new(0, h / 2 + 0.6, -0.375), C.woodLight, M.Wood)
+		Wedge(m, Vector3.new(1.5, 1.2, 0.75), stake.CFrame * CFrame.new(0, h / 2 + 0.6, 0.375) * CFrame.Angles(0, math.pi, 0), C.woodLight, M.Wood)
+	end
+	local mid = (a + b) / 2
+	Block(m, Vector3.new(0.5, 0.5, len), CFrame.lookAt(mid + Vector3.new(0, 3, 0), b + Vector3.new(0, 3, 0)), C.timber, M.Wood)
+	return m
+end
+
+-- Tour de guet en bois sur pilotis, avec toit et torche.
+function Buildings.Watchtower(parent: Instance, cf: CFrame): Model
+	local m = Kit.Model(parent, "TourDeGuet")
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			Block(m, Vector3.new(0.9, 14, 0.9), cf * CFrame.new(sx * 2.6, 7, sz * 2.6) * CFrame.Angles(sz * 0.05, 0, -sx * 0.05), C.timber, M.Wood)
+		end
+	end
+	for _, y in { 4, 9 } do
+		Block(m, Vector3.new(6, 0.4, 0.4), cf * CFrame.new(0, y, -2.6) * CFrame.Angles(0, 0, 0.6), C.wood, M.Wood)
+		Block(m, Vector3.new(6, 0.4, 0.4), cf * CFrame.new(0, y, 2.6) * CFrame.Angles(0, 0, -0.6), C.wood, M.Wood)
+	end
+	Block(m, Vector3.new(7.4, 0.6, 7.4), cf * CFrame.new(0, 14, 0), C.woodLight, M.WoodPlanks)
+	for _, side in { { 0, -3.6, 0 }, { 0, 3.6, 0 }, { -3.6, 0, 1 }, { 3.6, 0, 1 } } do
+		local rot = if side[3] == 1 then math.pi / 2 else 0
+		Block(m, Vector3.new(7.4, 1.6, 0.4), cf * CFrame.new(side[1], 15, side[2]) * CFrame.Angles(0, rot, 0), C.wood, M.WoodPlanks)
+	end
+	steppedRoof(m, cf * CFrame.new(0, 19, 0), 8, 8, C.thatch, 0.8)
+	for _, sx in { -1, 1 } do
+		for _, sz in { -1, 1 } do
+			Block(m, Vector3.new(0.5, 4, 0.5), cf * CFrame.new(sx * 3.4, 17, sz * 3.4), C.timber, M.Wood)
+		end
+	end
+	local torch = Block(m, Vector3.new(0.8, 0.8, 0.8), cf * CFrame.new(3.4, 16.2, -3.4), Color3.fromRGB(255, 150, 60), M.Neon)
+	fire(torch, 0.6)
+	return m
+end
+
+-- Poteau indicateur : une flèche par destination ({ text, angle } en radians autour du poteau).
+function Buildings.Signpost(parent: Instance, cf: CFrame, arrows: { { text: string, angle: number } }): Model
+	local m = Kit.Model(parent, "Panneau")
+	Block(m, Vector3.new(0.8, 9, 0.8), cf * CFrame.new(0, 4.5, 0), C.timber, M.Wood)
+	for i, a in arrows do
+		local arm = cf * CFrame.new(0, 8.4 - i * 1.6, 0) * CFrame.Angles(0, a.angle, 0) * CFrame.new(0, 0, -2.4)
+		local board = Block(m, Vector3.new(0.3, 1.2, 4.2), arm, C.woodLight, M.Wood)
+		Wedge(m, Vector3.new(0.3, 1.2, 1), arm * CFrame.new(0, 0, -2.6) * CFrame.Angles(0, math.pi, 0), C.woodLight, M.Wood)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Right
+		gui.CanvasSize = Vector2.new(260, 74)
+		gui.LightInfluence = 0.4
+		gui.Parent = board
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(1, 1)
+		t.Font = Enum.Font.Arcade
+		t.TextScaled = true
+		t.TextColor3 = Color3.fromRGB(60, 36, 20)
+		t.Text = a.text
+		t.Parent = gui
+		local gui2 = gui:Clone()
+		gui2.Face = Enum.NormalId.Left
+		gui2.Parent = board
+	end
+	return m
+end
+
+-- Mannequin d'entraînement en paille sur son poteau.
+function Buildings.Dummy(parent: Instance, cf: CFrame): Model
+	local m = Kit.Model(parent, "Mannequin")
+	Block(m, Vector3.new(0.7, 6, 0.7), cf * CFrame.new(0, 3, 0), C.timber, M.Wood)
+	Block(m, Vector3.new(2.4, 2.8, 1.6), cf * CFrame.new(0, 4.6, 0), C.thatch, M.Fabric)
+	Block(m, Vector3.new(4.2, 0.6, 0.6), cf * CFrame.new(0, 5.2, 0), C.timber, M.Wood)
+	Block(m, Vector3.new(1.6, 1.6, 1.6), cf * CFrame.new(0, 6.8, 0), C.thatch, M.Fabric)
+	Block(m, Vector3.new(1.2, 1.2, 0.2), cf * CFrame.new(0, 4.8, -0.85), Color3.fromRGB(190, 50, 40), M.Fabric)
+	Block(m, Vector3.new(3, 0.5, 3), cf * CFrame.new(0, 0.25, 0), C.wood, M.Wood)
+	return m
+end
+
+-- Râtelier d'armes (épées, lances, bouclier).
+function Buildings.WeaponRack(parent: Instance, cf: CFrame): Model
+	local m = Kit.Model(parent, "Ratelier")
+	for _, sx in { -2.4, 2.4 } do
+		Block(m, Vector3.new(0.5, 4.4, 0.5), cf * CFrame.new(sx, 2.2, 0), C.timber, M.Wood)
+	end
+	Block(m, Vector3.new(5.4, 0.4, 0.6), cf * CFrame.new(0, 3.9, 0), C.wood, M.Wood)
+	Block(m, Vector3.new(5.4, 0.4, 0.6), cf * CFrame.new(0, 1, 0), C.wood, M.Wood)
+	for i = -1, 1 do
+		Block(m, Vector3.new(0.25, 4.6, 0.25), cf * CFrame.new(i * 1.4, 2.6, 0.2) * CFrame.Angles(0.12, 0, 0), C.iron, M.Metal)
+		Block(m, Vector3.new(0.9, 0.25, 0.25), cf * CFrame.new(i * 1.4, 1.6, 0.35), C.gold, M.Metal)
+	end
+	local shield = Block(m, Vector3.new(2.2, 2.6, 0.3), cf * CFrame.new(3.4, 1.6, -0.2) * CFrame.Angles(0.15, 0.3, 0), Color3.fromRGB(60, 90, 160), M.Wood)
+	Block(m, Vector3.new(0.4, 2.6, 0.32), shield.CFrame * CFrame.new(0, 0, -0.02), C.gold, M.Metal)
+	return m
+end
+
+-- Rondin pour s'asseoir (autour d'un feu de camp).
+function Buildings.LogSeat(parent: Instance, cf: CFrame): Model
+	local m = Kit.Model(parent, "Rondin")
+	Cyl(m, 4.6, 1.6, cf * CFrame.new(0, 0.8, 0) * CFrame.Angles(0, 0, math.pi / 2), C.timber, M.Wood)
+	Cyl(m, 0.2, 1.3, cf * CFrame.new(2.35, 0.8, 0) * CFrame.Angles(0, 0, math.pi / 2), C.woodLight, M.Wood)
+	return m
+end
+
+-- Barque (retournée à terre ou à l'eau).
+function Buildings.Boat(parent: Instance, cf: CFrame, color: Color3?, upturned: boolean?): Model
+	local m = Kit.Model(parent, "Barque")
+	local c = color or Color3.fromRGB(150, 80, 50)
+	local base = if upturned then cf * CFrame.new(0, 1.4, 0) * CFrame.Angles(0, 0, math.pi) else cf * CFrame.new(0, 0.9, 0)
+	Block(m, Vector3.new(3, 0.4, 8), base * CFrame.new(0, -0.6, 0), C.wood, M.WoodPlanks)
+	for _, sx in { -1, 1 } do
+		Block(m, Vector3.new(0.4, 1.4, 8), base * CFrame.new(sx * 1.6, 0, 0) * CFrame.Angles(0, 0, sx * -0.25), c, M.WoodPlanks)
+	end
+	Wedge(m, Vector3.new(3.4, 1.4, 2.4), base * CFrame.new(0, 0, -5.1), c, M.WoodPlanks)
+	Block(m, Vector3.new(3.2, 1.4, 0.4), base * CFrame.new(0, 0, 4), c, M.WoodPlanks)
+	if not upturned then
+		Block(m, Vector3.new(3, 0.3, 0.8), base * CFrame.new(0, 0.2, 0.5), C.woodLight, M.Wood)
+		Block(m, Vector3.new(0.25, 0.25, 6), base * CFrame.new(1.2, 0.6, 1) * CFrame.Angles(0.2, 0.3, 0), C.timber, M.Wood)
+	end
+	return m
+end
+
+-- Séchoir à filets de pêche.
+function Buildings.NetRack(parent: Instance, cf: CFrame): Model
+	local m = Kit.Model(parent, "Sechoir")
+	for _, sx in { -3.5, 3.5 } do
+		Block(m, Vector3.new(0.6, 6, 0.6), cf * CFrame.new(sx, 3, 0), C.timber, M.Wood)
+	end
+	Block(m, Vector3.new(7.6, 0.4, 0.4), cf * CFrame.new(0, 5.8, 0), C.wood, M.Wood)
+	local net = Block(m, Vector3.new(6.6, 4.6, 0.15), cf * CFrame.new(0, 3.4, 0.1), Color3.fromRGB(150, 140, 110), M.Fabric)
+	net.Transparency = 0.25
+	for i = -2, 2 do
+		Block(m, Vector3.new(0.12, 4.6, 0.2), cf * CFrame.new(i * 1.3, 3.4, 0.12), Color3.fromRGB(110, 100, 80), M.Fabric)
+	end
+	Kit.Ball(m, 0.8, (cf * CFrame.new(-2.4, 1.6, 0.3)).Position, Color3.fromRGB(230, 200, 90), M.SmoothPlastic)
+	Kit.Ball(m, 0.8, (cf * CFrame.new(1.8, 2.2, 0.3)).Position, Color3.fromRGB(230, 90, 60), M.SmoothPlastic)
+	return m
+end
+
 return Buildings

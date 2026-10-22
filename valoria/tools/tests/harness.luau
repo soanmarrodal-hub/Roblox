@@ -140,12 +140,54 @@ local STUBS = {
 	Pause = function() end,
 	Resume = function() end,
 	Emit = function() end,
-	ScaleTo = function() end,
-	PivotTo = function() end,
-	GetPivot = function()
-		return roblox.CFrame.new()
-	end,
 }
+
+-- Pivots et mise à l'échelle des modèles (absents de Lune), appliqués réellement aux pièces.
+local function pivotOf(real)
+	if real:IsA("BasePart") then
+		return real.CFrame
+	end
+	local pp = real.PrimaryPart
+	if pp then
+		return pp.CFrame
+	end
+	for _, d in real:GetDescendants() do
+		if d:IsA("BasePart") then
+			return roblox.CFrame.new(d.CFrame.Position)
+		end
+	end
+	return roblox.CFrame.new()
+end
+STUBS.GetPivot = function(self)
+	return pivotOf(realOf[self])
+end
+STUBS.PivotTo = function(self, cf)
+	local real = realOf[self]
+	if real:IsA("BasePart") then
+		real.CFrame = cf
+		return
+	end
+	local delta = cf * pivotOf(real):Inverse()
+	for _, d in real:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CFrame = delta * d.CFrame
+		end
+	end
+end
+STUBS.ScaleTo = function(self, k)
+	local real = realOf[self]
+	local cur = real:GetAttribute("HarnessScale") or 1
+	local f = k / cur
+	real:SetAttribute("HarnessScale", k)
+	local o = pivotOf(real).Position
+	for _, d in real:GetDescendants() do
+		if d:IsA("BasePart") then
+			local cf = d.CFrame
+			d.Size = d.Size * f
+			d.CFrame = (cf - cf.Position) + (o + (cf.Position - o) * f)
+		end
+	end
+end
 local overridesOf = setmetatable({}, { __mode = "k" })
 local NIL = newproxy(false) -- valeur nil explicite dans une table de substitution
 

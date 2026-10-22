@@ -14,6 +14,7 @@ local TerrainGen = require(script.Parent.TerrainGen)
 local Kit = require(script.Parent.Kit)
 local Buildings = require(script.Parent.Buildings)
 local Props = require(script.Parent.Props)
+local Common = require(script.Parent.Common)
 
 local Hub = {}
 
@@ -46,6 +47,12 @@ local function facing(pos: Vector3, target: Vector3): CFrame
 end
 
 export type Result = { folder: Folder, grid: Kit.Grid, boards: { [string]: SurfaceGui } }
+
+-- emplacements occupés et test de place libre (utilisés ensuite par les décors)
+local hubPlaced: { Common.Spot } = {}
+local hubFree: (x: number, z: number, r: number) -> boolean = function()
+	return false
+end
 
 function Hub.Build(root: Instance): Result
 	local folder = Kit.Folder(root, "BourgLanterne")
@@ -97,29 +104,122 @@ function Hub.Build(root: Instance): Result
 		end
 	end
 
-	-- maisons en couronne autour de la place (entre les rues)
+	-- maisons : façades le long des quatre rues, puis couronnes dans les quartiers (entre rues, stations,
+	-- ruisseau et grands bâtiments), sur un sol assez plat
 	local houses = Kit.Folder(folder, "Maisons")
 	local rng = Rng.new(42)
-	local hn = 0
-	for _, ring in { { r = 82, n = 12 }, { r = 118, n = 16 } } do
-		for i = 0, ring.n - 1 do
-			local a = (i + 0.5) / ring.n * math.pi * 2
-			local x, z = math.cos(a) * ring.r, math.sin(a) * ring.r
-			-- éviter les rues et les quartiers (±25° autour des axes)
-			local deg = math.deg(a) % 90
-			local nearStation = false
-			for _, st in Stations.List do
-				if st.zone == "Hub" and (Vector3.new(st.pos.X, 0, st.pos.Z) - Vector3.new(x, 0, z)).Magnitude < 34 then
-					nearStation = true
-				end
+	local river = (Relief.HubSpec().river :: any).points
+	local placed: { Common.Spot } = {
+		{ x = 140, z = 0, r = 40 }, -- quartier de la Forge
+		{ x = -140, z = 0, r = 42 }, -- salle des raids
+		{ x = 0, z = 172, r = 34 }, -- Tour des Épreuves
+		{ x = 0, z = -122, r = 34 }, -- Cercle des Runes
+		{ x = -74, z = -62, r = 16 }, -- grand chêne
+		{ x = 66, z = -146, r = 20 }, -- taverne
+	}
+	local function flatEnough(x: number, z: number, r: number): boolean
+		local lo, hi = 1e9, -1e9
+		for _, o in { { 0, 0 }, { r, 0 }, { -r, 0 }, { 0, r }, { 0, -r } } do
+			local h = ground(x + o[1], z + o[2])
+			lo, hi = math.min(lo, h), math.max(hi, h)
+		end
+		return hi - lo < 4.5
+	end
+	local function free(x: number, z: number, r: number): boolean
+		if math.sqrt(x * x + z * z) < 56 + r then
+			return false
+		end
+		if math.abs(x) < 8 + r and z > -112 and z < 160 then
+			return false
+		end
+		if math.abs(z) < 8 + r and math.abs(x) < 175 then
+			return false
+		end
+		if math.sqrt(x * x + z * z) > 205 then
+			return false
+		end
+		for _, st in Stations.List do
+			if st.zone == "Hub" and Vector3.new(st.pos.X - x, 0, st.pos.Z - z).Magnitude < st.radius + r + 8 then
+				return false
 			end
-			if deg > 22 and deg < 68 and not nearStation and math.abs(z - 92) > 22 then
-				hn += 1
-				local cf = facing(Vector3.new(x, ground(x, z) - 0.8, z), Vector3.zero)
-				Buildings.House(houses, cf, { seed = hn * 13, floors = if ring.r > 100 then rng:Int(1, 2) else 2 })
+		end
+		if Common.LineDist(river, x, z) < 14 + r then
+			return false
+		end
+		for _, sp in placed do
+			if (sp.x - x) ^ 2 + (sp.z - z) ^ 2 < (sp.r + r + 3) ^ 2 then
+				return false
+			end
+		end
+		return flatEnough(x, z, r)
+	end
+	local roofs = { C.roofRed, C.roofBlue, C.roofSlate, C.thatch, C.roofRed }
+	local hn = 0
+	local function house(x: number, z: number, look: Vector3, w: number, d: number)
+		hn += 1
+		local cf = facing(Vector3.new(x, ground(x, z) - 0.8, z), look)
+		Buildings.House(houses, cf, { w = w, d = d, seed = hn * 13 + 5, floors = rng:Int(1, 2), roof = roofs[rng:Int(1, #roofs)] })
+		table.insert(placed, { x = x, z = z, r = math.max(w, d) * 0.62 })
+		-- tonneaux ou caisses contre un pignon, de temps en temps
+		if rng:Float() < 0.35 then
+			Buildings.Barrels(houses, cf * CFrame.new(w / 2 + 2.5, 0.8, rng:Range(-d / 3, d / 3)), rng:Int(2, 4))
+		end
+	end
+	-- façades sur les rues
+	for _, street in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+		for along = 64, 172, 20 do
+			for _, side in { -1, 1 } do
+				local w, d = rng:Int(14, 18), rng:Int(12, 14)
+				local off = 8 + d / 2 + 2.5
+				local x = street[1] * along + street[2] * side * off
+				local z = street[2] * along + street[1] * side * off
+				if free(x, z, math.max(w, d) * 0.55) then
+					local look = Vector3.new(street[1] * along, 0, street[2] * along)
+					house(x, z, look, w, d)
+				end
 			end
 		end
 	end
+	-- couronnes de maisons tournées vers la place
+	for _, ring in { 84, 112, 140, 168, 194 } do
+		local n = math.floor(ring * math.pi * 2 / 30)
+		for i = 0, n - 1 do
+			local a = (i + rng:Float() * 0.4) / n * math.pi * 2
+			local x, z = math.cos(a) * ring, math.sin(a) * ring
+			local w, d = rng:Int(13, 18), rng:Int(11, 14)
+			if free(x, z, math.max(w, d) * 0.55) then
+				house(x, z, Vector3.zero, w, d)
+				-- jardin clôturé derrière la maison
+				if rng:Float() < 0.45 then
+					local back = Vector3.new(x, 0, z).Unit
+					local gx, gz = x + back.X * (d / 2 + 9), z + back.Z * (d / 2 + 9)
+					if free(gx, gz, 7) then
+						local gcf = facing(Vector3.new(gx, ground(gx, gz), gz), Vector3.zero)
+						Buildings.Garden(houses, gcf, 14, 10, rng:Int(1, 999))
+						table.insert(placed, { x = gx, z = gz, r = 8 })
+					end
+				end
+			end
+		end
+	end
+	-- charrettes, étals et puits autour de la place et des rues
+	local market = Kit.Folder(folder, "Marche")
+	for i, spot in { { 22, -52, 0.3 }, { -58, 14, 1.4 }, { 58, -16, 4.4 }, { -16, 60, 2.8 }, { 90, 22, 0 }, { -96, -20, 3.1 } } do
+		local x, z = spot[1], spot[2]
+		if free(x, z, 4) or math.sqrt(x * x + z * z) < 70 then
+			Buildings.Cart(market, CFrame.new(x, ground(x, z), z) * CFrame.Angles(0, spot[3], 0), i)
+			table.insert(placed, { x = x, z = z, r = 5 })
+		end
+	end
+	for i, spot in { { 48, -48 }, { -48, -48 }, { 52, 50 } } do
+		local x, z = spot[1], spot[2]
+		Buildings.Stall(market, facing(Vector3.new(x, ground(x, z), z), Vector3.zero), ({ C.cloth, Color3.fromRGB(70, 140, 90), Color3.fromRGB(220, 170, 60) })[i], 30 + i)
+	end
+	Buildings.Well(market, CFrame.new(-64, ground(-64, -26), -26))
+	table.insert(placed, { x = -64, z = -26, r = 5 })
+	hubPlaced = placed
+	hubFree = free
+
 	-- la taverne
 	Buildings.House(houses, facing(Vector3.new(66, ground(66, -146) - 0.8, -146), Vector3.new(0, 0, 0)), {
 		w = 24,
@@ -237,6 +337,31 @@ function Hub.Decorate(res: Result)
 			Props.Place(folder, if i % 3 == 0 then "BushGreen" else "BushAutumn", CFrame.new(x, ground(x, z), z) * CFrame.Angles(0, rng:Float() * 6.28, 0), rng:Range(0.8, 1.1))
 		end
 	end
+	-- arbres et massifs entre les maisons
+	local inVillage = 0
+	for _ = 1, 400 do
+		if inVillage >= 22 then
+			break
+		end
+		local a, r = rng:Float() * math.pi * 2, rng:Range(66, 200)
+		local x, z = math.cos(a) * r, math.sin(a) * r
+		if hubFree(x, z, 4) then
+			inVillage += 1
+			local kind = ({ "OakAutumn1", "OakAutumn2", "BirchAutumn", "OakAutumn3" })[rng:Int(1, 4)]
+			Props.Place(folder, kind, CFrame.new(x, ground(x, z) - 0.6, z) * CFrame.Angles(0, rng:Float() * 6.28, 0), rng:Range(0.65, 0.9), { radius = 1.2, height = 12 })
+			table.insert(hubPlaced, { x = x, z = z, r = 4 })
+		end
+	end
+	-- fleurs et buissons au pied des maisons
+	for i, sp in table.clone(hubPlaced) do
+		if i > 6 and sp.r < 13 and rng:Float() < 0.6 then
+			local a = rng:Float() * math.pi * 2
+			local x, z = sp.x + math.cos(a) * (sp.r + 1.5), sp.z + math.sin(a) * (sp.r + 1.5)
+			if math.abs(x) > 10 and math.abs(z) > 10 then
+				Props.Place(folder, if rng:Float() < 0.5 then "BushGreen" else "BushAutumn", CFrame.new(x, ground(x, z) - 0.3, z) * CFrame.Angles(0, rng:Float() * 6.28, 0), rng:Range(0.55, 0.8))
+			end
+		end
+	end
 	-- arbres sur les collines et en lisière du village
 	local placed = 0
 	local tries = 0
@@ -244,7 +369,7 @@ function Hub.Decorate(res: Result)
 		tries += 1
 		local x, z = rng:Range(-310, 310), rng:Range(-310, 310)
 		local r = math.sqrt(x * x + z * z)
-		if r > 150 and not paved(x, z) and math.abs(z - 92) > 18 and math.abs(x) > 14 then
+		if r > 205 and not paved(x, z) and math.abs(z - 92) > 18 and math.abs(x) > 14 and not Common.InSpots(hubPlaced, x, z) then
 			local slope = Kit.Slope(res.grid, origin, x, z)
 			local h = ground(x, z)
 			local nearStation = false

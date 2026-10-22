@@ -185,4 +185,30 @@ function Common.Bounds(folder: Instance, w: Worlds.World, margin: number?)
 	end
 end
 
+-- Angle (radians) d'une flèche de poteau indicateur pointant de (x, z) vers (tx, tz).
+function Common.ArrowAngle(x: number, z: number, tx: number, tz: number): number
+	return math.atan2(-(tx - x), -(tz - z))
+end
+
+-- Feu de camp entouré de rondins (repère au sol `cf`).
+function Common.Fireplace(folder: Instance, cf: CFrame)
+	Buildings.Campfire(folder, cf)
+	for i = 0, 2 do
+		local a = i / 3 * math.pi * 2 + 0.5
+		local p = cf * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -5)
+		Buildings.LogSeat(folder, p * CFrame.Angles(0, math.pi / 2, 0))
+	end
+end
+
+-- Palissade en arc de cercle (centre local, rayon, angles en radians, `ground(x, z)` monde).
+function Common.PalisadeArc(folder: Instance, o: Vector3, cx: number, cz: number, r: number, a0: number, a1: number, ground: (number, number) -> number)
+	local n = math.max(2, math.floor(r * (a1 - a0) / 9))
+	for i = 0, n - 1 do
+		local t0, t1 = a0 + (a1 - a0) * i / n, a0 + (a1 - a0) * (i + 1) / n
+		local x0, z0 = cx + math.cos(t0) * r, cz + math.sin(t0) * r
+		local x1, z1 = cx + math.cos(t1) * r, cz + math.sin(t1) * r
+		Buildings.Palisade(folder, Vector3.new(o.X + x0, ground(x0, z0), o.Z + z0), Vector3.new(o.X + x1, ground(x1, z1), o.Z + z1))
+	end
+end
+
 return Common
