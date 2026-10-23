@@ -3,11 +3,16 @@
     WORLD_DUMP=parts.json lune run tools/tests/world_smoke.luau .
     lune run tools/preview/terrain_dump.luau Hub ter_Hub.bin   (idem W1, W2)
     python3 tools/voxel/game_views.py parts.json <dossier des terrains> <dossier de sortie> [nom de vue…]
+
+Les détails au sol (herbe, fleurs, cailloux…) sont calculés par le module du jeu via
+tools/preview/detail_dump.luau (Lune : variable LUNE ou `lune` dans le PATH).
 """
 from __future__ import annotations
 
+import json
 import math
 import os
+import subprocess
 import sys
 import time
 
@@ -367,6 +372,23 @@ VIEWS = [
 ]
 
 
+class _Dry:
+    """Maillage factice : première passe pour connaître les cadrages (zones des détails au sol)."""
+    terrain = None
+
+    def add(self, *a, **k):
+        pass
+
+
+def detail_zone(cfg):
+    """Zone des détails au sol d'une vue : autour de la cible, rien pour les grands panoramas."""
+    t, e = np.array(cfg['target']), np.array(cfg['eye'])
+    dist = float(np.linalg.norm(e - t))
+    if dist > 250:
+        return None
+    return dict(x=float(t[0]), z=float(t[2]), r=float(min(160.0, dist + 40.0)))
+
+
 def main():
     parts_path, ter_dir, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
     only = set(sys.argv[4:])
@@ -375,19 +397,34 @@ def main():
     parts = sr.Parts(parts_path)
     terrains = {k: sr.Terrain(os.path.join(ter_dir, 'ter_%s.bin' % k)) for k in ('Hub', 'W1', 'W2')}
     scene = Scene(parts, terrains)
+    views = [(n, fn) for n, fn in VIEWS if not only or n in only or any(o in n for o in only)]
+    # détails au sol : calculés par le module du jeu (Lune), une seule fois pour toutes les vues
+    zones = {}
+    for name, fn in views:
+        z = detail_zone(fn(scene, _Dry()))
+        if z:
+            zones[name] = z
+    details = None
+    if zones:
+        zpath = os.path.join(out_dir, '_zones.json')
+        dpath = os.path.join(out_dir, '_details.bin')
+        json.dump(list(zones.values()), open(zpath, 'w'))
+        root = os.path.abspath(os.path.join(HERE, '..', '..'))
+        subprocess.check_call([os.environ.get('LUNE', 'lune'), 'run', 'tools/preview/detail_dump.luau', zpath, dpath], cwd=root)
+        details = sr.Details(dpath)
     print('données chargées en %.1fs' % (time.time() - t0))
-    for name, fn in VIEWS:
-        if only and name not in only and not any(o in name for o in only):
-            continue
+    for name, fn in views:
         t1 = time.time()
         mesh = sr.Mesh()
         cfg = fn(scene, mesh)
+        z = zones.get(name)
+        nd = details.add_to(mesh, parts, (z['x'], 0, z['z']), z['r'], cfg['eye']) if (details is not None and z) else 0
         light = dict(LIGHT[cfg.pop('light')])
         target, eye = cfg.pop('target'), cfg.pop('eye')
         light.update(cfg)
         im, n = sr.render(mesh, eye, target, size=(1280, 720), **light)
         im.save(os.path.join(out_dir, name + '.png'))
-        print('%s : %d triangles, %.1fs' % (name, n, time.time() - t1))
+        print('%s : %d triangles, %d détails au sol, %.1fs' % (name, n, nd, time.time() - t1))
 
 
 if __name__ == '__main__':

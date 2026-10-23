@@ -31,6 +31,94 @@ end
 
 export type Result = { folder: Folder, grid: Kit.Grid, boards: { [string]: SurfaceGui } }
 
+local STONE = {
+	Color3.fromRGB(178, 166, 144),
+	Color3.fromRGB(162, 152, 134),
+	Color3.fromRGB(190, 178, 154),
+	Color3.fromRGB(150, 142, 130),
+	Color3.fromRGB(170, 160, 146),
+}
+
+-- Pavage en pièces sur les pavés du terrain : anneaux de dalles autour de la fontaine (joints visibles),
+-- quatre rayons de pierre sombre vers les rues, bordures le long de la place, des rues et des quartiers.
+local function pave(folder: Instance, ground: (number, number) -> number)
+	local pav = Kit.Folder(folder, "Pavage")
+	local rng = Rng.new(91)
+	local function stone(size: Vector3, x: number, z: number, yaw: number, color: Color3, top: number?)
+		-- `top` : hauteur du dessus de la pierre au-dessus du sol
+		local y = ground(x, z) + (top or 0.15) - size.Y / 2
+		Kit.Block(pav, size, CFrame.new(x, y, z) * CFrame.Angles(0, yaw, 0), color, Enum.Material.Slate, { CanCollide = false })
+	end
+	local function nearAxis(x: number, z: number, d: number): boolean
+		return math.abs(x) < d or math.abs(z) < d
+	end
+	-- anneaux de dalles (le premier, plus clair, borde la fontaine)
+	local r, ring = 12.2, 0
+	while r < 30 do
+		local wR = if ring == 0 then 1.8 else 3
+		local rc = r + wR / 2
+		local n = math.floor(2 * math.pi * rc / 3.4)
+		local off = rng:Float()
+		for i = 0, n - 1 do
+			local a = (i + off) / n * math.pi * 2
+			local x, z = math.cos(a) * rc, math.sin(a) * rc
+			if ring == 0 or not nearAxis(x, z, 3.8) then
+				local col = if ring == 0 then Color3.fromRGB(208, 198, 174) else STONE[rng:Int(1, #STONE)]:Lerp(Color3.new(0, 0, 0), rng:Float() * 0.07)
+				stone(Vector3.new(2 * math.pi * rc / n - 0.28, 0.5, wR - 0.28), x, z, -a - math.pi / 2, col, if ring == 0 then 0.3 else 0.15)
+			end
+		end
+		r += wR
+		ring += 1
+	end
+	-- rayons de pierre sombre, de la fontaine jusqu'aux rues
+	for _, dir in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+		local d = 14.2
+		while d < 49 do
+			local x, z = dir[1] * (d + 1.4), dir[2] * (d + 1.4)
+			local yaw = if dir[1] ~= 0 then 0 else math.pi / 2
+			stone(Vector3.new(2.6, 0.5, 4.2), x, z, yaw, Color3.fromRGB(104, 100, 98):Lerp(Color3.fromRGB(130, 124, 116), rng:Float()), 0.17)
+			d += 2.9
+		end
+	end
+	-- bordure : pierres posées le long d'un cercle (sauf aux entrées)
+	local function curbCircle(cx: number, cz: number, rad: number, skip: (x: number, z: number) -> boolean)
+		local n = math.floor(2 * math.pi * rad / 2.7)
+		for i = 0, n - 1 do
+			local a = i / n * math.pi * 2
+			local x, z = cx + math.cos(a) * rad, cz + math.sin(a) * rad
+			if not skip(x, z) then
+				stone(Vector3.new(2.4, 0.9, 1.1), x, z, -a - math.pi / 2, Color3.fromRGB(196, 190, 178):Lerp(Color3.fromRGB(150, 146, 140), rng:Float() * 0.5), 0.4)
+			end
+		end
+	end
+	curbCircle(0, 0, 49.4, function(x, z)
+		return nearAxis(x, z, 7)
+	end)
+	curbCircle(140, 0, 40.4, function(x, z)
+		return x < 120 and math.abs(z) < 7
+	end)
+	curbCircle(-140, 0, 42.4, function(x, z)
+		return x > -120 and math.abs(z) < 7
+	end)
+	curbCircle(0, 142, 26.4, function(x, z)
+		return (z < 130 and math.abs(x) < 7) or math.sqrt(x * x + (z - 178) ^ 2) < 23
+	end)
+	-- bordures des rues (le pont et l'escalier du Cercle des Runes ont les leurs)
+	for _, seg in { { 0, 1, 52, 74 }, { 1, 0, 52, 98 }, { -1, 0, 52, 96 } } do
+		local ax, az, d0, d1 = seg[1], seg[2], seg[3], seg[4]
+		local d = d0
+		while d < d1 do
+			for _, side in { -1, 1 } do
+				local x = ax * (d + 1.3) + az * side * 6.2
+				local z = az * (d + 1.3) + ax * side * 6.2
+				local yaw = if ax ~= 0 then 0 else math.pi / 2
+				stone(Vector3.new(2.4, 0.9, 1.1), x, z, yaw, Color3.fromRGB(196, 190, 178):Lerp(Color3.fromRGB(150, 146, 140), rng:Float() * 0.5), 0.4)
+			end
+			d += 2.7
+		end
+	end
+end
+
 -- emplacements occupés et test de place libre (utilisés ensuite par les décors)
 local hubPlaced: { Common.Spot } = {}
 local hubFree: (x: number, z: number, r: number) -> boolean = function()
@@ -70,6 +158,7 @@ function Hub.Build(root: Instance): Result
 		local a = i / 4 * math.pi * 2 + math.pi / 4
 		Buildings.Bench(plaza, CFrame.lookAt(Vector3.new(math.cos(a) * 18, G, math.sin(a) * 18), Vector3.new(0, G, 0)) * CFrame.Angles(0, math.pi, 0))
 	end
+	pave(plaza, ground)
 	Buildings.Banner(plaza, CFrame.new(-10, G, -46), Color3.fromRGB(60, 90, 170), C.gold)
 	Buildings.Banner(plaza, CFrame.new(10, G, -46), Color3.fromRGB(170, 50, 50), C.gold)
 

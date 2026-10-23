@@ -60,6 +60,28 @@ les zones d'ennemis sont des plateaux de plus en plus hauts et de plus en plus d
 Chaque camp a son **autel d'invocation** (bannière du monde), un **donneur de quêtes** (Sire Aldric, Maëlle) et une
 pierre de retour.
 
+### Sol, détails et bâtiments
+
+- **Matériaux haute résolution** : la place active les matériaux 2022 de Roblox (`MaterialService.Use2022Materials`)
+  et l'herbe animée du terrain (`Terrain.Decoration`, `GrassLength`), réglés dans `default.project.json` (ces
+  propriétés ne sont pas modifiables par script).
+- **Terrain** : mélange de matériaux à petite échelle (bords de chemins irréguliers, taches de terre nue ou d'herbe
+  sèche, affleurements rocheux sur les pentes, rives de boue ou de sable).
+- **Place du village** : anneaux de dalles autour de la fontaine (joints visibles), rayons de pierre sombre vers les
+  rues, bordures le long de la place, des rues et des quartiers.
+- **Détails au sol** (client, `Controllers/GroundDetail`) : touffes d'herbe, herbes hautes, fleurs aux couleurs de
+  chaque monde, cailloux, plaques de gravier, feuilles mortes, champignons, roseaux, coquillages, brindilles. Ils sont
+  choisis selon le matériau du terrain sous chaque point, par tranches de 32 × 32 studs autour du joueur, sans
+  collision ni ombre, jamais sous un bâtiment. Portée (56 à 128 studs) et densité suivent la qualité graphique choisie
+  par le joueur.
+- **Bâtiments** : maisons à colombages avec encorbellement et abouts de solives, fenêtres à croisées (vitres allumées
+  ou sombres, volets, jardinières fleuries), croix de Saint-André, moellons du soubassement, porte cloutée et auvent,
+  rives de toit, lucarne, oculus, cheminée, pots de fleurs, tas de bois, tonneau de pluie, lierre ; toits en tuiles,
+  ardoise, chaume ou bardeaux et murs enduits. Tours à socle évasé, cordons et meurtrières ; forge (soufflet, auge,
+  meule, râtelier d'épées) ; fontaine à margelle et gargouilles ; puits, étals, moulin, tentes et phare enrichis.
+
+![Les bâtiments](docs/images/batiments.jpg)
+
 ### Héros et invocation
 
 23 héros (12 dans le Val, 11 sur les Falaises), de Commun à Mythique, dont deux héros **Secrets** obtenus en
@@ -117,7 +139,9 @@ passes Robux (Or ×2, Chance royale, Escouade royale, Invocation éclair, Grande
 ## Galerie
 
 Vues en perspective rendues hors de Roblox à partir des pièces et du terrain réellement construits par le serveur
-(banc d'essai), avec les héros et les monstres voxel en situation.
+(banc d'essai), avec les héros et les monstres voxel en situation. Les matériaux y sont imités par des textures
+procédurales, et les détails au sol viennent du même module que dans le jeu. L'herbe animée propre à Roblox n'y est
+pas dessinée.
 
 ### Le village
 
@@ -168,7 +192,7 @@ Vues en perspective rendues hors de Roblox à partir des pièces et du terrain r
 src/
   ReplicatedStorage/Shared/
     Config/        données du jeu (équilibrage, mondes, stations…)
-    Logic/         formules pures : statistiques, progression, gacha, butin, quêtes, modèle du profil
+    Logic/         formules pures : statistiques, progression, gacha, butin, quêtes, modèle du profil, détails au sol
     Voxel/         assembleur des modèles voxel + modèles générés (Models/) et portraits pixel
     Anim/          animation procédurale (démarches, attaques à poses clés, chaînes souples, clignements)
     Util/          signaux, aléatoire déterministe, formats (nombres, temps, texte UTF-8)
@@ -181,12 +205,12 @@ src/
     Main.client    démarrage du client
     UI/            thème, composants, pixel art, HUD, gestionnaire de menus
     Menus/         héros, invocation, forge, bijoutier, voyage, tour et raids, quêtes, récompenses, boutique…
-    Controllers/   héros, ennemis, effets, stations, ambiance, décor animé, PNJ, sons
+    Controllers/   héros, ennemis, effets, stations, ambiance, décor animé, PNJ, sons, détails au sol
   ReplicatedFirst/ écran de chargement
 tools/
   voxel/           modélisation voxel (Python) : héros, ennemis, décors, portraits, aperçus, plans, vues 3D
   ui/icons.py      icônes pixel art 16×16 de l'interface
-  preview/         aperçus Lune (animations, reliefs, export du terrain)
+  preview/         aperçus Lune (animations, reliefs, export du terrain, des détails au sol, vitrine des bâtiments)
   tests/           tests unitaires et bancs d'essai
 ```
 
@@ -203,7 +227,7 @@ TOOLS=/chemin/vers/outils ROBLOX_TYPES=/chemin/globalTypes.d.luau ./tools/check.
 1. **Tests unitaires** (Lune) des formules partagées et des données de configuration.
 2. **Banc d'essai de l'interface et des contrôleurs** (`tools/tests/ui_smoke.luau`) : HUD, 22 menus et
    contrôleurs construits avec de vraies instances Roblox (propriétés validées), chaque bouton cliqué, scénario
-   de combat simulé (ennemis, coups, morts, butin, télégraphes).
+   de combat simulé (ennemis, coups, morts, butin, télégraphes), détails au sol posés autour du joueur.
 3. **Banc d'essai du serveur** (`tools/tests/world_smoke.luau`) : le vrai serveur démarre, construit le village,
    les deux mondes et les arènes, puis un joueur simulé se connecte, invoque, s'équipe, s'améliore, combat, bat le
    boss, gravit la Tour, gagne un raid, polit un accessoire, fait évoluer un héros et se déconnecte.
@@ -211,8 +235,10 @@ TOOLS=/chemin/vers/outils ROBLOX_TYPES=/chemin/globalTypes.d.luau ./tools/check.
 
 Les plans vus de dessus et les vues de la galerie sont produits à partir des pièces réellement construites par le
 banc d'essai du serveur (`WORLD_DUMP=parts.json`), puis `tools/voxel/site_render.py` (plans) et
-`tools/voxel/game_views.py` (vues 3D : petit moteur de rendu logiciel avec ombres portées, `tools/voxel/scene_render.py`,
-terrain exporté par `tools/preview/terrain_dump.luau`).
+`tools/voxel/game_views.py` (vues 3D : petit moteur de rendu logiciel avec ombres portées et textures procédurales des
+matériaux, `tools/voxel/scene_render.py` ; terrain exporté par `tools/preview/terrain_dump.luau`, détails au sol par
+`tools/preview/detail_dump.luau`). La planche des bâtiments : `tools/preview/buildings_dump.luau` puis
+`tools/voxel/building_views.py`.
 
 ## Régénérer les ressources
 

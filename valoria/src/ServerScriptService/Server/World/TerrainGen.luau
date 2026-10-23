@@ -40,6 +40,7 @@ export type Palette = {
 	high: Enum.Material,
 	snowline: number,
 	deep: Enum.Material,
+	patch: Enum.Material, -- petites taches dans l'herbe (terre nue, herbe sèche…)
 }
 
 TerrainGen.Palettes = {
@@ -54,6 +55,7 @@ TerrainGen.Palettes = {
 		high = Enum.Material.Snow,
 		snowline = 210,
 		deep = Enum.Material.Rock,
+		patch = Enum.Material.LeafyGrass,
 	},
 	W1 = {
 		flat = Enum.Material.LeafyGrass,
@@ -66,6 +68,7 @@ TerrainGen.Palettes = {
 		high = Enum.Material.Snow,
 		snowline = 270,
 		deep = Enum.Material.Rock,
+		patch = Enum.Material.Ground,
 	},
 	W2 = {
 		flat = Enum.Material.Grass,
@@ -78,6 +81,7 @@ TerrainGen.Palettes = {
 		high = Enum.Material.Snow,
 		snowline = 280,
 		deep = Enum.Material.Basalt,
+		patch = Enum.Material.LeafyGrass,
 	},
 } :: { [string]: Palette }
 
@@ -90,7 +94,8 @@ function TerrainGen.SurfaceMaterial(pal: Palette, s: Relief.Sample, slope: numbe
 	if s.water and h < s.water - 0.5 then
 		return pal.bed
 	end
-	if s.path > 0.5 and slope < 0.9 then
+	-- bords de chemin irréguliers : la terre battue mord sur l'herbe par endroits
+	if s.path > 0.5 + math.noise(x / 7, z / 7, 11) * 0.3 and slope < 0.9 then
 		return pal.path
 	end
 	if h > pal.snowline + math.noise(x / 50, z / 50, 3) * 25 and slope < 1.2 then
@@ -99,15 +104,23 @@ function TerrainGen.SurfaceMaterial(pal: Palette, s: Relief.Sample, slope: numbe
 	if slope > 1.05 then
 		return pal.cliff
 	end
-	if s.wet > 0.4 then
+	if s.wet > 0.4 + math.noise(x / 9, z / 9, 12) * 0.2 then
 		return pal.shore
 	end
 	if slope > 0.6 then
-		return if math.noise(x / 30, z / 30, 5) > 0 then pal.slope else pal.cliff
+		return if math.noise(x / 30, z / 30, 5) + math.noise(x / 9, z / 9, 6) * 0.4 > 0 then pal.slope else pal.cliff
 	end
-	local n = math.noise(x / 46, z / 46, 8)
+	-- affleurements rocheux sur les pentes douces
+	if slope > 0.32 and math.noise(x / 13, z / 13, 21) > 0.42 then
+		return pal.cliff
+	end
+	-- grandes nappes (bruit large + détail fin pour des contours irréguliers), puis petites taches
+	local n = math.noise(x / 46, z / 46, 8) + math.noise(x / 12, z / 12, 9) * 0.3
 	if n > 0.32 and s.plateau < 0.5 then
 		return pal.flat2
+	end
+	if math.noise(x / 9, z / 9, 13) > 0.56 then
+		return pal.patch
 	end
 	return pal.flat
 end
@@ -249,7 +262,8 @@ function TerrainGen.ApplyColors()
 	terrain.WaterReflectance = 0.6
 	terrain.WaterWaveSize = 0.18
 	terrain.WaterWaveSpeed = 9
-	terrain.Decoration = true
+	-- l'herbe animée (Decoration, GrassLength) et les matériaux 2022 se règlent dans default.project.json :
+	-- ces propriétés ne sont pas modifiables par script
 end
 
 return TerrainGen

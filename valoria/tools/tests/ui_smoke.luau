@@ -392,7 +392,7 @@ step("contrôleurs : init", function()
 	localPlayer.Character = char
 	localPlayer:SetAttribute("Zone", "W1")
 	localPlayer:SetAttribute("Team", "Squire:0:4,Archer:1:5,RedDragon:0:6")
-	for _, name in { "Effects", "Enemies", "Heroes", "Stations", "Decor", "Environment", "Sound", "Npcs" } do
+	for _, name in { "Effects", "Enemies", "Heroes", "Stations", "Decor", "Environment", "Sound", "Npcs", "GroundDetail" } do
 		req(Controllers[name]).Init()
 	end
 	Hud.findBoss = req(Controllers.Enemies).FindBoss
@@ -464,6 +464,17 @@ step("contrôleurs : combat", function()
 	settle(200)
 	local npcs = workspaceMock:FindFirstChild("PNJ")
 	print(string.format("Contrôleurs : %d PNJ", if npcs then #npcs:GetChildren() else -1))
+	-- détails au sol posés autour du joueur (sol simulé : herbe)
+	local details = workspaceMock:FindFirstChild("DetailsAuSol")
+	local nChunks, nParts = 0, 0
+	for _, c in (if details then details:GetChildren() else {}) do
+		nChunks += 1
+		nParts += #c:GetChildren()
+	end
+	if nChunks < 4 or nParts < 50 then
+		error(string.format("détails au sol manquants : %d tranches, %d pièces", nChunks, nParts))
+	end
+	print(string.format("Contrôleurs : détails au sol, %d tranches, %d pièces", nChunks, nParts))
 	remotes.EnemyDeath.OnClientEvent:Fire("W1", 2, {}, true)
 	remotes.Zone.OnClientEvent:Fire("Tower:1", { kind = "Tower", slot = 1 })
 	remotes.EnemySnapshot.OnClientEvent:Fire("Tower:1", {})

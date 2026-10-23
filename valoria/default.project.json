@@ -55,6 +55,13 @@
         "StreamingMinRadius": 256,
         "Gravity": 196.2,
         "FallenPartsDestroyHeight": -500
+      },
+      "Terrain": {
+        "$className": "Terrain",
+        "$properties": {
+          "Decoration": true,
+          "GrassLength": 0.85
+        }
       }
     },
     "Lighting": {
@@ -78,6 +85,12 @@
           0.2,
           0.22
         ]
+      }
+    },
+    "MaterialService": {
+      "$className": "MaterialService",
+      "$properties": {
+        "Use2022Materials": true
       }
     },
     "SoundService": {
