@@ -86,8 +86,10 @@ function G.load(which)
 			S[ix][iz] = s
 		end
 	end
+	local C = {}
 	for ix = 1, n do
 		M[ix] = {}
+		C[ix] = {}
 		for iz = 1, n do
 			local lx = x0 + (ix - 0.5) * RES - origin.X
 			local lz = z0 + (iz - 0.5) * RES - origin.Z
@@ -95,9 +97,15 @@ function G.load(which)
 			local dzh = (H[ix][math.min(n, iz + 1)] - H[ix][math.max(1, iz - 1)]) / (2 * RES)
 			local slope = math.sqrt(dxh * dxh + dzh * dzh)
 			M[ix][iz] = TerrainGen.SurfaceMaterial(pal, S[ix][iz], slope, lx, lz, paved and paved(lx, lz)).Name
+			-- paroi de falaise : dans le jeu, chaque voxel y prend la couche de son altitude
+			C[ix][iz] = slope > 1.05 and M[ix][iz] ~= pal.high.Name and M[ix][iz] ~= pal.path.Name
 		end
 	end
-	local grid = { n = n, res = RES, x0 = x0, z0 = z0, origin = origin, H = H, S = S, M = M, colors = {} }
+	local strata = {}
+	for _, m in pal.strata do
+		table.insert(strata, m.Name)
+	end
+	local grid = { n = n, res = RES, x0 = x0, z0 = z0, origin = origin, H = H, S = S, M = M, cliff = C, strata = strata, colors = {} }
 	-- couleurs par nom de matériau (les EnumItem de Lune ne sont pas des clés stables)
 	for mat, col in TerrainGen.Colors do
 		grid.colors[mat.Name] = col

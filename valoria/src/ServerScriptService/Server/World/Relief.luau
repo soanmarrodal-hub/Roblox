@@ -23,7 +23,7 @@ export type Spec = {
 	trend: ((x: number, z: number) -> number)?,
 	terrace: { step: number, sharp: number }?,
 	edge: { from: number, height: number },
-	plateaus: { { x: number, z: number, h: number, r: number, blend: number } },
+	plateaus: { { x: number, z: number, h: number, r: number, blend: number, flat: boolean? } },
 	paths: { { { x: number, z: number, h: number } } },
 	pathWidth: number,
 	pathBlend: number,
@@ -134,7 +134,7 @@ function Relief.Sample(spec: Spec, x: number, z: number): Sample
 		local d = math.sqrt((x - p.x) ^ 2 + (z - p.z) ^ 2)
 		if d < p.r + p.blend then
 			local w = 1 - smoothstep(p.r, p.r + p.blend, d)
-			local target = p.h + math.noise(x / 40, z / 40, spec.seed + 3) * 1.6
+			local target = if p.flat then p.h else p.h + math.noise(x / 40, z / 40, spec.seed + 3) * 1.6
 			h = h + (target - h) * w
 			plateauW = math.max(plateauW, w)
 		end
@@ -257,8 +257,9 @@ end
 Relief.Meander = meander
 
 local function zonesAsPlateaus(w: Worlds.World): { any }
-	local out = {}
-	table.insert(out, { x = w.spawn.x, z = w.spawn.z, h = w.spawn.h, r = 46, blend = 26 })
+	local out: { { x: number, z: number, h: number, r: number, blend: number, flat: boolean? } } = {}
+	-- camp d'arrivée parfaitement plat : les dalles du kit de sol s'y raccordent sans marche
+	table.insert(out, { x = w.spawn.x, z = w.spawn.z, h = w.spawn.h, r = 46, blend = 26, flat = true })
 	for _, z in w.zones do
 		table.insert(out, { x = z.x, z = z.z, h = z.h, r = z.radius * 0.95, blend = 30 })
 	end

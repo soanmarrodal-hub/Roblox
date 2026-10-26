@@ -5,6 +5,7 @@
 -- Roblox appellent les mêmes fonctions avec le terrain exporté (tools/preview/detail_dump.luau).
 
 local Rng = require(script.Parent.Parent.Util.Rng)
+local Palette = require(script.Parent.Parent.Config.Palette)
 
 local GroundDetail = {}
 
@@ -31,11 +32,15 @@ local BASE: { [string]: Rule } = {
 	Sandstone = { { "pebble", 0.2 }, { "tuft", 0.06 } },
 	Cobblestone = { { "weed", 0.06 } },
 }
+-- (les règles par monde remplacent celles de base pour un matériau)
 local OVERRIDE: { [string]: { [string]: Rule } } = {
 	-- le Val en automne : feuilles mortes jusque dans l'herbe verte, champignons
 	W1 = {
 		Grass = { { "tuft", 0.36 }, { "tall", 0.08 }, { "leaves", 0.1 }, { "flowers", 0.06 }, { "pebble", 0.04 } },
 		LeafyGrass = { { "tuft", 0.4 }, { "leaves", 0.16 }, { "mushroom", 0.04 }, { "flowers", 0.04 }, { "pebble", 0.02 } },
+		-- chemins pavés : pierres légèrement surélevées, mousse et herbe dans les joints, feuilles
+		Cobblestone = { { "cobble", 0.22 }, { "moss", 0.12 }, { "weed", 0.1 }, { "leaves", 0.08 } },
+		Ground = { { "pebble", 0.1 }, { "root", 0.05 }, { "tuft", 0.16 }, { "twig", 0.04 }, { "leaves", 0.06 } },
 	},
 	-- les falaises : herbe rase et fleurs de lande, pas de feuilles mortes
 	W2 = {
@@ -224,6 +229,38 @@ function GroundDetail.Pieces(it: Item): { Piece }
 			local cf = f * CFrame.new(r:Range(-0.6, 0.6), 0.08, r:Range(-0.6, 0.6)) * CFrame.Angles(r:Range(-0.2, 0.2), r:Range(0, 6.28), 0)
 			table.insert(out, { shape = "Block", size = Vector3.new(0.7, 0.22, 0.5) * r:Range(0.7, 1.1), cf = cf, color = SHELLS[r:Int(1, #SHELLS)], material = "SmoothPlastic" })
 		end
+	elseif k == "moss" then
+		local moss = Palette.ValDAutomne.moss
+		for _ = 1, r:Int(2, 4) do
+			local size = Vector3.new(r:Range(0.5, 1.3), 0.08, r:Range(0.4, 1)) * Vector3.new(s, 1, s)
+			table.insert(out, { shape = "Block", size = size, cf = f * CFrame.new(r:Range(-0.9, 0.9), 0.05, r:Range(-0.9, 0.9)) * CFrame.Angles(0, r:Range(0, 6.28), 0), color = moss[r:Int(1, #moss)], material = "LeafyGrass" })
+		end
+	elseif k == "cobble" then
+		local pal = Palette.ValDAutomne
+		for _ = 1, r:Int(1, 2) do
+			local size = Vector3.new(r:Range(0.9, 1.5), 0.36, r:Range(0.8, 1.3)) * Vector3.new(s, 1, s)
+			local cf = f * CFrame.new(r:Range(-0.7, 0.7), 0.1, r:Range(-0.7, 0.7)) * CFrame.Angles(r:Range(-0.06, 0.06), r:Range(0, 6.28), r:Range(-0.06, 0.06))
+			local col = if r:Float() < 0.25 then pal.cobbleGray[r:Int(1, #pal.cobbleGray)] else pal.cobble[r:Int(1, #pal.cobble)]
+			table.insert(out, { shape = "Block", size = size, cf = cf, color = col, material = "Limestone" })
+		end
+	elseif k == "root" then
+		local wood = Palette.ValDAutomne.wood
+		local col = wood[r:Int(1, #wood)]
+		local a = f * CFrame.Angles(0, r:Range(0, 6.28), 0)
+		for i = 1, r:Int(2, 3) do
+			local len = r:Range(1.2, 2.2) * s
+			local cf = a * CFrame.new((i - 2) * 0.35, 0.05, len / 2 - 0.2) * CFrame.Angles(r:Range(-0.35, -0.15), r:Range(-0.5, 0.5), 0)
+			table.insert(out, { shape = "Block", size = Vector3.new(0.32, 0.3, len), cf = cf, color = col, material = "Wood" })
+		end
+	elseif k == "log" then
+		local wood = Palette.ValDAutomne.wood
+		local len = r:Range(2.4, 3.6) * s
+		local log = f * CFrame.new(0, 0.42, 0)
+		table.insert(out, { shape = "Block", size = Vector3.new(0.9, 0.9, len), cf = log, color = wood[r:Int(1, #wood)], material = "Wood" })
+		table.insert(out, { shape = "Block", size = Vector3.new(0.7, 0.7, 0.12), cf = log * CFrame.new(0, 0, len / 2), color = rgb(196, 160, 112), material = "Wood" })
+		table.insert(out, { shape = "Block", size = Vector3.new(0.3, 0.3, 1.1), cf = log * CFrame.new(0.4, 0.2, -len * 0.2) * CFrame.Angles(0.3, 0.9, 0), color = wood[1], material = "Wood" })
+		local moss = Palette.ValDAutomne.moss
+		table.insert(out, { shape = "Block", size = Vector3.new(0.7, 0.12, len * 0.5), cf = log * CFrame.new(0, 0.48, r:Range(-0.3, 0.3)), color = moss[r:Int(1, #moss)], material = "LeafyGrass" })
 	elseif k == "twig" then
 		local col = if it.material == "Sand" then rgb(176, 164, 142) else rgb(108, 80, 54)
 		table.insert(out, { shape = "Block", size = Vector3.new(0.22, 0.22, r:Range(2, 3.4) * s), cf = f * CFrame.new(0, 0.1, 0) * CFrame.Angles(0, 0, r:Range(-0.2, 0.2)), color = col, material = "Wood" })

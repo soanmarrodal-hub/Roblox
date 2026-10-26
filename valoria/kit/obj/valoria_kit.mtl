@@ -1,0 +1,8 @@
+# Valoria — matériau unique du kit de sol (atlas : une case de 32 × 32 pixels par teinte)
+newmtl valoria_kit
+Ka 0 0 0
+Kd 1 1 1
+Ks 0 0 0
+d 1
+illum 1
+map_Kd textures/atlas.png

@@ -189,7 +189,8 @@ static void texmod(int t, float px, float py, float pz, float nx, float ny, floa
 void raster(int W, int H, int n, const float *tri, const float *lsp, const float *ca, const float *cd,
             const float *al, const float *smap, int SN, float sbias, float *zb, float *img, int mode,
             const float *wp, const float *fn, const int *mt,
-            int gn, float gx0, float gz0, float gres, const unsigned char *gtex, const float *gcol) {
+            int gn, float gx0, float gz0, float gres, const unsigned char *gtex, const float *gcol,
+            const unsigned char *gcliff, int nstrata, const int *stex, const float *scol) {
     for (int t = 0; t < n; t++) {
         const float *v = tri + t * 9;
         float x0 = v[0], y0 = v[1], w0 = v[2], x1 = v[3], y1 = v[4], w1 = v[5], x2 = v[6], y2 = v[7], w2 = v[8];
@@ -251,8 +252,17 @@ void raster(int W, int H, int n, const float *tri, const float *lsp, const float
                             if (gx < 0) gx = 0; if (gz < 0) gz = 0; if (gx > gn - 1) gx = gn - 1; if (gz > gn - 1) gz = gn - 1;
                             int cell = gz * gn + gx;
                             float var = 0.96f + 0.08f * h01(gx, gz, 43);
-                            r *= gcol[cell * 3] * var; g *= gcol[cell * 3 + 1] * var; b *= gcol[cell * 3 + 2] * var;
+                            const float *cc = gcol + cell * 3;
                             tid = gtex[cell];
+                            if (nstrata > 0 && gcliff[cell] && fabsf(N[1]) < 0.8f) {
+                                /* paroi de falaise : couche selon l'altitude (bandes de 5 studs ondulées) */
+                                float yy = wy + 2.5f * sinf(wy * 0.37f) + (vn(wx * 0.025f, wz * 0.025f, 51) - 0.5f) * 8.0f;
+                                int band = (int)floorf(yy / 5.0f) % nstrata;
+                                if (band < 0) band += nstrata;
+                                tid = stex[band];
+                                cc = scol + band * 3;
+                            }
+                            r *= cc[0] * var; g *= cc[1] * var; b *= cc[2] * var;
                         }
                     }
                     float mo[3];
@@ -307,7 +317,8 @@ def lib():
         i = ctypes.POINTER(ctypes.c_int)
         u8 = ctypes.POINTER(ctypes.c_ubyte)
         _lib.raster.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, f, f, f, f, f, f, ctypes.c_int, ctypes.c_float, f, f, ctypes.c_int,
-                                f, f, i, ctypes.c_int, ctypes.c_float, ctypes.c_float, ctypes.c_float, u8, f]
+                                f, f, i, ctypes.c_int, ctypes.c_float, ctypes.c_float, ctypes.c_float, u8, f,
+                                u8, ctypes.c_int, i, f]
         _lib.depthmap.argtypes = [ctypes.c_int, ctypes.c_int, f, f]
     return _lib
 
@@ -544,7 +555,11 @@ class Terrain:
         n, res, x0, z0 = struct.unpack('<iiff', raw[:16])
         (ln,) = struct.unpack('<i', raw[16:20])
         names = raw[20:20 + ln].decode().split(',')
-        rec = np.frombuffer(raw[20 + ln:], dtype=np.dtype([('h', '<f4'), ('w', '<f4'), ('c', 'u1', 4)]))
+        o = 20 + ln
+        (ls,) = struct.unpack('<i', raw[o:o + 4])
+        strata = raw[o + 4:o + 4 + ls].decode().split(',') if ls else []
+        o += 4 + ls
+        rec = np.frombuffer(raw[o:], dtype=np.dtype([('h', '<f4'), ('w', '<f4'), ('c', 'u1', 4)]))
         rec = rec.reshape(n, n)  # [iz][ix]
         self.n, self.res, self.x0, self.z0 = n, res, x0, z0
         self.h = rec['h'].astype(np.float32)
@@ -554,8 +569,19 @@ class Terrain:
         lut = np.zeros(256, np.uint8)
         for i, name in enumerate(names):
             lut[i + 1] = TEX.get(name, 0)
-        self.tex = np.ascontiguousarray(lut[rec['c'][..., 3]])
+        mid = rec['c'][..., 3] & 127
+        self.tex = np.ascontiguousarray(lut[mid])
         self.col = np.ascontiguousarray(self.c.reshape(-1, 3))
+        # parois de falaise et couches (texture, couleur moyenne des cellules de ce matériau)
+        self.cliff = np.ascontiguousarray(((rec['c'][..., 3] >> 7) & 1).astype(np.uint8))
+        stex, scol = [], []
+        for name in strata:
+            k = names.index(name) + 1 if name in names else -1
+            cells = self.c[mid == k]
+            stex.append(TEX.get(name, 0))
+            scol.append(cells.mean(0) if len(cells) else np.array([0.5, 0.5, 0.5]))
+        self.stex = np.ascontiguousarray(np.array(stex, np.int32))
+        self.scol = np.ascontiguousarray(np.array(scol, np.float32).reshape(-1))
 
     def xs(self, ix):
         return self.x0 + (ix + 0.5) * self.res
@@ -781,11 +807,14 @@ def render(mesh, eye, target, size=(1600, 900), fov=50, sun=(-0.45, 0.75, -0.35)
     ter = mesh.terrain
     if ter is not None:
         gn, gx0, gz0, gres = ter.n, ter.x0, ter.z0, ter.res
-        gtex, gcol = ter.tex, ter.col
+        gtex, gcol, gcliff, stex, scol = ter.tex, ter.col, ter.cliff, ter.stex, ter.scol
     else:
         gn, gx0, gz0, gres = 0, 0.0, 0.0, 1.0
         gtex, gcol = np.zeros(1, np.uint8), np.zeros(3, np.float32)
+        gcliff, stex, scol = np.zeros(1, np.uint8), np.zeros(1, np.int32), np.zeros(3, np.float32)
     u8p = gtex.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
+    cliffp = gcliff.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
+    nstrata = len(stex) if ter is not None else 0
     op = al_k >= 0.99
     bias = 1.2 * SN / (2 * E)
     for mode, m in ((0, op), (1, ~op)):
@@ -800,7 +829,8 @@ def render(mesh, eye, target, size=(1600, 900), fov=50, sun=(-0.45, 0.75, -0.35)
                  fp(np.ascontiguousarray(ca_k[ii])), fp(np.ascontiguousarray(cd_k[ii])), fp(np.ascontiguousarray(al_k[ii])),
                  fp(sm), SN, ctypes.c_float(bias), fp(zb), fp(img), mode,
                  fp(np.ascontiguousarray(wp_k[ii])), fp(np.ascontiguousarray(fn_k[ii])), mt_i.ctypes.data_as(ctypes.POINTER(ctypes.c_int)),
-                 gn, ctypes.c_float(gx0), ctypes.c_float(gz0), ctypes.c_float(gres), u8p, fp(gcol))
+                 gn, ctypes.c_float(gx0), ctypes.c_float(gz0), ctypes.c_float(gres), u8p, fp(gcol),
+                 cliffp, nstrata, stex.ctypes.data_as(ctypes.POINTER(ctypes.c_int)), fp(scol))
     img = img.reshape(H, W, 3)
     zb = zb.reshape(H, W)
     # ciel

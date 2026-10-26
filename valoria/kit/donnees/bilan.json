@@ -1,0 +1,225 @@
+{
+  "modules": [
+    {
+      "description": "Bloc surélevé de 4 studs : herbe sur terre",
+      "groupe": "Relief",
+      "module": "Bloc_Terrain_H4",
+      "pieces_moyenne": 22,
+      "variantes": 2
+    },
+    {
+      "description": "Bloc surélevé de 8 studs : terre puis couches rocheuses",
+      "groupe": "Relief",
+      "module": "Bloc_Terrain_H8",
+      "pieces_moyenne": 25,
+      "variantes": 2
+    },
+    {
+      "description": "Pierre d'angle (coin nord-ouest)",
+      "groupe": "Bordures",
+      "module": "Bordure_Coin",
+      "pieces_moyenne": 1,
+      "variantes": 2
+    },
+    {
+      "description": "Bordure de pierres le long du côté nord",
+      "groupe": "Bordures",
+      "module": "Bordure_Pierre",
+      "pieces_moyenne": 4,
+      "variantes": 2
+    },
+    {
+      "description": "Croisement : raccords sur les quatre côtés",
+      "groupe": "Chemin",
+      "module": "Chemin_Croix",
+      "pieces_moyenne": 23.5,
+      "variantes": 2
+    },
+    {
+      "description": "Tronçon droit : raccords nord et sud",
+      "groupe": "Chemin",
+      "module": "Chemin_Droit",
+      "pieces_moyenne": 30,
+      "variantes": 2
+    },
+    {
+      "description": "Extrémité : raccord au nord, bord herbeux ailleurs",
+      "groupe": "Chemin",
+      "module": "Chemin_Fin",
+      "pieces_moyenne": 31,
+      "variantes": 2
+    },
+    {
+      "description": "Dalle pavée isolée, bords irréguliers",
+      "groupe": "Chemin",
+      "module": "Chemin_Seul",
+      "pieces_moyenne": 38,
+      "variantes": 2
+    },
+    {
+      "description": "Embranchement en T : raccords nord, est, sud",
+      "groupe": "Chemin",
+      "module": "Chemin_T",
+      "pieces_moyenne": 25,
+      "variantes": 2
+    },
+    {
+      "description": "Virage : raccords nord et est",
+      "groupe": "Chemin",
+      "module": "Chemin_Virage",
+      "pieces_moyenne": 30.5,
+      "variantes": 2
+    },
+    {
+      "description": "Bûche moussue (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Bois",
+      "pieces_moyenne": 4,
+      "variantes": 3
+    },
+    {
+      "description": "Brindille (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Brindille",
+      "pieces_moyenne": 1,
+      "variantes": 3
+    },
+    {
+      "description": "Cailloux (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Cailloux",
+      "pieces_moyenne": 2,
+      "variantes": 3
+    },
+    {
+      "description": "Champignons (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Champignons",
+      "pieces_moyenne": 4.666666666666667,
+      "variantes": 3
+    },
+    {
+      "description": "Feuilles mortes orange, rouges et jaunes (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Feuilles",
+      "pieces_moyenne": 3.6666666666666665,
+      "variantes": 3
+    },
+    {
+      "description": "Petites fleurs (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Fleurs",
+      "pieces_moyenne": 4,
+      "variantes": 3
+    },
+    {
+      "description": "Herbes hautes (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_HerbeHaute",
+      "pieces_moyenne": 5,
+      "variantes": 3
+    },
+    {
+      "description": "Plaques de mousse (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Mousse",
+      "pieces_moyenne": 3,
+      "variantes": 3
+    },
+    {
+      "description": "Racines affleurantes (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Racine",
+      "pieces_moyenne": 2,
+      "variantes": 3
+    },
+    {
+      "description": "Touffe d'herbe (décor facultatif, sans collision)",
+      "groupe": "Deco",
+      "module": "Deco_Touffe",
+      "pieces_moyenne": 6,
+      "variantes": 3
+    },
+    {
+      "description": "Quatre marches d'un stud, montent vers le nord",
+      "groupe": "Relief",
+      "module": "Escalier_H4",
+      "pieces_moyenne": 13,
+      "variantes": 2
+    },
+    {
+      "description": "Falaise de 16 studs en strates, saillies rocheuses",
+      "groupe": "Relief",
+      "module": "Falaise_H16",
+      "pieces_moyenne": 50.5,
+      "variantes": 2
+    },
+    {
+      "description": "Pente praticable de 4 studs, monte vers le nord",
+      "groupe": "Relief",
+      "module": "Pente_H4",
+      "pieces_moyenne": 15,
+      "variantes": 2
+    },
+    {
+      "description": "Rocher d'environ 5 studs",
+      "groupe": "Rochers",
+      "module": "Rocher_Grand",
+      "pieces_moyenne": 6,
+      "variantes": 3
+    },
+    {
+      "description": "Rocher d'environ 3,4 studs",
+      "groupe": "Rochers",
+      "module": "Rocher_Moyen",
+      "pieces_moyenne": 5.333333333333333,
+      "variantes": 3
+    },
+    {
+      "description": "Rocher cubique d'environ 1,6 stud (sans collision)",
+      "groupe": "Rochers",
+      "module": "Rocher_Petit",
+      "pieces_moyenne": 6,
+      "variantes": 3
+    },
+    {
+      "description": "Dalle d'herbe 8 × 8, touffes en relief",
+      "groupe": "Sol",
+      "module": "Sol_Herbe",
+      "pieces_moyenne": 17,
+      "variantes": 3
+    },
+    {
+      "description": "Transition terre / herbe par plaques",
+      "groupe": "Sol",
+      "module": "Sol_Mixte",
+      "pieces_moyenne": 15,
+      "variantes": 3
+    },
+    {
+      "description": "Place pavée (pavés sur toute la dalle)",
+      "groupe": "Sol",
+      "module": "Sol_Paves",
+      "pieces_moyenne": 27.666666666666668,
+      "variantes": 3
+    },
+    {
+      "description": "Dalle de terre, taches, cailloux, bord herbeux",
+      "groupe": "Sol",
+      "module": "Sol_Terre",
+      "pieces_moyenne": 13,
+      "variantes": 3
+    }
+  ],
+  "zone_demo": {
+    "couches": {
+      "Bordures": 88,
+      "Deco": 189,
+      "Relief": 567,
+      "Rochers": 17,
+      "Sol": 915
+    },
+    "pieces": 1776,
+    "plan": "8 8 F F F F 8 8\n4 4 8 h h 8 4 4\n/ 4 4 h h 4 4 e\nh h # # # # h h\nh t # p p # h r\nR h # p p # # #\nh m # h h # h h\nh h # h t h G h\n"
+  }
+}

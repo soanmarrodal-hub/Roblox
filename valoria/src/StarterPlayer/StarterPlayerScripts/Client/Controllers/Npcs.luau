@@ -55,7 +55,14 @@ local function spawnNpc(folder: Folder, st: Stations.Station, cast: { model: str
 	local pos = st.pos + dir * (st.radius * 0.55)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = { workspace.Terrain }
+	-- sol : terrain, et dalles du kit de sol là où un camp en est pavé (les PNJ ne s'y enfoncent pas)
+	local ground: { Instance } = { workspace.Terrain }
+	local monde = workspace:FindFirstChild("Monde")
+	local kitFloor = monde and monde:FindFirstChild("SolDuCamp", true)
+	if kitFloor then
+		table.insert(ground, kitFloor)
+	end
+	params.FilterDescendantsInstances = ground
 	local hit = workspace:Raycast(pos + Vector3.new(0, 12, 0), Vector3.new(0, -30, 0), params)
 	if hit then
 		pos = Vector3.new(pos.X, hit.Position.Y, pos.Z)

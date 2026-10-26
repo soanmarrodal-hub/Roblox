@@ -60,6 +60,25 @@ les zones d'ennemis sont des plateaux de plus en plus hauts et de plus en plus d
 Chaque camp a son **autel d'invocation** (bannière du monde), un **donneur de quêtes** (Sire Aldric, Maëlle) et une
 pierre de retour.
 
+### Direction artistique et kit de sol
+
+Voxel 3D stylisé, lisible comme un jeu Roblox : herbe sur terre comme des blocs, chemins pavés de pierre
+beige, falaises en couches de roche, feuilles d'automne, petites fleurs. Une palette commune
+(`src/ReplicatedStorage/Shared/Config/Palette.luau`) fixe les couleurs du terrain, du kit et des détails au sol.
+
+- **Kit de sol modulaire** ([`kit/`](kit/README.md)) : dalles de 8 × 8 studs, chemins pavés à raccords
+  automatiques (droit, virage, T, croix, extrémité), bordures, blocs de terrain de 4 et 8 studs, falaise de 16
+  studs en strates, pente, escalier, rochers, décor séparé. Livré pour Roblox Studio (`.rbxmx` avec
+  assembleur), en OBJ (un matériau, un atlas de textures) et avec sa documentation. Le camp du Val d'Automne
+  est construit avec ces modules.
+- **Terrain** : herbe verte et nappes d'herbe sèche dans le Val, chemins pavés beiges aux bords irréguliers
+  (pierres surélevées, mousse et herbe dans les joints posées côté client), falaises en couches de roche
+  d'épaisseurs inégales dans tous les lieux (ocre et beige dans le Val, ardoise et basalte sur les Falaises).
+
+| | |
+| --- | --- |
+| ![Zone de démonstration du kit](kit/apercus/zone_demo_ensemble.jpg) | ![Planche des modules](kit/apercus/planche_modules.jpg) |
+
 ### Sol, détails et bâtiments
 
 - **Matériaux haute résolution** : la place active les matériaux 2022 de Roblox (`MaterialService.Use2022Materials`)
@@ -200,7 +219,7 @@ src/
     Main.server    démarrage des services
     Services/      données, joueurs, héros, invocations, combat, ennemis, boss, tour, raids, quêtes,
                    récompenses, boutique, téléportations, classements, cuisson des modèles, monde
-    World/         relief, terrain, bâtiments, décors, village, mondes, arènes
+    World/         relief, terrain, kit de sol, bâtiments, décors, village, mondes, arènes
   StarterPlayer/StarterPlayerScripts/Client/
     Main.client    démarrage du client
     UI/            thème, composants, pixel art, HUD, gestionnaire de menus
@@ -212,6 +231,8 @@ tools/
   ui/icons.py      icônes pixel art 16×16 de l'interface
   preview/         aperçus Lune (animations, reliefs, export du terrain, des détails au sol, vitrine des bâtiments)
   tests/           tests unitaires et bancs d'essai
+  kit/             kit de sol : export .rbxmx et OBJ, aperçus, assembleur pour Studio
+kit/               livrables du kit de sol (.rbxmx, OBJ, aperçus, documentation)
 ```
 
 Le serveur fait autorité : les ennemis n'existent que sous forme de données côté serveur et sont dessinés par les
@@ -231,7 +252,8 @@ TOOLS=/chemin/vers/outils ROBLOX_TYPES=/chemin/globalTypes.d.luau ./tools/check.
 3. **Banc d'essai du serveur** (`tools/tests/world_smoke.luau`) : le vrai serveur démarre, construit le village,
    les deux mondes et les arènes, puis un joueur simulé se connecte, invoque, s'équipe, s'améliore, combat, bat le
    boss, gravit la Tour, gagne un raid, polit un accessoire, fait évoluer un héros et se déconnecte.
-4. **Analyse de types** stricte (luau-lsp) et **construction** de la place (Rojo).
+4. **Kit de sol** : export du `.rbxmx`, relu et vérifié (emprises, collisions), assembleur du fichier exécuté.
+5. **Analyse de types** stricte (luau-lsp) et **construction** de la place (Rojo).
 
 Les plans vus de dessus et les vues de la galerie sont produits à partir des pièces réellement construites par le
 banc d'essai du serveur (`WORLD_DUMP=parts.json`), puis `tools/voxel/site_render.py` (plans) et
@@ -245,6 +267,8 @@ matériaux, `tools/voxel/scene_render.py` ; terrain exporté par `tools/preview/
 ```bash
 python3 tools/voxel/build.py         # modèles voxel, portraits, planches docs/images/*.png
 python3 tools/ui/icons.py            # icônes de l'interface + docs/images/icons.png
+lune run tools/kit/export_kit.luau kit && python3 tools/kit/export_obj.py kit && python3 tools/kit/kit_views.py kit
+                                     # kit de sol : .rbxmx, OBJ, aperçus (voir kit/README.md)
 ```
 
 ![Ennemis](docs/images/enemies.png)

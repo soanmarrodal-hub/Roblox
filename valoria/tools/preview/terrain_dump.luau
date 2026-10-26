@@ -2,8 +2,9 @@
 -- Exporte le terrain tel que l'écrit TerrainGen (hauteur, niveau d'eau, couleur et matériau de surface)
 -- pour les rendus hors de Roblox (tools/voxel/scene_render.py).
 --   lune run tools/preview/terrain_dump.luau <Hub|W1|W2> <sortie.bin>
--- Format : en-tête <iiff (n, résolution, x0, z0), <i + noms des matériaux séparés par des virgules, puis
--- n × n cellules <ffBBBB (hauteur, eau ou -9999, r, g, b, matériau) rangées [z][x].
+-- Format : en-tête <iiff (n, résolution, x0, z0), <i + noms des matériaux séparés par des virgules, <i + noms
+-- des couches de falaise (de bas en haut, bandes de 5 studs), puis n × n cellules <ffBBBB (hauteur, eau ou
+-- -9999, r, g, b, matériau + 128 si paroi de falaise) rangées [z][x].
 local fs = require("@lune/fs")
 local process = require("@lune/process")
 local TG = require("./terrain_grid")
@@ -28,9 +29,11 @@ for iz = 1, n do
 			r, g, b = math.floor(c.R * 255), math.floor(c.G * 255), math.floor(c.B * 255)
 		end
 		local water = if s.water then grid.origin.Y + s.water else -9999
-		table.insert(cells, string.pack("<ffBBBB", grid.origin.Y + s.h, water, r, g, b, ids[mat] or 0))
+		local id = (ids[mat] or 0) + (if grid.cliff[ix][iz] then 128 else 0)
+		table.insert(cells, string.pack("<ffBBBB", grid.origin.Y + s.h, water, r, g, b, id))
 	end
 end
 local names = table.concat(TG.MATERIALS, ",")
-fs.writeFile(out, string.pack("<iiff", n, grid.res, grid.x0, grid.z0) .. string.pack("<i", #names) .. names .. table.concat(cells))
+local strata = table.concat(grid.strata, ",")
+fs.writeFile(out, string.pack("<iiff", n, grid.res, grid.x0, grid.z0) .. string.pack("<i", #names) .. names .. string.pack("<i", #strata) .. strata .. table.concat(cells))
 print(string.format("%s : %d x %d cellules", which, n, n))

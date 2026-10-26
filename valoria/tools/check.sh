@@ -16,6 +16,11 @@ echo "== Interface et contrôleurs (banc d'essai Lune) =="
 echo "== Serveur : construction des mondes et session complète (banc d'essai Lune) =="
 "$(bin lune)" run tools/tests/world_smoke.luau .
 
+echo "== Kit de sol : export .rbxmx relu, assembleur exécuté (Lune) =="
+KIT_TMP="$(mktemp -d)"
+"$(bin lune)" run tools/kit/export_kit.luau "$KIT_TMP"
+rm -rf "$KIT_TMP"
+
 echo "== Analyse de types =="
 "$(bin rojo)" sourcemap default.project.json -o sourcemap.json >/dev/null
 "$(bin luau-lsp)" analyze --definitions="$TYPES" --sourcemap=sourcemap.json --no-strict-dm-types \

@@ -15,8 +15,29 @@ local Kit = require(script.Parent.Kit)
 local Buildings = require(script.Parent.Buildings)
 local Props = require(script.Parent.Props)
 local Common = require(script.Parent.Common)
+local GroundKit = require(script.Parent.GroundKit)
+local GroundLayout = require(script.Parent.GroundLayout)
 
 local World1 = {}
+
+-- Sol du camp en modules du kit (dalles de 8 × 8, centré sur l'arrivée, nord en haut) : place pavée autour de
+-- l'arrivée, placettes de l'autel (ouest) et de Sire Aldric (est) reliées par un chemin, chemin du poteau
+-- indicateur au nord, terre battue autour du feu ; le cercle de la pierre de retour (sud) reste sur le terrain.
+local CAMP_PLAN = [[
+. . . . . . . . . . . . .
+. . . . . . # . . . . . .
+. . . h h h # h h h . . .
+. . p p h h # h h p p . .
+. . p p # # # # # p p . .
+. . h h h p p p h h h . .
+. h h t h p p p h h h h .
+. . t t t p p p h h t . .
+. . h h h . . . h h h . .
+. . h h h . . . h h h . .
+. . . h h h h h h h . . .
+. . . . . . . . . . . . .
+. . . . . . . . . . . . .
+]]
 
 export type Result = { folder: Folder, grid: Kit.Grid, world: Worlds.World, spec: Relief.Spec, reserved: { Common.Spot } }
 
@@ -45,27 +66,41 @@ function World1.Build(root: Instance): Result
 	local camp = Kit.Folder(folder, "Camp")
 	local s = w.spawn
 	table.insert(reserved, { x = s.x, z = s.z, r = 62 })
-	Common.Fireplace(camp, at(s.x - 14, s.z + 6))
-	Buildings.Tent(camp, face(s.x - 32, s.z + 14, s.x, s.z), Color3.fromRGB(170, 60, 50), 0.9)
-	Buildings.Tent(camp, face(s.x + 32, s.z + 14, s.x, s.z), Color3.fromRGB(60, 90, 160), 0.9)
-	Buildings.Tent(camp, face(s.x - 16, s.z + 32, s.x, s.z), Color3.fromRGB(70, 120, 60), 0.7)
-	Buildings.Tent(camp, face(s.x + 16, s.z + 32, s.x, s.z), Color3.fromRGB(200, 160, 60), 0.7)
+	GroundKit.BuildZone(camp, "SolDuCamp", CAMP_PLAN, CFrame.new(o.X + s.x, o.Y + s.h, o.Z + s.z), { bordures = true, deco = true })
+	-- ce qui est posé sur une dalle du kit est relevé à son niveau
+	local campGrid = GroundLayout.Parse(CAMP_PLAN)
+	local function lift(x: number, z: number): number
+		local row = campGrid[math.floor((z - s.z) / 8 + 0.5) + 7]
+		local ch = row and row[math.floor((x - s.x) / 8 + 0.5) + 7]
+		return if ch and ch ~= "." then GroundKit.TOP else 0
+	end
+	local function onKit(x: number, z: number, dy: number?): CFrame
+		return at(x, z, lift(x, z) + (dy or 0))
+	end
+	local function faceKit(x: number, z: number, tx: number, tz: number, dy: number?, r: number?): CFrame
+		return face(x, z, tx, tz, lift(x, z) + (dy or 0), r)
+	end
+	Common.Fireplace(camp, onKit(s.x - 14, s.z + 6))
+	Buildings.Tent(camp, faceKit(s.x - 32, s.z + 14, s.x, s.z), Color3.fromRGB(170, 60, 50), 0.9)
+	Buildings.Tent(camp, faceKit(s.x + 32, s.z + 14, s.x, s.z), Color3.fromRGB(60, 90, 160), 0.9)
+	Buildings.Tent(camp, faceKit(s.x - 16, s.z + 32, s.x, s.z), Color3.fromRGB(70, 120, 60), 0.7)
+	Buildings.Tent(camp, faceKit(s.x + 16, s.z + 32, s.x, s.z), Color3.fromRGB(200, 160, 60), 0.7)
 	Common.PalisadeArc(camp, o, s.x, s.z, 47, math.rad(18), math.rad(162), ground)
 	for _, a in { math.rad(32), math.rad(148) } do
 		local x, z = s.x + math.cos(a) * 42, s.z + math.sin(a) * 42
-		Buildings.Watchtower(camp, face(x, z, s.x, s.z, -0.3))
+		Buildings.Watchtower(camp, faceKit(x, z, s.x, s.z, -0.3))
 	end
-	Buildings.Banner(camp, at(s.x - 10, s.z - 30), Color3.fromRGB(200, 120, 40), Kit.C.gold)
-	Buildings.Banner(camp, at(s.x + 10, s.z - 30), Color3.fromRGB(200, 120, 40), Kit.C.gold)
+	Buildings.Banner(camp, onKit(s.x - 10, s.z - 30), Color3.fromRGB(200, 120, 40), Kit.C.gold)
+	Buildings.Banner(camp, onKit(s.x + 10, s.z - 30), Color3.fromRGB(200, 120, 40), Kit.C.gold)
 	local zp = w.zones[1]
 	local zc = w.zones[2]
-	Buildings.Signpost(camp, at(s.x, s.z - 38), {
+	Buildings.Signpost(camp, onKit(s.x, s.z - 38), {
 		{ text = zp.name, angle = Common.ArrowAngle(s.x, s.z - 38, zp.x, zp.z) },
 		{ text = zc.name, angle = Common.ArrowAngle(s.x, s.z - 38, zc.x, zc.z) },
 		{ text = "Arène des Moissons", angle = Common.ArrowAngle(s.x, s.z - 38, w.boss.x, w.boss.z) },
 	})
 	local altar = Stations.Get("Altar1") :: Stations.Station
-	Buildings.Altar(camp, face(altar.pos.X - o.X - 10, altar.pos.Z - o.Z - 8, s.x, s.z), altar.color)
+	Buildings.Altar(camp, faceKit(altar.pos.X - o.X - 10, altar.pos.Z - o.Z - 8, s.x, s.z), altar.color)
 	local gate = Stations.Get("Gate1") :: Stations.Station
 	Buildings.RuneCircle(camp, at(gate.pos.X - o.X, gate.pos.Z - o.Z), 6, gate.color)
 	Buildings.WeaponRack(camp, face(s.x + 42, s.z - 4, s.x, s.z))
@@ -75,13 +110,13 @@ function World1.Build(root: Instance): Result
 	Buildings.Barrels(camp, face(s.x - 44, s.z + 22, s.x, s.z), 3)
 	Buildings.Barrels(camp, face(s.x + 44, s.z + 24, s.x, s.z), 2)
 	for _, sx in { -20, 20 } do
-		Buildings.LanternPost(camp, face(s.x + sx, s.z - 34, s.x, s.z))
+		Buildings.LanternPost(camp, faceKit(s.x + sx, s.z - 34, s.x, s.z))
 	end
 	-- pastilles des stations du monde
 	for _, st in Stations.List do
 		if st.zone == w.key then
 			local lx, lz = st.pos.X - o.X, st.pos.Z - o.Z
-			local pad = Buildings.Pad(camp, at(lx, lz).Position, st.radius, st.color)
+			local pad = Buildings.Pad(camp, onKit(lx, lz).Position, st.radius, st.color)
 			pad.Name = st.key
 			Kit.Sign(pad, st.name, st.hint, st.color, 9)
 		end

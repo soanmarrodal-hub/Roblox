@@ -10,24 +10,15 @@ local TerrainGen = {}
 local RES = 4
 local CHUNK = 64
 
--- Couleurs globales des matériaux (le terrain est partagé par tous les mondes, d'où une palette par monde
--- construite sur des matériaux différents : herbe verte au village et sur la côte, herbe dorée au Val…).
-TerrainGen.Colors = {
-	[Enum.Material.Grass] = Color3.fromRGB(104, 150, 70),
-	[Enum.Material.LeafyGrass] = Color3.fromRGB(176, 146, 62),
-	[Enum.Material.Ground] = Color3.fromRGB(112, 84, 54),
-	[Enum.Material.Mud] = Color3.fromRGB(88, 70, 50),
-	[Enum.Material.Rock] = Color3.fromRGB(124, 122, 118),
-	[Enum.Material.Sandstone] = Color3.fromRGB(176, 118, 76),
-	[Enum.Material.Limestone] = Color3.fromRGB(196, 182, 150),
-	[Enum.Material.Slate] = Color3.fromRGB(92, 99, 108),
-	[Enum.Material.Basalt] = Color3.fromRGB(62, 64, 70),
-	[Enum.Material.Sand] = Color3.fromRGB(220, 200, 152),
-	[Enum.Material.Cobblestone] = Color3.fromRGB(138, 132, 122),
-	[Enum.Material.Snow] = Color3.fromRGB(236, 242, 248),
-	[Enum.Material.Pavement] = Color3.fromRGB(150, 144, 134),
-	[Enum.Material.Salt] = Color3.fromRGB(226, 222, 210),
-}
+-- Couleurs globales des matériaux (le terrain est partagé par tous les lieux) : direction artistique
+-- commune dans Shared/Config/Palette.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ArtPalette = require(ReplicatedStorage.Shared.Config.Palette)
+
+TerrainGen.Colors = {} :: { [Enum.Material]: Color3 }
+for name, col in ArtPalette.Terrain do
+	TerrainGen.Colors[(Enum.Material :: any)[name]] = col
+end
 
 export type Palette = {
 	flat: Enum.Material,
@@ -41,6 +32,7 @@ export type Palette = {
 	snowline: number,
 	deep: Enum.Material,
 	patch: Enum.Material, -- petites taches dans l'herbe (terre nue, herbe sèche…)
+	strata: { Enum.Material }, -- couches des falaises, de bas en haut (bandes de 5 studs)
 }
 
 TerrainGen.Palettes = {
@@ -56,19 +48,22 @@ TerrainGen.Palettes = {
 		snowline = 210,
 		deep = Enum.Material.Rock,
 		patch = Enum.Material.LeafyGrass,
+		strata = { Enum.Material.Rock, Enum.Material.Sandstone, Enum.Material.Rock, Enum.Material.Limestone },
 	},
+	-- Val d'Automne : herbe verte, nappes d'herbe sèche, chemins pavés beiges, falaises en strates
 	W1 = {
-		flat = Enum.Material.LeafyGrass,
-		flat2 = Enum.Material.Grass,
+		flat = Enum.Material.Grass,
+		flat2 = Enum.Material.LeafyGrass,
 		slope = Enum.Material.Ground,
 		cliff = Enum.Material.Rock,
-		path = Enum.Material.Ground,
+		path = Enum.Material.Cobblestone,
 		shore = Enum.Material.Mud,
 		bed = Enum.Material.Mud,
 		high = Enum.Material.Snow,
 		snowline = 270,
 		deep = Enum.Material.Rock,
 		patch = Enum.Material.Ground,
+		strata = { Enum.Material.Rock, Enum.Material.Sandstone, Enum.Material.Rock, Enum.Material.Limestone, Enum.Material.Sandstone, Enum.Material.Rock },
 	},
 	W2 = {
 		flat = Enum.Material.Grass,
@@ -82,8 +77,15 @@ TerrainGen.Palettes = {
 		snowline = 280,
 		deep = Enum.Material.Basalt,
 		patch = Enum.Material.LeafyGrass,
+		strata = { Enum.Material.Slate, Enum.Material.Basalt, Enum.Material.Slate, Enum.Material.Rock },
 	},
 } :: { [string]: Palette }
+
+-- Couche de falaise à l'altitude locale `y` : bandes d'environ 5 studs, d'épaisseurs inégales, ondulées.
+function TerrainGen.Strata(pal: Palette, y: number, x: number, z: number): Enum.Material
+	local band = math.floor((y + 2.5 * math.sin(y * 0.37) + math.noise(x / 40, z / 40, 31) * 4) / 5)
+	return pal.strata[band % #pal.strata + 1]
+end
 
 -- Matériau de surface d'une colonne (fonction pure, réutilisée par les aperçus).
 function TerrainGen.SurfaceMaterial(pal: Palette, s: Relief.Sample, slope: number, x: number, z: number, paved: boolean?): Enum.Material
@@ -102,7 +104,7 @@ function TerrainGen.SurfaceMaterial(pal: Palette, s: Relief.Sample, slope: numbe
 		return pal.high
 	end
 	if slope > 1.05 then
-		return pal.cliff
+		return TerrainGen.Strata(pal, h, x, z)
 	end
 	if s.wet > 0.4 + math.noise(x / 9, z / 9, 12) * 0.2 then
 		return pal.shore
@@ -199,12 +201,18 @@ function TerrainGen.Build(spec: Relief.Spec, origin: Vector3, paletteKey: string
 					local slope = math.sqrt(dxh * dxh + dzh * dzh)
 					local surf = TerrainGen.SurfaceMaterial(pal, s, slope, lx, lz, paved and paved(lx, lz))
 					local water = if s.water then origin.Y + s.water else nil
+					-- colonne de falaise : chaque voxel prend la couche de son altitude (strates visibles sur la paroi)
+					local cliffCol = slope > 1.05 and surf ~= pal.high and surf ~= pal.path
 					for j = 1, ny do
 						local vb = yb + (j - 1) * RES
 						local vt = vb + RES
 						if vt <= h then
 							local depth = h - vt
-							mcol[j][k] = if depth < 4 then surf elseif depth < 14 and surf ~= pal.cliff then pal.slope else pal.deep
+							mcol[j][k] = if cliffCol and depth < 14
+								then TerrainGen.Strata(pal, vb + RES / 2 - origin.Y, lx, lz)
+								elseif depth < 4 then surf
+								elseif depth < 14 and surf ~= pal.cliff then pal.slope
+								else pal.deep
 							ocol[j][k] = 1
 						elseif vb < h then
 							mcol[j][k] = surf
