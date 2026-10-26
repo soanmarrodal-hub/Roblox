@@ -5,7 +5,7 @@
 -- attribut sur workspace (« Ready_<clé> ») pour l'écran de chargement des clients.
 --
 -- Requêtes : sol sous un point (terrain + sols d'arène), point au sol aléatoire dans un disque, proximité
--- d'une station, repères d'apparition, de points de passage et d'arènes, panneaux de classement.
+-- d'une station, repères d'apparition et d'arènes, panneaux de classement et statues du mur des légendes.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +20,7 @@ local Hub = require(World.Hub)
 local World1 = require(World.World1)
 local World2 = require(World.World2)
 local Arenas = require(World.Arenas)
+local Statue = require(World.Statue)
 
 local WorldService = {}
 
@@ -27,6 +28,9 @@ local ready: { [string]: boolean } = {}
 local readied = Signal.new()
 local arenas: { [string]: { Arenas.Arena } } = {}
 local boards: { [string]: SurfaceGui } = {}
+local legends: { [string]: { gui: SurfaceGui, spot: CFrame, plate: TextLabel } } = {}
+local statueFolder: Folder? = nil
+local statueOf: { [string]: number } = {} -- n°1 actuellement sculpté, par classement
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Include
 local groundList: { Instance } = {}
@@ -132,20 +136,6 @@ function WorldService.SpawnCF(self: any, key: string): CFrame
 	return groundCF(p, p + Vector3.new(0, 0, -10))
 end
 
-function WorldService.WaypointCF(self: any, worldKey: string, wpKey: string): CFrame?
-	local w = Worlds.ByKey(worldKey)
-	if not w then
-		return nil
-	end
-	for _, wp in w.waypoints do
-		if wp.key == wpKey then
-			local p = w.origin + Vector3.new(wp.x, wp.h, wp.z)
-			return groundCF(p, p + Vector3.new(0, 0, -10))
-		end
-	end
-	return nil
-end
-
 -- Arène instanciée (attend sa construction si besoin).
 function WorldService.Arena(self: any, key: string, slot: number): Arenas.Arena
 	while not (arenas[key] and arenas[key][slot]) do
@@ -154,8 +144,8 @@ function WorldService.Arena(self: any, key: string, slot: number): Arenas.Arena
 	return arenas[key][slot]
 end
 
--- Panneaux de classement du village.
-function WorldService.UpdateBoards(self: any, top: { [string]: { { name: string, value: number } } }, defs: { [string]: { title: string, unit: string } }, Format: any)
+-- Panneaux de classement du village, statues et plaques du mur des légendes.
+function WorldService.UpdateBoards(self: any, top: { [string]: { { name: string, value: number, userId: number? } } }, defs: { [string]: { title: string, unit: string, prefix: string? } }, Format: any)
 	for key, gui in boards do
 		local list = gui:FindFirstChild("List") :: TextLabel?
 		local def = defs[key]
@@ -167,10 +157,29 @@ function WorldService.UpdateBoards(self: any, top: { [string]: { { name: string,
 					if i > 10 then
 						break
 					end
-					table.insert(lines, string.format("%2d. %s  -  %s %s", i, Format.Clip(e.name, 16), Format.Short(e.value), def.unit))
+					local unit = if def.unit ~= "" then " " .. def.unit else ""
+					table.insert(lines, string.format("%2d. %s  -  %s%s%s", i, Format.Clip(e.name, 16), def.prefix or "", Format.Short(e.value), unit))
 				end
 			end
 			list.Text = if #lines > 0 then table.concat(lines, "\n") else "Aucun record pour l'instant."
+		end
+	end
+	for key, l in legends do
+		local first = top[key] and top[key][1]
+		l.plate.Text = if first then "N°1 · " .. first.name else "Place à prendre !"
+		local uid = if first then first.userId or 0 else -1
+		local folder = statueFolder
+		if folder and statueOf[key] ~= uid then
+			statueOf[key] = uid
+			-- l'avatar se charge sur le réseau : sculpté en tâche de fond
+			task.spawn(function()
+				local ok, err = pcall(function()
+					Statue.Place(folder, "Statue_" .. key, l.spot, if first then first.userId or 0 else nil)
+				end)
+				if not ok then
+					warn("[WorldService] statue " .. key .. " : " .. tostring(err))
+				end
+			end)
 		end
 	end
 end
@@ -204,6 +213,8 @@ function WorldService.Start(self: any)
 		end)
 		if hubRes then
 			boards = hubRes.boards
+			legends = hubRes.legends
+			statueFolder = hubRes.statues
 		end
 		setReady("Hub")
 		-- les joueurs arrivés pendant la construction apparaissent maintenant

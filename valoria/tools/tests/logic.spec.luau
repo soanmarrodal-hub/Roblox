@@ -333,3 +333,30 @@ test("Quêtes quotidiennes déterministes", function()
 	end
 	check(a[1] ~= a[2] and a[2] ~= a[3] and a[1] ~= a[3], "quêtes distinctes")
 end)
+
+test("Titres : avancement, déblocage, titre affiché ; puissance d'équipe", function()
+	local Titles = require(Shared.Config.Titles)
+	local d = DataTemplate.New()
+	d.rank = 12
+	eq(Titles.Current(d).key, "Chevalier", "meilleur titre de rang")
+	d.title = "Roi"
+	eq(Titles.Current(d).key, "Chevalier", "titre verrouillé ignoré")
+	d.title = "Sergent"
+	eq(Titles.Current(d).key, "Sergent", "titre choisi")
+	local t = Titles.ByKey.Citrouilles
+	local cur, need = Titles.Progress(d, t)
+	eq(cur, 0)
+	eq(need, 10)
+	d.bossKills.PumpkinKing = 10
+	check(Titles.Unlocked(d, t), "haut fait débloqué")
+	d.index = { Squire = true, Archer = true }
+	cur, need = Titles.Progress(d, Titles.ByKey.Index)
+	eq(cur, 2)
+	eq(need, 20)
+	-- puissance d'équipe : somme des héros équipés
+	d.heroes = { a = { id = "Squire", lvl = 5, xp = 0, stars = 1 }, b = { id = "Archer", lvl = 3, xp = 0, stars = 0 } }
+	d.team = { "a", "b" }
+	local ctx = Stats.Context(d)
+	eq(Stats.TeamPower(d, ctx), Stats.Power(d.heroes.a, ctx) + Stats.Power(d.heroes.b, ctx))
+	check(Stats.TeamPower(d, ctx) > 0, "puissance positive")
+end)

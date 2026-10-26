@@ -1,7 +1,8 @@
 --!strict
--- Classements globaux (OrderedDataStore) : record de la Tour et ennemis vaincus. Affichés sur les
--- panneaux du village (SurfaceGui créés par le constructeur du hub). Repli sur le serveur seul si les
--- DataStores sont indisponibles.
+-- Classements globaux (OrderedDataStore) : record de la Tour (panneau au pied de la tour), ennemis vaincus,
+-- et, sur le mur des légendes près du point d'apparition, Robux dépensés, puissance d'équipe et rang (avec
+-- la statue du n°1 de chacun). Affichés sur les panneaux du village (SurfaceGui créés par le constructeur
+-- du hub). Repli sur le serveur seul si les DataStores sont indisponibles.
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -12,16 +13,34 @@ local R = require(script.Parent.Parent.Registry)
 
 local LeaderboardService = {}
 
-type BoardDef = { store: string, title: string, unit: string }
+type BoardDef = { store: string, title: string, unit: string, prefix: string?, value: (player: Player, data: any) -> number }
+type Entry = { name: string, value: number, userId: number }
 
 local BOARDS: { [string]: BoardDef } = {
-	Tower = { store = "Valoria_Tower_v1", title = "Tour des Épreuves", unit = "étage" },
-	Kills = { store = "Valoria_Kills_v1", title = "Chasseurs de Valoria", unit = "ennemis" },
+	Tower = { store = "Valoria_Tower_v1", title = "Étages de la Tour", unit = "", prefix = "étage ", value = function(_p, d)
+		return d.tower.best
+	end },
+	Kills = { store = "Valoria_Kills_v1", title = "Chasseurs de Valoria", unit = "ennemis", value = function(_p, d)
+		return d.stats.kills
+	end },
+	Robux = { store = "Valoria_Robux_v1", title = "Mécènes du royaume", unit = "", prefix = "R$ ", value = function(_p, d)
+		return d.stats.robux
+	end },
+	Power = { store = "Valoria_Power_v1", title = "Équipes les plus puissantes", unit = "", prefix = "puissance ", value = function(p, d)
+		return R.PlayerService:TeamPower(p, d)
+	end },
+	Rank = { store = "Valoria_Rank_v1", title = "Plus hauts rangs", unit = "", prefix = "rang ", value = function(_p, d)
+		return d.rank
+	end },
 }
 
 local stores: { [string]: OrderedDataStore? } = {}
-local pendingWrites: { [string]: { [number]: number } } = { Tower = {}, Kills = {} }
-local top: { [string]: { { name: string, value: number } } } = { Tower = {}, Kills = {} }
+local pendingWrites: { [string]: { [number]: number } } = {}
+local top: { [string]: { Entry } } = {}
+for key in BOARDS do
+	pendingWrites[key] = {}
+	top[key] = {}
+end
 local names: { [number]: string } = {}
 
 local function nameOf(userId: number): string
@@ -43,12 +62,23 @@ end
 function LeaderboardService.Report(self: any, player: Player, key: string, value: number)
 	local w = pendingWrites[key]
 	if w then
-		w[player.UserId] = math.max(w[player.UserId] or 0, math.floor(value))
+		-- entier positif borné (OrderedDataStore)
+		w[player.UserId] = math.max(w[player.UserId] or 0, math.floor(math.clamp(value, 0, 2 ^ 52)))
 	end
 end
 
-function LeaderboardService.Top(self: any, key: string)
+function LeaderboardService.Top(self: any, key: string): { Entry }
 	return top[key] or {}
+end
+
+-- Valeurs actuelles d'un joueur pour chaque classement.
+local function reportAll(self: any, player: Player, data: any)
+	for key, def in BOARDS do
+		local ok, v = pcall(def.value, player, data)
+		if ok and type(v) == "number" then
+			self:Report(player, key, v)
+		end
+	end
 end
 
 local function flush()
@@ -80,20 +110,21 @@ local function fetch()
 				local list = {}
 				for _, entry in (pages :: DataStorePages):GetCurrentPage() do
 					local uid = tonumber(string.sub(entry.key, 2)) or 0
-					table.insert(list, { name = nameOf(uid), value = entry.value })
+					table.insert(list, { name = nameOf(uid), value = entry.value, userId = uid })
 				end
 				top[key] = list
 			end
 		end
 	end
 	-- repli : classement des joueurs présents
-	for key in BOARDS do
+	for key, def in BOARDS do
 		if not stores[key] then
 			local list = {}
 			for _, p in Players:GetPlayers() do
 				local data = R.DataService:Get(p)
-				if data then
-					table.insert(list, { name = p.DisplayName, value = if key == "Tower" then data.tower.best else data.stats.kills })
+				local ok, v = pcall(def.value, p, data)
+				if data and ok then
+					table.insert(list, { name = p.DisplayName, value = v, userId = p.UserId })
 				end
 			end
 			table.sort(list, function(a, b)
@@ -114,23 +145,26 @@ function LeaderboardService.Init(self: any)
 	end
 end
 
+-- Relève les valeurs des joueurs présents, écrit, relit les meilleurs et met à jour les panneaux.
+function LeaderboardService.Refresh(self: any)
+	for _, p in Players:GetPlayers() do
+		local data = R.DataService:Get(p)
+		if data then
+			reportAll(self, p, data)
+		end
+	end
+	pcall(flush)
+	pcall(fetch)
+end
+
 function LeaderboardService.Start(self: any)
 	R.DataService.Releasing:Connect(function(player: Player, data: any)
-		self:Report(player, "Tower", data.tower.best)
-		self:Report(player, "Kills", data.stats.kills)
+		reportAll(self, player, data)
 	end)
 	task.spawn(function()
 		task.wait(8)
 		while true do
-			for _, p in Players:GetPlayers() do
-				local data = R.DataService:Get(p)
-				if data then
-					self:Report(p, "Kills", data.stats.kills)
-					self:Report(p, "Tower", data.tower.best)
-				end
-			end
-			pcall(flush)
-			pcall(fetch)
+			self:Refresh()
 			task.wait(90)
 		end
 	end)

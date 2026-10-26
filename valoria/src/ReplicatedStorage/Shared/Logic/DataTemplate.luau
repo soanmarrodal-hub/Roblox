@@ -102,6 +102,7 @@ local function template(): { [string]: any }
 			talentRolls = 0,
 			clicks = 0,
 			seasonPulls = 0,
+			robux = 0, -- Robux dépensés (mur des légendes)
 			goldEarned = 0,
 			damage = 0,
 		},
@@ -116,7 +117,9 @@ local function template(): { [string]: any }
 			showRange = true, -- cercle de la zone d'action
 			autoClick = true, -- clic automatique actif (s'il est possédé)
 		},
-		perks = { AutoClick = false }, -- avantages achetés en gemmes (Config/Shop.GemPerks)
+		perks = { AutoClick = false, QuickTravel = false }, -- avantages achetés en gemmes (Config/Shop.GemPerks)
+		title = "", -- titre affiché (Config/Titles), "" = meilleur titre de rang
+		rankClaimed = {} :: { [string]: boolean }, -- récompenses de rang réclamées
 		morph = "", -- apparence empruntée à un héros possédé (identifiant du héros, "" = la sienne)
 		tutorial = 1,
 		purchases = {} :: { string },
@@ -136,6 +139,7 @@ local OPAQUE = {
 	index = true,
 	indexClaimed = true,
 	codes = true,
+	rankClaimed = true,
 	list = true,
 	progress = true,
 	claimed = true,

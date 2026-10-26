@@ -93,6 +93,10 @@ function ShopService.Start(self: any)
 					local set = owned[player] or {}
 					set[p.key] = true
 					owned[player] = set
+					local data = R.DataService:Get(player)
+					if data then
+						data.stats.robux += p.price
+					end
 					R.PlayerService:Notify(player, "Merci ! Passe « " .. p.name .. " » activé.", "success")
 				end
 			end
@@ -123,6 +127,7 @@ function ShopService.Start(self: any)
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		local gains = R.PlayerService:Grant(player, product)
+		data.stats.robux += product.price
 		if product.season then
 			R.SummonService:GrantSeason(player, product.season)
 		end

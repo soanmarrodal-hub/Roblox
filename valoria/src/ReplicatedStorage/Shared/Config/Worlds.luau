@@ -1,6 +1,6 @@
 --!strict
 -- Plan des mondes : position dans l'espace, zones d'ennemis (plateaux de hauteur croissante), arène du boss,
--- chemins (qui guident aussi le relief), points de passage et conditions de déblocage.
+-- chemins (qui guident aussi le relief) et conditions de déblocage.
 -- Les coordonnées des zones sont LOCALES au monde (ajouter `origin`). Y = hauteur du sol.
 
 export type Zone = {
@@ -31,7 +31,6 @@ export type World = {
 	zones: { Zone },
 	boss: Zone,
 	paths: { { PathNode } },
-	waypoints: { { key: string, name: string, x: number, z: number, h: number } },
 	recommended: string,
 }
 
@@ -80,12 +79,6 @@ Worlds.List = {
 			{ { x = 305, z = -110, h = 120 }, { x = 275, z = -220, h = 145 }, { x = 215, z = -305, h = 165 }, { x = 150, z = -365, h = 178 } },
 			{ { x = -150, z = -235, h = 150 }, { x = -40, z = -305, h = 165 }, { x = 150, z = -365, h = 178 } },
 		},
-		waypoints = {
-			{ key = "Camp", name = "Camp du Val", x = 0, z = 384, h = 24 },
-			{ key = "BoisRoux", name = "Bois Roux", x = -290, z = 60, h = 62 },
-			{ key = "Gorge", name = "Gorge du Torrent", x = 40, z = 20, h = 88 },
-			{ key = "Arene", name = "Arène des Moissons", x = 150, z = -300, h = 168 },
-		},
 	},
 	{
 		id = 2,
@@ -118,12 +111,6 @@ Worlds.List = {
 			{ { x = -60, z = -80, h = 58 }, { x = -130, z = -160, h = 86 }, { x = -200, z = -228, h = 114 }, { x = -250, z = -280, h = 140 } },
 			{ { x = 330, z = -20, h = 96 }, { x = 322, z = -140, h = 130 }, { x = 262, z = -262, h = 170 }, { x = 170, z = -340, h = 205 } },
 			{ { x = -250, z = -280, h = 140 }, { x = -80, z = -335, h = 172 }, { x = 170, z = -340, h = 205 } },
-		},
-		waypoints = {
-			{ key = "Port", name = "Brisecôte", x = 0, z = 384, h = 42 },
-			{ key = "Corniche", name = "Corniche des Harpies", x = -320, z = 80, h = 70 },
-			{ key = "Aiguilles", name = "Aiguilles Marines", x = 330, z = -20, h = 96 },
-			{ key = "Nid", name = "Nid de la Tempête", x = 170, z = -280, h = 196 },
 		},
 	},
 } :: { World }

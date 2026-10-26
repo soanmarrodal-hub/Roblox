@@ -398,6 +398,10 @@ print(string.format("Monde : %d écritures de voxels (%d cellules), %d étiquett
 if process.env.WORLD_DUMP then
 	step("export des pièces", function()
 		waitAttr("Ready_Decor", 400)
+		-- statues de démonstration sur le mur des légendes (chevaliers sculptés : pas d'avatar hors ligne)
+		local demo = { { name = "Démo", value = 1, userId = 0 } }
+		R.WorldService:UpdateBoards({ Robux = demo, Power = demo, Rank = demo }, {}, req(rsNode.Shared.Util.Format))
+		lunetask.wait(0.5)
 		local serde = require("@lune/serde")
 		local fs = require("@lune/fs")
 		local monde = H.unwrap(ws:FindFirstChild("Monde"))
@@ -676,10 +680,17 @@ step("monde 2", function()
 	settle(5)
 	ok, err = act("UnlockWorld", 2)
 	assert(ok, "déblocage du monde 2 : " .. tostring(err))
-	ok, err = act("Teleport", "W2:Aiguilles")
-	assert(ok, "point de passage : " .. tostring(err))
+	ok = act("Teleport", "W2:Aiguilles")
+	assert(not ok, "point de passage accepté (les runes des mondes ont été retirées)")
+	ok, err = act("Teleport", "W2")
+	assert(ok, "voyage vers le monde 2 : " .. tostring(err))
 	settle(5)
 	assert(player:GetAttribute("Zone") == "W2", "zone attendue W2")
+	-- arrivée au camp du monde
+	local w2 = req(rsNode.Shared.Config.Worlds).ByKey("W2")
+	local camp = w2.origin + Vector3.new(w2.spawn.x, 0, w2.spawn.z)
+	local r = root()
+	assert(r and Vector3.new(r.Position.X - camp.X, 0, r.Position.Z - camp.Z).Magnitude < 20, "arrivée hors du camp du monde 2")
 end)
 
 step("progression : enchantements, talents, jetons, clic", function()
@@ -934,6 +945,79 @@ step("évolution et relâche", function()
 		ok, err = act("Release", { free[1] })
 		assert(ok, "relâche : " .. tostring(err))
 	end
+end)
+
+step("interface et social : voyage express, rang, titres, mur des légendes", function()
+	local data = R.DataService:Get(player)
+	-- voyage express (passe ou 1 500 gemmes) vers la Tour, les raids et la Forge des talents
+	local ok, err = act("Teleport", "Hub:Tower")
+	assert(not ok, "voyage express sans le passe")
+	data.gems = 2000
+	ok, err = act("BuyPerk", "QuickTravel")
+	assert(ok and data.gems == 500 and R.ShopService:Has(player, "QuickTravel"), "achat du voyage express : " .. tostring(err))
+	for dest, station in { Tower = "Tower", Raids = "RaidShop", Talents = "Talents" } do
+		ok, err = act("Teleport", "Hub:" .. dest)
+		assert(ok, "voyage express " .. dest .. " : " .. tostring(err))
+		settle(2)
+		local st = req(rsNode.Shared.Config.Stations).Get(station)
+		local r = root()
+		assert(r and Vector3.new(r.Position.X - st.pos.X, 0, r.Position.Z - st.pos.Z).Magnitude < st.radius + 10, "arrivée loin de " .. station)
+	end
+	ok = act("Teleport", "Hub:Nulle")
+	assert(not ok, "destination express inconnue acceptée")
+	-- récompenses de rang
+	data.rank = 12
+	local gems = data.gems
+	ok, err = act("ClaimRankReward", 5)
+	assert(ok and data.gems == gems + 50, "récompense du rang 5 : " .. tostring(err))
+	ok = act("ClaimRankReward", 5)
+	assert(not ok, "récompense de rang réclamée deux fois")
+	ok = act("ClaimRankReward", 15)
+	assert(not ok, "récompense d'un rang pas encore atteint")
+	ok = act("ClaimRankReward", 7)
+	assert(not ok, "récompense de rang inconnue")
+	-- titres : choisi (débloqué) ou automatique (meilleur titre de rang)
+	ok, err = act("SetTitle", "Chevalier")
+	assert(ok and player:GetAttribute("Title") == "Chevalier", "titre Chevalier : " .. tostring(err))
+	ok = act("SetTitle", "Roi")
+	assert(not ok, "titre verrouillé accepté")
+	data.bossKills.PumpkinKing = 10
+	ok, err = act("SetTitle", "Citrouilles")
+	assert(ok and player:GetAttribute("TitleKey") == "Citrouilles", "titre de haut fait : " .. tostring(err))
+	ok = act("SetTitle", "")
+	assert(ok and player:GetAttribute("TitleKey") == "Chevalier", "titre automatique")
+	-- mur des légendes : classements Robux / puissance / rang, statue du n°1, panneau de la Tour
+	data.stats.robux = 400
+	R.LeaderboardService:Refresh()
+	for _, key in { "Robux", "Power", "Rank", "Tower" } do
+		local first = R.LeaderboardService:Top(key)[1]
+		assert(first and first.userId == player.UserId, "classement " .. key .. " vide")
+	end
+	assert(R.LeaderboardService:Top("Robux")[1].value == 400, "Robux dépensés")
+	assert(R.LeaderboardService:Top("Power")[1].value > 0, "puissance d'équipe nulle")
+	lunetask.wait(0.5)
+	local wall = H.unwrap(ws:FindFirstChild("Monde")):FindFirstChild("MurDesLegendes", true)
+	assert(wall, "mur des légendes absent")
+	local statues = wall:FindFirstChild("Statues")
+	for _, key in { "Robux", "Power", "Rank" } do
+		local st = statues and statues:FindFirstChild("Statue_" .. key)
+		assert(st and #st:GetChildren() > 3, "statue du n°1 absente : " .. key)
+	end
+	local plates = 0
+	for _, d in wall:GetDescendants() do
+		if d:IsA("TextLabel") and string.find(d.Text, "Chevalier", 1, true) then
+			plates += 1
+		end
+	end
+	assert(plates >= 3, "plaques des statues : " .. plates)
+	local boards = 0
+	for _, d in H.unwrap(ws:FindFirstChild("Monde")):GetDescendants() do
+		if d:IsA("TextLabel") and d.Name == "List" and string.find(d.Text, "Chevalier", 1, true) then
+			boards += 1
+		end
+	end
+	assert(boards >= 5, "panneaux de classement remplis : " .. boards)
+	print(string.format("Session : voyage express, titre %s, %d panneaux de classement remplis", tostring(player:GetAttribute("Title")), boards))
 end)
 
 step("classements et départ", function()

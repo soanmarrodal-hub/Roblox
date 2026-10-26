@@ -89,7 +89,7 @@ function Kit.Text(parent: Instance, text: string, opts: { [string]: any }?): Tex
 	local t = Kit.new("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = text,
-		FontFace = if o.pixel then Theme.Pixel else Theme.Font,
+		FontFace = o.font or (if o.pixel then Theme.Pixel else Theme.Font),
 		TextColor3 = o.color or (if light then Theme.White else Theme.Text),
 		TextSize = o.size or 20,
 		TextScaled = o.scaled == true,

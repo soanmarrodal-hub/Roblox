@@ -89,25 +89,4 @@ function Progression.AddRankXp(data: { rank: number, rankXp: number }, amount: n
 	return gained
 end
 
-local TITLES: { { rank: number, title: string } } = {
-	{ rank = 1, title = "Écuyer" },
-	{ rank = 5, title = "Sergent" },
-	{ rank = 10, title = "Chevalier" },
-	{ rank = 15, title = "Baron" },
-	{ rank = 20, title = "Comte" },
-	{ rank = 30, title = "Duc" },
-	{ rank = 40, title = "Prince" },
-	{ rank = 60, title = "Roi" },
-}
-
-function Progression.RankTitle(rank: number): string
-	local title = TITLES[1].title
-	for _, t in TITLES do
-		if rank >= t.rank then
-			title = t.title
-		end
-	end
-	return title
-end
-
 return Progression

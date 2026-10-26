@@ -324,7 +324,6 @@ function World2.Build(root: Instance): Result
 	Buildings.Tower(storm, face(b.x + b.radius - 4, b.z - b.radius + 10, b.x, b.z, -1, 10), { radius = 6, height = 40, color = Color3.fromRGB(110, 116, 126), crenels = true, door = false, segments = 10 })
 
 	railings(folder, w, grid)
-	Common.Waypoints(folder, w, grid, Color3.fromRGB(110, 210, 255))
 	Common.Bounds(folder, w)
 	return { folder = folder, grid = grid, world = w, spec = spec, reserved = reserved }
 end

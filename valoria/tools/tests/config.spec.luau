@@ -315,3 +315,53 @@ test("enchantements, talents et déblocages", function()
 	eq(Shop.Perk("AutoClick").cost, 500, "clic automatique en gemmes")
 	eq(Shop.Pass("AutoClick").price, 50, "clic automatique en Robux")
 end)
+
+test("interface et social : titres, récompenses de rang, voyage express", function()
+	local Titles = require(Shared.Config.Titles)
+	local Stations = require(Shared.Config.Stations)
+	-- titres : clés uniques, une seule condition chacun, titres de rang croissants
+	local seen = {}
+	local prevRank = 0
+	for _, t in Titles.List do
+		check(not seen[t.key], "titre en double " .. t.key)
+		seen[t.key] = true
+		local n = (if t.rank then 1 else 0) + (if t.boss then 1 else 0) + (if t.tower then 1 else 0) + (if t.raids then 1 else 0) + (if t.index then 1 else 0)
+		eq(n, 1, t.key .. " : une condition")
+		if t.boss then
+			local e = Enemies.Get(t.boss)
+			check(e and e.boss, t.key .. " : boss inconnu")
+		end
+		if t.rank then
+			check(t.rank > prevRank, t.key .. " : rangs croissants")
+			prevRank = t.rank
+		end
+	end
+	eq(Titles.List[1].rank, 1, "premier titre au rang 1")
+	-- récompenses de rang : rangs croissants, objets existants
+	local prev = 0
+	for _, e in Titles.RankRewards do
+		check(e.rank > prev, "récompenses de rang croissantes")
+		prev = e.rank
+		checkReward(e.reward, "rang " .. e.rank)
+		check((e.reward.gems or 0) + (e.reward.runes or 0) + #(function()
+			local l = {}
+			for k in e.reward.items or {} do
+				table.insert(l, k)
+			end
+			return l
+		end)() > 0, "rang " .. e.rank .. " : récompense vide")
+	end
+	-- voyage express : 1 500 gemmes ou 200 Robux, destinations du village
+	eq(Shop.Perk("QuickTravel").cost, 1500, "voyage express en gemmes")
+	eq(Shop.Pass("QuickTravel").price, 200, "voyage express en Robux")
+	for _, key in { "Talents", "RaidShop", "Tower" } do
+		local st = Stations.Get(key)
+		check(st and st.zone == "Hub", "station du voyage express " .. key)
+	end
+	-- mondes : plus de runes de passage, une seule pierre de retour au camp
+	for _, w in Worlds.List do
+		check((w :: any).waypoints == nil, w.key .. " : points de passage retirés")
+		local gate = Stations.Get("Gate" .. w.id)
+		check(gate and gate.menu == "Teleport", w.key .. " : pierre de retour au camp")
+	end
+end)

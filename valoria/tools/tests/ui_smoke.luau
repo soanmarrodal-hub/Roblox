@@ -32,6 +32,7 @@ local localPlayer = {
 	UserId = 1,
 	Character = nil,
 	CharacterAdded = newSignal(),
+	AttributeChanged = newSignal(),
 	Parent = true,
 }
 function localPlayer:WaitForChild(name)
@@ -51,6 +52,7 @@ function localPlayer:SetAttribute(k, v)
 	if attrSignals[k] then
 		attrSignals[k]:Fire()
 	end
+	localPlayer.AttributeChanged:Fire(k)
 end
 function localPlayer:GetAttributeChangedSignal(k)
 	attrSignals[k] = attrSignals[k] or newSignal()
@@ -185,6 +187,12 @@ local actionResults = {
 	SeasonSummon = function()
 		return true, { results = { { kind = "item", key = "Fusion", amount = 3, rarity = "Rare", name = "Jeton de fusion" } } }
 	end,
+	ClaimRankReward = function()
+		return true, { gains = { { kind = "gems", amount = 50 } }, text = "+50 gemmes" }
+	end,
+	SetTitle = function()
+		return true, nil
+	end,
 }
 local NetMock = {
 	Event = remote,
@@ -246,6 +254,9 @@ local function sampleData()
 	d.quests.daily.day = QuestLogic.Day(os.time())
 	d.quests.chain["1"] = { step = 2, progress = 1 }
 	d.login.streak = 3
+	d.rankClaimed["5"] = true
+	d.bossKills.PumpkinKing = 3
+	d.title = "Sergent"
 	return d
 end
 
@@ -311,6 +322,7 @@ settle(20)
 local menuNames = {
 	"Heroes", "Summon1", "Summon2", "Upgrades", "Traits", "Talents", "Evolve", "Jeweler", "Teleport", "Tower", "TowerShop",
 	"Raid1", "Raid2", "RaidShop", "Quests", "QuestNpc1", "QuestNpc2", "Daily", "Gifts", "Index", "GemShop", "Bag", "Settings", "Season",
+	"Rank",
 }
 local function buttonsIn(root)
 	local out = {}
@@ -414,7 +426,7 @@ step("contrôleurs : init", function()
 	localPlayer.Character = char
 	localPlayer:SetAttribute("Zone", "W1")
 	localPlayer:SetAttribute("Team", "Squire:0:4,Archer:1:5,RedDragon:0:6")
-	for _, name in { "Effects", "Enemies", "Heroes", "Stations", "Altars", "Decor", "Environment", "Sound", "Npcs", "GroundDetail" } do
+	for _, name in { "Effects", "Enemies", "Heroes", "Stations", "Altars", "Decor", "Environment", "Sound", "Npcs", "GroundDetail", "Nameplates" } do
 		req(Controllers[name]).Init()
 	end
 	Hud.findBoss = req(Controllers.Enemies).FindBoss
@@ -654,6 +666,56 @@ step("panneaux des autels", function()
 	print(string.format("Contrôleurs : panneaux d'autel (%d cartes dans la vitrine du Val), tirages par touche et bouton", cards))
 end)
 settle(5)
+
+-- rang cliquable (récompenses, titres), plaque au-dessus du joueur, carte de voyage (touche M)
+step("rang, titres, plaque, carte de voyage", function()
+	local rank = App.hud:FindFirstChild("Rank")
+	if not rank or not rank:FindFirstChild("Dot") or not rank.Dot.Visible then
+		error("pastille de récompense de rang absente")
+	end
+	rank.Activated:Fire()
+	settle(3)
+	if MenuManager.Current() ~= "Rank" then
+		error("le clic sur le rang n'ouvre pas « Rang et titres »")
+	end
+	MenuManager.Close()
+	settle(3)
+	localPlayer:SetAttribute("Rank", 14)
+	localPlayer:SetAttribute("TitleKey", "Sergent")
+	localPlayer:SetAttribute("Title", "Sergent")
+	settle(2)
+	local plaques = localPlayer:WaitForChild("PlayerGui"):FindFirstChild("Plaques")
+	local plate = plaques and plaques:FindFirstChild("Plaque_Testeur")
+	if not plate or plate.Titre.Text ~= "Sergent" or plate.Rang.Text ~= "RANG 14" then
+		error("plaque du joueur (titre, rang) incorrecte")
+	end
+	localPlayer:SetAttribute("Zone", "Hub")
+	services.UserInputService.InputBegan:Fire({ KeyCode = roblox.Enum.KeyCode.M, UserInputType = roblox.Enum.UserInputType.Keyboard }, false)
+	settle(3)
+	if MenuManager.Current() ~= "Teleport" then
+		error("la touche M n'ouvre pas la carte de voyage")
+	end
+	local win = App.menus:FindFirstChild("Window")
+	local carte = win and win:FindFirstChild("Carte", true)
+	if not carte then
+		error("carte parchemin absente")
+	end
+	for _, k in { "Hub", "W1", "W2", "Soon", "Tower", "Raids", "Talents" } do
+		if not carte:FindFirstChild(k, true) then
+			error("lieu absent de la carte : " .. k)
+		end
+	end
+	-- voyage express sans le passe : boutons gemmes / Robux dans le cartouche
+	carte:FindFirstChild("Tower", true).Activated:Fire()
+	settle(3)
+	carte = App.menus:FindFirstChild("Window"):FindFirstChild("Carte", true)
+	local nom = carte:FindFirstChild("Nom", true)
+	if not nom or nom.Text ~= "Tour" then
+		error("le cartouche n'affiche pas le lieu choisi")
+	end
+	MenuManager.Close()
+	settle(3)
+end)
 
 -- boutons du HUD
 step("boutons du HUD", function()

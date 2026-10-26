@@ -1,9 +1,11 @@
 --!strict
--- Interface permanente : monnaies, rang et expérience, boutons latéraux (menus), barre d'équipe et attaque
+-- Interface permanente : monnaies, rang et expérience (cliquable : récompenses de rang et titres), boutons
+-- latéraux (menus ; la carte de voyage s'ouvre aussi avec M), barre d'équipe et attaque
 -- automatique, potions actives, suivi de quête, nom de zone, barre du boss, panneau de tour / raid, salon
 -- de raid, notifications, annonces serveur et fenêtres de récompense.
 
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
@@ -13,6 +15,7 @@ local Quests = require(Shared.Config.Quests)
 local Raids = require(Shared.Config.Raids)
 local Worlds = require(Shared.Config.Worlds)
 local Rewards = require(Shared.Config.Rewards)
+local Titles = require(Shared.Config.Titles)
 local Stats = require(Shared.Logic.Stats)
 local Progression = require(Shared.Logic.Progression)
 local QuestLogic = require(Shared.Logic.QuestLogic)
@@ -216,8 +219,12 @@ end
 ------------------------------------------------------------------ construction
 
 local function buildTop()
-	-- rang (en haut à gauche)
-	local rank = Kit.new("Frame", { Name = "Rank", BackgroundTransparency = 1, Size = UDim2.fromOffset(300, 64), Position = UDim2.fromOffset(16, 12), Parent = App.hud })
+	-- rang (en haut à gauche) : un clic ouvre les récompenses de rang et les titres
+	local rank = Kit.new("TextButton", { Name = "Rank", Text = "", AutoButtonColor = false, BackgroundTransparency = 1, Size = UDim2.fromOffset(300, 64), Position = UDim2.fromOffset(16, 12), Parent = App.hud })
+	rank.Activated:Connect(function()
+		Kit.Sound("Click")
+		MenuManager.Toggle("Rank")
+	end)
 	local badge = Kit.new("Frame", { BackgroundColor3 = C.gold, Size = UDim2.fromOffset(60, 60), ZIndex = 3, Parent = rank })
 	Kit.Corner(badge, 14)
 	Kit.Stroke(badge, 3)
@@ -227,6 +234,12 @@ local function buildTop()
 	local title = Kit.Text(rank, "Écuyer", { size = 22, sizeUD = UDim2.fromOffset(230, 26), pos = UDim2.fromOffset(68, 2), alignX = Enum.TextXAlignment.Left })
 	title.Name = "Title"
 	rankBar = Kit.Bar(rank, { size = UDim2.fromOffset(226, 24), pos = UDim2.fromOffset(66, 32), color = C.green, textSize = 14 })
+	-- pastille : récompense de rang à réclamer
+	local dot = Kit.new("Frame", { Name = "Dot", BackgroundColor3 = C.red, Size = UDim2.fromOffset(20, 20), Position = UDim2.fromOffset(46, -6), Visible = false, ZIndex = 6, Parent = rank })
+	Kit.Corner(dot, 10)
+	Kit.Stroke(dot, 2.5)
+	Kit.Text(dot, "!", { size = 14, z = 7 })
+	badges.Rank = dot
 	-- monnaies (en haut à droite)
 	local col = Kit.new("Frame", { Name = "Currencies", BackgroundTransparency = 1, Size = UDim2.fromOffset(200, 160), Position = UDim2.new(1, -16, 0, 12), AnchorPoint = Vector2.new(1, 0), Parent = App.hud })
 	Kit.ListLayout(col, 8, false, Enum.HorizontalAlignment.Right)
@@ -245,6 +258,7 @@ local SIDE = {
 	{ key = "Bag", icon = "Bag", label = "SAC", color = C.brown },
 	{ key = "Quests", icon = "Scroll", label = "QUETES", color = C.gold },
 	{ key = "Index", icon = "Book", label = "INDEX", color = C.red },
+	{ key = "Teleport", icon = "Map", label = "VOYAGE", color = C.brown }, -- carte de voyage (touche M)
 	{ key = "Gifts", icon = "Gift", label = "CADEAUX", color = C.green },
 	{ key = "Daily", icon = "Chest", label = "COFFRE", color = C.gold }, -- coffre du jour (n'est plus sur la carte)
 	{ key = "GemShop", icon = "Gem", label = "BOUTIQUE", color = C.teal },
@@ -402,7 +416,9 @@ local function refreshRank()
 	rankLabel.Text = tostring(d.rank)
 	local title = rankLabel.Parent and rankLabel.Parent.Parent and rankLabel.Parent.Parent:FindFirstChild("Title") :: TextLabel?
 	if title then
-		title.Text = string.format("%s · Rang %d", Progression.RankTitle(d.rank), d.rank)
+		local t = Titles.Current(d)
+		title.Text = string.format("%s · Rang %d", t.name, d.rank)
+		title.TextColor3 = t.color
 	end
 	local need = Progression.RankXpToNext(d.rank)
 	rankBar:Set(d.rankXp / need, string.format("%s / %s", Format.Short(d.rankXp), Format.Short(need)))
@@ -538,6 +554,14 @@ local function refreshBadges()
 		end
 	end
 	badges.Gifts.Visible = gift
+	-- rang : récompense atteinte et pas encore réclamée
+	local rankReady = false
+	for _, e in Titles.RankRewards do
+		if d.rank >= e.rank and not d.rankClaimed[tostring(e.rank)] then
+			rankReady = true
+		end
+	end
+	badges.Rank.Visible = rankReady
 	-- index : récompense de monde complète
 	local idx = false
 	for wid in Rewards.Index do
@@ -779,7 +803,7 @@ function Hud.Init()
 		if section == "gold" or section == "gems" or section == "items" then
 			refreshCurrencies(true)
 		end
-		if section == "rank" or section == "rankXp" then
+		if section == "rank" or section == "rankXp" or section == "title" or section == "bossKills" or section == "tower" or section == "stats" or section == "index" then
 			refreshRank()
 		end
 		if section == "team" or section == "heroes" or section == "upgrades" or section == "passes" then
@@ -798,11 +822,17 @@ function Hud.Init()
 		if section == "quests" or section == "stats" or section == "heroes" or section == "worlds" or section == "rank" or section == "tower" or section == "bossKills" then
 			refreshQuest()
 		end
-		if section == "quests" or section == "login" or section == "index" or section == "indexClaimed" then
+		if section == "quests" or section == "login" or section == "index" or section == "indexClaimed" or section == "rank" or section == "rankClaimed" then
 			refreshBadges()
 		end
 	end)
 	State.ZoneChanged:Connect(refreshZone)
+	-- M : carte de voyage
+	UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
+		if not processed and input.KeyCode == Enum.KeyCode.M and State.loaded then
+			MenuManager.Toggle("Teleport")
+		end
+	end)
 	Remote.On("Notify", function(text: string, kind: string?)
 		Hud.Toast(text, kind)
 	end)

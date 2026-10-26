@@ -405,6 +405,14 @@ def v_autel_du_val(s, m):
     return dict(target=t, eye=sr.look(t, 51, 22, 48), fov=55, light='w1', shadow_extent=100)
 
 
+def v_mur_des_legendes(s, m):
+    t = (0, G + 14, 62)
+    s.terrains['Hub'].add_to(m, t, 200)
+    s.parts.add_to(m, t, 130)
+    s.squad(m, ['Paladin', 'Archer', 'Fox'], 0, 34, (0, 62), spread=5)
+    return dict(target=t, eye=sr.look(t, 196, 16, 74), fov=55, light='hub', shadow_extent=120)
+
+
 VIEWS = [
     ('01_village_panorama', v_village_panorama),
     ('02_village_place', v_village_place),
@@ -435,6 +443,7 @@ VIEWS = [
     ('27_salle_de_parcours', v_parcours),
     ('28_autel_de_saison', v_autel_de_saison),
     ('29_autel_du_val', v_autel_du_val),
+    ('30_mur_des_legendes', v_mur_des_legendes),
 ]
 
 

@@ -7,6 +7,14 @@ local Theme = {}
 
 Theme.Font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Regular)
 Theme.Pixel = Font.fromEnum(Enum.Font.Arcade)
+Theme.Script = Font.fromEnum(Enum.Font.Fondamento) -- calligraphie (carte, titres)
+Theme.Hand = Font.fromEnum(Enum.Font.Kalam) -- écriture à la plume (annotations de la carte)
+
+-- Encres et papier de la carte de voyage (parchemin croquis).
+Theme.Paper = Color3.fromRGB(236, 214, 168)
+Theme.PaperDark = Color3.fromRGB(196, 160, 104)
+Theme.Sepia = Color3.fromRGB(96, 62, 34)
+Theme.RedInk = Color3.fromRGB(170, 44, 32)
 
 Theme.Ink = Color3.fromRGB(42, 28, 38)
 Theme.Panel = Color3.fromRGB(255, 247, 228)

@@ -188,6 +188,22 @@ STUBS.ScaleTo = function(self, k)
 		end
 	end
 end
+STUBS.GetBoundingBox = function(self)
+	-- boîte alignée sur les axes (approximation suffisante pour les tests)
+	local real = realOf[self]
+	local lo, hi = nil, nil
+	for _, d in real:GetDescendants() do
+		if d:IsA("BasePart") then
+			local p, h = d.CFrame.Position, d.Size / 2
+			lo = if lo then lo:Min(p - h) else p - h
+			hi = if hi then hi:Max(p + h) else p + h
+		end
+	end
+	if not lo then
+		return roblox.CFrame.new(), roblox.Vector3.zero
+	end
+	return roblox.CFrame.new((lo + hi) / 2), hi - lo
+end
 local overridesOf = setmetatable({}, { __mode = "k" })
 local NIL = newproxy(false) -- valeur nil explicite dans une table de substitution
 

@@ -1131,13 +1131,8 @@ function Buildings.Campfire(parent: Instance, cf: CFrame): Model
 	return m
 end
 
-function Buildings.Board(parent: Instance, cf: CFrame, title: string): (Model, SurfaceGui)
-	local m = Kit.Model(parent, "Panneau")
-	for _, x in { -6.5, 6.5 } do
-		Block(m, Vector3.new(1, 14, 1), cf * CFrame.new(x, 7, 0), C.timber, M.Wood)
-	end
-	local panel = Block(m, Vector3.new(13, 10, 0.6), cf * CFrame.new(0, 8.5, 0), Color3.fromRGB(56, 44, 36), M.WoodPlanks)
-	steppedRoof(m, cf * CFrame.new(0, 14, 0), 15, 3, C.roofRed, 0.6)
+-- Texte d'un panneau de classement (titre + liste), sur la face avant de `panel`.
+local function boardGui(panel: BasePart, title: string): SurfaceGui
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
 	gui.CanvasSize = Vector2.new(520, 400)
@@ -1164,7 +1159,99 @@ function Buildings.Board(parent: Instance, cf: CFrame, title: string): (Model, S
 	list.TextColor3 = Color3.fromRGB(240, 232, 214)
 	list.Text = "…"
 	list.Parent = gui
-	return m, gui
+	return gui
+end
+
+function Buildings.Board(parent: Instance, cf: CFrame, title: string): (Model, SurfaceGui)
+	local m = Kit.Model(parent, "Panneau")
+	for _, x in { -6.5, 6.5 } do
+		Block(m, Vector3.new(1, 14, 1), cf * CFrame.new(x, 7, 0), C.timber, M.Wood)
+	end
+	local panel = Block(m, Vector3.new(13, 10, 0.6), cf * CFrame.new(0, 8.5, 0), Color3.fromRGB(56, 44, 36), M.WoodPlanks)
+	steppedRoof(m, cf * CFrame.new(0, 14, 0), 15, 3, C.roofRed, 0.6)
+	return m, boardGui(panel, title)
+end
+
+-- Plaque dorée gravée (face avant), renvoie le texte.
+local function plaque(parent: Instance, cf: CFrame, w: number, h: number, text: string): TextLabel
+	local p = Block(parent, Vector3.new(w, h, 0.4), cf, C.gold, M.Metal)
+	p.Name = "Plaque"
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.CanvasSize = Vector2.new(w * 40, h * 40)
+	gui.LightInfluence = 0.3
+	gui.Parent = p
+	local t = Instance.new("TextLabel")
+	t.Name = "Text"
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.new(0.94, 0, 0.84, 0)
+	t.Position = UDim2.new(0.03, 0, 0.08, 0)
+	t.Font = Enum.Font.Fondamento
+	t.TextScaled = true
+	t.TextColor3 = Color3.fromRGB(70, 44, 22)
+	t.Text = text
+	t.Parent = gui
+	return t
+end
+
+export type Legend = { gui: SurfaceGui, spot: CFrame, plate: TextLabel }
+
+-- Mur des légendes (près du point d'apparition) : deux ailes crénelées et une arche au-dessus de la rue.
+-- Chaque partie porte un panneau de classement et, au sommet, le socle de la statue du n°1 avec sa plaque.
+-- `boards` = { clé, titre } pour l'aile gauche, l'arche, l'aile droite. Renvoie les panneaux et les socles.
+function Buildings.LegendsWall(parent: Instance, cf: CFrame, boards: { { key: string, title: string } }): (Model, { [string]: Legend })
+	local m = Kit.Model(parent, "MurDesLegendes")
+	local out: { [string]: Legend } = {}
+	local wood = Color3.fromRGB(56, 44, 36)
+	local function frame(x: number, y: number, z: number, w: number, h: number)
+		Block(m, Vector3.new(w + 1, 0.6, 0.5), cf * CFrame.new(x, y + h / 2 + 0.3, z), C.gold, M.Metal)
+		Block(m, Vector3.new(w + 1, 0.6, 0.5), cf * CFrame.new(x, y - h / 2 - 0.3, z), C.gold, M.Metal)
+		for _, sx in { -1, 1 } do
+			Block(m, Vector3.new(0.6, h + 1.2, 0.5), cf * CFrame.new(x + sx * (w / 2 + 0.2), y, z), C.gold, M.Metal)
+		end
+	end
+	-- ailes : aile gauche (boards[1]) et aile droite (boards[3])
+	for _, sx in { -1, 1 } do
+		local b = boards[if sx < 0 then 1 else 3]
+		local x = sx * 24.5
+		Block(m, Vector3.new(29, 1.2, 9), cf * CFrame.new(x, 0.1, 0.5), C.stoneDark, M.Cobblestone)
+		Block(m, Vector3.new(27, 16, 3), cf * CFrame.new(x, 6, 4), C.stoneWarm, M.Brick)
+		Block(m, Vector3.new(28, 1, 3.8), cf * CFrame.new(x, 14.3, 4), C.stone, M.Slate)
+		for _, px in { -13, 13 } do
+			Block(m, Vector3.new(2, 15.6, 3.8), cf * CFrame.new(x + px, 6.6, 3.8), C.stone, M.Slate)
+		end
+		for k = -4, 4, 2 do
+			if math.abs(k * 3) > 4 then
+				Block(m, Vector3.new(2.4, 1.6, 3), cf * CFrame.new(x + k * 3, 15.6, 4), C.stoneWarm, M.Brick)
+			end
+		end
+		local panel = Block(m, Vector3.new(14, 9, 0.6), cf * CFrame.new(x, 7.5, 2.3), wood, M.WoodPlanks)
+		frame(x, 7.5, 2.2, 14, 9)
+		Block(m, Vector3.new(6, 2.4, 4.6), cf * CFrame.new(x, 16.1, 4), C.stone, M.Marble)
+		out[b.key] = { gui = boardGui(panel, b.title), spot = cf * CFrame.new(x, 17.3, 4), plate = plaque(m, cf * CFrame.new(x, 16.1, 1.5), 5.4, 1.6, "") }
+		-- brasero au bout de l'aile
+		local bowl = Block(m, Vector3.new(1.8, 1, 1.8), cf * CFrame.new(sx * 37, 15.4, 4), C.iron, M.Metal)
+		local flame = Block(m, Vector3.new(1.2, 1.2, 1.2), bowl.CFrame * CFrame.new(0, 1, 0), Color3.fromRGB(255, 150, 60), M.Neon, { CanCollide = false })
+		fire(flame, 0.7)
+	end
+	-- arche au-dessus de la rue, panneau central (boards[2]) et grand socle au sommet
+	local b = boards[2]
+	for _, sx in { -1, 1 } do
+		Block(m, Vector3.new(3, 24, 3.6), cf * CFrame.new(sx * 9.5, 10, 4), C.stone, M.Slate)
+		Block(m, Vector3.new(4, 1, 4.4), cf * CFrame.new(sx * 9.5, 0.3, 4), C.stoneDark, M.Slate)
+		-- consoles en escalier sous le linteau
+		Block(m, Vector3.new(2, 1, 3.4), cf * CFrame.new(sx * 7, 17.5, 4), C.stoneWarm, M.Brick)
+		Block(m, Vector3.new(1, 1, 3.4), cf * CFrame.new(sx * 5.5, 16.5, 4), C.stoneWarm, M.Brick)
+	end
+	Block(m, Vector3.new(23, 4, 3.6), cf * CFrame.new(0, 20, 4), C.stoneWarm, M.Brick)
+	plaque(m, cf * CFrame.new(0, 20, 2), 18, 2.6, "Mur des légendes")
+	Block(m, Vector3.new(16, 11, 2), cf * CFrame.new(0, 27.5, 4.5), C.stoneWarm, M.Brick)
+	Block(m, Vector3.new(18, 1, 3), cf * CFrame.new(0, 33.4, 4.4), C.stone, M.Slate)
+	local panel = Block(m, Vector3.new(14, 9, 0.6), cf * CFrame.new(0, 27.5, 3.3), wood, M.WoodPlanks)
+	frame(0, 27.5, 3.2, 14, 9)
+	Block(m, Vector3.new(6.5, 2.4, 4.6), cf * CFrame.new(0, 35.1, 4.2), C.stone, M.Marble)
+	out[b.key] = { gui = boardGui(panel, b.title), spot = cf * CFrame.new(0, 36.3, 4.2), plate = plaque(m, cf * CFrame.new(0, 35.1, 1.7), 5.8, 1.6, "") }
+	return m, out
 end
 
 ------------------------------------------------------------------ vie du village

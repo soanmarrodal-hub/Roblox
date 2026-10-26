@@ -18,6 +18,7 @@ local Decor = require(Client.Controllers.Decor)
 local Environment = require(Client.Controllers.Environment)
 local Npcs = require(Client.Controllers.Npcs)
 local GroundDetail = require(Client.Controllers.GroundDetail)
+local Nameplates = require(Client.Controllers.Nameplates)
 
 local function start(name: string, fn: () -> ())
 	local ok, err = pcall(fn :: any)
@@ -54,6 +55,7 @@ start("Décor", Decor.Init)
 start("Ambiance", Environment.Init)
 start("PNJ", Npcs.Init)
 start("Détails au sol", GroundDetail.Init)
+start("Plaques", Nameplates.Init)
 
 -- premier lancement : mot de bienvenue
 local function welcome()

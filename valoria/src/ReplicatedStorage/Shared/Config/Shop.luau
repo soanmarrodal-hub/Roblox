@@ -26,6 +26,7 @@ local PASSES: { Pass } = {
 	{ key = "Storage", name = "Grandes écuries", desc = "+150 places de héros.", id = 0, price = 99, icon = "Chest" },
 	{ key = "Vip", name = "VIP", desc = "+10 % de dégâts, titre doré et accès au salon VIP de la taverne.", id = 0, price = 299, icon = "Crown" },
 	{ key = "AutoClick", name = "Clic automatique", desc = "Frappe la cible automatiquement (aussi en gemmes).", id = 0, price = 50, icon = "Fist" },
+	{ key = "QuickTravel", name = "Voyage express", desc = "Téléportation directe à la Forge des talents, aux raids et à la Tour (aussi en gemmes).", id = 0, price = 200, icon = "Map" },
 }
 Shop.Passes = PASSES
 
@@ -53,6 +54,7 @@ Shop.GemShop = GEMSHOP
 export type Perk = { key: string, name: string, desc: string, cost: number, icon: string }
 Shop.GemPerks = {
 	{ key = "AutoClick", name = "Clic automatique", desc = "Frappe la cible automatiquement, pour toujours.", cost = 500, icon = "Fist" },
+	{ key = "QuickTravel", name = "Voyage express", desc = "Téléportation directe à la Forge des talents, aux raids et à la Tour.", cost = 1500, icon = "Map" },
 } :: { Perk }
 
 function Shop.Perk(key: string): Perk?

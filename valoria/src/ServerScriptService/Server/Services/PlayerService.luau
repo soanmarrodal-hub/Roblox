@@ -11,6 +11,7 @@ local Stats = require(Shared.Logic.Stats)
 local Progression = require(Shared.Logic.Progression)
 local Items = require(Shared.Config.Items)
 local Rarities = require(Shared.Config.Rarities)
+local Titles = require(Shared.Config.Titles)
 local Rewards = require(Shared.Config.Rewards)
 local Format = require(Shared.Util.Format)
 local R = require(script.Parent.Parent.Registry)
@@ -56,7 +57,8 @@ function PlayerService.ApplyCharacter(self: any, player: Player)
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.WalkSpeed = Stats.WalkSpeed(data.upgrades)
-		hum.NameDisplayDistance = 60
+		-- nom, titre et rang : plaque dessinée par les clients (Controllers/Nameplates)
+		hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 		hum.MaxSlopeAngle = 55 -- les reliefs des mondes sont raides
 	end
 end
@@ -68,7 +70,9 @@ function PlayerService.RefreshPublic(self: any, player: Player)
 		return
 	end
 	player:SetAttribute("Rank", data.rank)
-	player:SetAttribute("Title", Progression.RankTitle(data.rank))
+	local title = Titles.Current(data)
+	player:SetAttribute("Title", title.name)
+	player:SetAttribute("TitleKey", title.key)
 	-- équipe : héros:étoiles:niveau:aura (rareté du meilleur enchantement, 0 = aucune):taille:téléportation
 	local parts = {}
 	for _, uid in data.team do
@@ -131,6 +135,15 @@ function PlayerService.Context(self: any, player: Player): Stats.Ctx?
 		return nil
 	end
 	return Stats.Context(data, R.ShopService:Passes(player), R.BoostService:Active(player))
+end
+
+-- Puissance de l'équipe sans les potions (classement du mur des légendes).
+function PlayerService.TeamPower(self: any, player: Player, data: any?): number
+	local d = data or R.DataService:Get(player)
+	if not d then
+		return 0
+	end
+	return Stats.TeamPower(d, Stats.Context(d, R.ShopService:Passes(player)))
 end
 
 ------------------------------------------------------------------ monnaies
@@ -286,7 +299,7 @@ function PlayerService.AddRankXp(self: any, player: Player, amount: number)
 			gems += Rewards.RankUp(r)
 		end
 		self:AddGems(player, gems)
-		Net.Event("LevelUp"):FireClient(player, "rank", { rank = data.rank, title = Progression.RankTitle(data.rank), gems = gems })
+		Net.Event("LevelUp"):FireClient(player, "rank", { rank = data.rank, title = Titles.Current(data).name, gems = gems })
 		self:RefreshPublic(player)
 		R.QuestService:Refresh(player)
 	end

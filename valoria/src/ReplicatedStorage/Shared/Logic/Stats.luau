@@ -168,6 +168,18 @@ function Stats.Power(inst: any, ctx: Ctx): number
 	return if s then math.floor(s.dps) else 0
 end
 
+-- Puissance de l'équipe : somme des héros équipés (classement du mur des légendes).
+function Stats.TeamPower(data: any, ctx: Ctx): number
+	local total = 0
+	for _, uid in data.team do
+		local inst = data.heroes[uid]
+		if inst then
+			total += Stats.Power(inst, ctx)
+		end
+	end
+	return total
+end
+
 function Stats.GoldMult(ctx: Ctx): number
 	local m = 1 + up(ctx, "Butin") + ctx.teamGold
 	if ctx.passes.DoubleGold then

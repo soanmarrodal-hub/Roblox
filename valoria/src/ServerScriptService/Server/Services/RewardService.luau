@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Rewards = require(Shared.Config.Rewards)
+local Titles = require(Shared.Config.Titles)
 local Heroes = require(Shared.Config.Heroes)
 local QuestLogic = require(Shared.Logic.QuestLogic)
 local R = require(script.Parent.Parent.Registry)
@@ -112,6 +113,42 @@ function RewardService.Init(self: any)
 		end
 		data.settings[k :: string] = value
 		R.DataService:Sync(player, "settings")
+		return true, nil
+	end)
+	-- rang : récompenses par palier et titre affiché
+	Router.Register("ClaimRankReward", function(player: Player, rank: any)
+		local data = R.DataService:Get(player)
+		local r = Router.Int(rank, 1, 1000)
+		local entry = nil
+		for _, e in Titles.RankRewards do
+			if e.rank == r then
+				entry = e
+			end
+		end
+		if not entry or not r then
+			return false, "Récompense inconnue."
+		end
+		if data.rank < r then
+			return false, string.format("Atteins d'abord le rang %d.", r)
+		end
+		if data.rankClaimed[tostring(r)] then
+			return false, "Récompense déjà réclamée."
+		end
+		data.rankClaimed[tostring(r)] = true
+		local gains = R.PlayerService:Grant(player, entry.reward)
+		R.DataService:Sync(player, "rankClaimed")
+		return true, { gains = gains, text = R.PlayerService:Describe(gains) }
+	end)
+	Router.Register("SetTitle", function(player: Player, key: any)
+		local data = R.DataService:Get(player)
+		local k = Router.Str(key) or ""
+		local t = Titles.ByKey[k]
+		if k ~= "" and (not t or not Titles.Unlocked(data, t)) then
+			return false, "Titre pas encore débloqué."
+		end
+		data.title = k
+		R.DataService:Sync(player, "title")
+		R.PlayerService:RefreshPublic(player)
 		return true, nil
 	end)
 	Router.Register("Tutorial", function(player: Player, step: any)

@@ -29,7 +29,7 @@ local function facing(pos: Vector3, target: Vector3): CFrame
 	return CFrame.lookAt(pos, flat)
 end
 
-export type Result = { folder: Folder, grid: Kit.Grid, boards: { [string]: SurfaceGui } }
+export type Result = { folder: Folder, grid: Kit.Grid, boards: { [string]: SurfaceGui }, legends: { [string]: Buildings.Legend }, statues: Folder }
 
 local STONE = {
 	Color3.fromRGB(178, 166, 144),
@@ -188,6 +188,8 @@ function Hub.Build(root: Instance): Result
 		{ x = 0, z = -122, r = 34 }, -- Cercle des Runes
 		{ x = -74, z = -62, r = 16 }, -- grand chêne
 		{ x = 66, z = -146, r = 20 }, -- taverne
+		{ x = -24, z = 62, r = 16 }, -- mur des légendes (ailes)
+		{ x = 24, z = 62, r = 16 },
 	}
 	local function flatEnough(x: number, z: number, r: number): boolean
 		local lo, hi = 1e9, -1e9
@@ -276,7 +278,7 @@ function Hub.Build(root: Instance): Result
 	end
 	-- charrettes, étals et puits autour de la place et des rues
 	local market = Kit.Folder(folder, "Marche")
-	for i, spot in { { 22, -52, 0.3 }, { -58, 14, 1.4 }, { 58, -16, 4.4 }, { -16, 60, 2.8 }, { 90, 22, 0 }, { -96, -20, 3.1 } } do
+	for i, spot in { { 22, -52, 0.3 }, { -58, 14, 1.4 }, { 58, -16, 4.4 }, { -24, -60, 2.8 }, { 90, 22, 0 }, { -96, -20, 3.1 } } do
 		local x, z = spot[1], spot[2]
 		if free(x, z, 4) or math.sqrt(x * x + z * z) < 70 then
 			Buildings.Cart(market, CFrame.new(x, ground(x, z), z) * CFrame.Angles(0, spot[3], 0), i)
@@ -348,11 +350,25 @@ function Hub.Build(root: Instance): Result
 	Buildings.Tower(tw, CFrame.new(0, ground(0, 178) - 1, 178), { radius = 20, height = 132, roof = Color3.fromRGB(150, 50, 50), segments = 24 })
 	local ts = (Stations.Get("TowerShop") :: Stations.Station).pos
 	Buildings.Stall(tw, facing(Vector3.new(ts.X - 10, ground(ts.X - 10, ts.Z), ts.Z), ts), Color3.fromRGB(200, 140, 40), 11)
+	-- classements : étages de la Tour au pied de la tour, chasseurs un peu plus loin
 	local boards = {}
-	local _, g1 = Buildings.Board(tw, facing(Vector3.new(32, ground(32, 132), 132), Vector3.new(0, 0, 120)), "Tour des Épreuves")
-	local _, g2 = Buildings.Board(tw, facing(Vector3.new(50, ground(50, 146), 146), Vector3.new(0, 0, 120)), "Chasseurs de Valoria")
+	local _, g1 = Buildings.Board(tw, facing(Vector3.new(28, ground(28, 160), 160), Vector3.new(6, 0, 140)), "Étages de la Tour")
+	local _, g2 = Buildings.Board(tw, facing(Vector3.new(50, ground(50, 140), 140), Vector3.new(0, 0, 120)), "Chasseurs de Valoria")
 	boards.Tower = g1
 	boards.Kills = g2
+
+	-- mur des légendes, juste derrière le point d'apparition (face à la place) : dépenses en Robux,
+	-- puissance d'équipe, rang ; statue du n°1 de chaque classement au sommet
+	local lg = Kit.Folder(folder, "MurDesLegendes")
+	local _, legends = Buildings.LegendsWall(lg, CFrame.new(0, ground(0, 62), 62), {
+		{ key = "Robux", title = "Mécènes du royaume" },
+		{ key = "Power", title = "Équipes les plus puissantes" },
+		{ key = "Rank", title = "Plus hauts rangs" },
+	})
+	for key, l in legends do
+		boards[key] = l.gui
+	end
+	local statues = Kit.Folder(lg, "Statues")
 	for _, x in { -14, 14 } do
 		Buildings.Banner(tw, CFrame.new(x, ground(x, 152), 152), Color3.fromRGB(150, 50, 50), C.gold)
 	end
@@ -393,7 +409,7 @@ function Hub.Build(root: Instance): Result
 		Kit.Block(walls, size, CFrame.new(pos), Color3.new(1, 1, 1), nil, { Transparency = 1, CanQuery = false })
 	end
 
-	return { folder = folder, grid = grid, boards = boards }
+	return { folder = folder, grid = grid, boards = boards, legends = legends, statues = statues }
 end
 
 -- Décors voxel (cuits en unions) : posés après coup pour ne pas retarder l'ouverture du village.

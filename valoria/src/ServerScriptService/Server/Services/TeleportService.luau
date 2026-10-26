@@ -1,7 +1,8 @@
 --!strict
--- Déplacements entre zones : village, mondes (et leurs points de passage), arènes de la tour et des raids.
--- Déblocage des mondes (rang, boss vaincu, or). Chaque changement de zone prévient le client (ambiance,
--- musique, ennemis à afficher).
+-- Déplacements entre zones : village, mondes (arrivée au camp du monde : il n'y a plus de runes de passage
+-- dans les mondes), arènes de la tour et des raids, voyage express dans le village (Forge des talents,
+-- raids, Tour ; passe ou gemmes). Déblocage des mondes (rang, boss vaincu, or). Chaque changement de zone
+-- prévient le client (ambiance, musique, ennemis à afficher).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,6 +17,9 @@ local Router = require(script.Parent.Parent.Router)
 local TeleportService = {}
 
 local lastTp: { [Player]: number } = {}
+
+-- Voyage express : destination → station du village.
+TeleportService.Express = { Talents = "Talents", Raids = "RaidShop", Tower = "Tower" } :: { [string]: string }
 
 local function zoneInfo(key: string): { [string]: any }
 	local kind, idx = string.match(key, "^(%a+%d?):(%d+)$")
@@ -86,11 +90,22 @@ function TeleportService.Init(self: any)
 		local wk, wp = string.match(d, "^(%w+):(%w+)$")
 		local worldKey: string = wk or d
 		if worldKey == "Hub" then
+			local station = wp and TeleportService.Express[wp]
+			if wp and not station then
+				return false, "Destination inconnue."
+			end
+			if station then
+				if not R.ShopService:Has(player, "QuickTravel") then
+					return false, "Le voyage express demande le passe « Voyage express » (ou 1 500 gemmes)."
+				end
+				self:ToZone(player, "Hub", R.WorldService:StationCF(station) or R.WorldService:SpawnCF("Hub"))
+				return true, nil
+			end
 			self:ToZone(player, "Hub", R.WorldService:SpawnCF("Hub"))
 			return true, nil
 		end
 		local w = Worlds.ByKey(worldKey)
-		if not w then
+		if not w or wp then
 			return false, "Destination inconnue."
 		end
 		if not data.worlds[tostring(w.id)] then
@@ -99,11 +114,8 @@ function TeleportService.Init(self: any)
 		if not R.WorldService:IsReady(w.key) then
 			return false, "Ce monde se prépare encore, réessaie dans quelques secondes."
 		end
-		local cf = R.WorldService:SpawnCF(w.key)
-		if wp then
-			cf = R.WorldService:WaypointCF(w.key, wp) or cf
-		end
-		self:ToZone(player, w.key, cf)
+		-- toujours au camp du monde (les runes de passage ont été retirées)
+		self:ToZone(player, w.key, R.WorldService:SpawnCF(w.key))
 		return true, nil
 	end)
 	Router.Register("UnlockWorld", function(player: Player, id: any)

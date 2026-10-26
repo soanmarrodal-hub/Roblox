@@ -39,11 +39,17 @@ service est un **cercle lumineux** : y entrer ouvre le menu (comme les marchands
 
 | Lieu | Rôle |
 | --- | --- |
-| **Cercle des Runes** (nord) | Téléporteur : village, mondes et points de passage, déblocage des mondes |
+| **Cercle des Runes** (nord) | Téléporteur : carte de voyage (village, mondes), déblocage des mondes |
 | **Quartier de la Forge** (est) | Forge des talents (reroll des statistiques des héros), Enchanteresse (enchantements), Autel d'évolution (étoiles), Bijoutier (accessoires) |
 | **Salle des raids** (ouest) | Portails de la Crypte et du Temple, quartier-maître (boutique des raids) |
-| **Tour des Épreuves** (sud) | Ascension par étages, gardien des jetons (boutique), classements |
-| **Place** | Tableau des quêtes du jour, coffre du jour, marché (gemmes), bibliothèque (index des héros) |
+| **Tour des Épreuves** (sud) | Ascension par étages, gardien des jetons (boutique), classement des étages au pied de la tour |
+| **Place** | Tableau des quêtes du jour, autel de saison, marché (gemmes), bibliothèque (index des héros) |
+| **Mur des légendes** (derrière le point d'apparition) | Classements des Robux dépensés, de la puissance d'équipe et du rang, statue dorée du n°1 de chacun |
+
+**Voyager** : la carte de voyage (touche **M**, bouton « VOYAGE », Cercle des Runes, pierre de retour des camps)
+est une vieille carte sur parchemin dessinée à la plume : village, mondes, monde 3 à venir. Le **voyage express**
+(passe à 200 Robux ou 1 500 gemmes) mène directement aux améliorations (Forge des talents), aux raids et à la Tour.
+Dans les mondes, on arrive toujours au camp : il n'y a plus de runes de passage.
 
 ### Les mondes (téléporteur)
 
@@ -145,7 +151,9 @@ Déblocage progressif : **monde 1** fusion d'étoiles, **monde 2** enchantements
   l'équipe ; **clic automatique** à 500 gemmes ou 50 Robux.
 - **Accessoires** de raid : 6 types (heaume, amulette, anneaux, perle, cape), 4 raretés, statistiques secondaires,
   **polissage** avec les jetons du raid, recyclage.
-- **Rang du joueur** (titres d'Écuyer à Roi), gemmes à chaque rang.
+- **Rang du joueur** : gemmes à chaque rang, **récompenses de rang** à réclamer et **titres** (rangs d'Écuyer à Roi,
+  hauts faits : boss, Tour, raids, index) à choisir — clic sur le rang en haut à gauche. Le titre et le rang
+  s'affichent au-dessus de chaque joueur.
 
 ### Combat
 
@@ -162,7 +170,7 @@ réapparition) ne s'affiche qu'à proximité (`Worlds.BossBarDistance`).
 
 Une salle par joueur sur une île flottante : nettoie l'étage avant la fin du chrono, un **gardien** tous les 10
 étages, reprise tous les 10 étages, jetons à chaque étage et gemmes / runes / potions aux paliers. Records et
-classement mondial sur le panneau du village.
+classement mondial des étages sur le panneau au pied de la tour.
 
 ### Raids (accessoires)
 
@@ -199,6 +207,7 @@ pas dessinée.
 | ![Bourg-Lanterne vu du ciel](docs/images/vues/01_village_panorama.jpg)<br>Bourg-Lanterne vu du ciel | ![La place et sa fontaine](docs/images/vues/02_village_place.jpg)<br>La place et sa fontaine |
 | ![Le Cercle des Runes (téléporteur)](docs/images/vues/03_cercle_des_runes.jpg)<br>Le Cercle des Runes (téléporteur) | ![Le Quartier de la Forge](docs/images/vues/04_quartier_forge.jpg)<br>Le Quartier de la Forge |
 | ![La Salle des raids](docs/images/vues/05_salle_des_raids.jpg)<br>La Salle des raids | ![La Tour des Épreuves](docs/images/vues/06_tour_des_epreuves.jpg)<br>La Tour des Épreuves |
+| ![Le Mur des légendes](docs/images/vues/30_mur_des_legendes.jpg)<br>Le Mur des légendes (près du point d'apparition) |  |
 
 ### Val d'Automne
 
@@ -256,7 +265,8 @@ src/
     Main.client    démarrage du client
     UI/            thème, composants, pixel art, HUD, gestionnaire de menus
     Menus/         héros, invocation, forge, bijoutier, voyage, tour et raids, quêtes, récompenses, boutique…
-    Controllers/   héros, ennemis, effets, stations, ambiance, décor animé, PNJ, sons, détails au sol
+    Controllers/   héros, ennemis, effets, stations, autels, ambiance, décor animé, PNJ, sons, détails au sol,
+                   plaques des joueurs (titre, rang)
   ReplicatedFirst/ écran de chargement
 tools/
   voxel/           modélisation voxel (Python) : héros, ennemis, décors, portraits, aperçus, plans, vues 3D

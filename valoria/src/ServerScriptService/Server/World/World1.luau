@@ -213,7 +213,6 @@ function World1.Build(root: Instance): Result
 			return if h > 45 then "rope" else "stone"
 		end)
 	end
-	Common.Waypoints(folder, w, grid, Color3.fromRGB(255, 190, 90))
 	Common.Bounds(folder, w)
 	return { folder = folder, grid = grid, world = w, spec = spec, reserved = reserved }
 end

@@ -166,4 +166,48 @@ Le produit Robux « Tirage de saison » doit être créé dans le Creator Hub pu
   (accessoire + héros).
 - Vues : `docs/images/vues/28_autel_de_saison.jpg`, `29_autel_du_val.jpg`.
 
-## 5. Interface et social — à venir
+## 5. Interface et social — fait
+
+| Point du document | Existant | Changement |
+| --- | --- | --- |
+| Touche de téléportation vers les mondes | Seulement en marchant jusqu'au Cercle des Runes ou à la pierre de retour d'un camp | Touche **M** et bouton « VOYAGE » dans la colonne de menus : la carte de voyage s'ouvre partout (sauf pendant une épreuve, comme avant) |
+| Option payante : téléportation directe à la zone d'amélioration, de raid et à la tour (1 500 diamants ou 200 Robux) | — | **Voyage express** : avantage permanent à **1 500 gemmes** (boutique, onglet Marché) ou passe **200 Robux** ; sur la carte, trois destinations du village : **Améliorations** (Forge des talents, au cœur du quartier de la Forge avec l'évolution, l'Enchanteresse et le Bijoutier), **Raids** (quartier-maître, entre les deux portails), **Tour** (devant la tour). Le serveur refuse sans le passe |
+| Menu de téléportation façon ancien parchemin / carte croquis (spawn, monde 1, monde 2, monde 3…) | Liste de cartes colorées « Cercle des Runes » | **Carte du royaume** dessinée à la plume sur parchemin (grain, bords brûlés, rose des vents, montagnes, forêts, mer, chemins en pointillés) : Bourg-Lanterne (point d'apparition), Monde 1, Monde 2, Monde 3 (« terres inconnues », à venir), voyage express autour du village ; « Vous êtes ici » à l'encre rouge ; le lieu choisi s'affiche dans un cartouche avec son action (Voyager, Débloquer avec les conditions, achat du voyage express) |
+| Retirer les runes de téléportation dans les mondes, garder une téléportation au spawn du monde | 4 menhirs de points de passage par monde, voyage direct vers chacun | Menhirs et points de passage supprimés (construction, configuration, serveur) ; on arrive toujours au camp du monde ; seule la **pierre de retour** du camp reste (elle ouvre la carte) |
+| Niveau et rang du joueur cliquables : récompenses par rang, titres déblocables | Rang et titre affichés, non cliquables ; titre imposé par le rang | Clic sur le rang (en haut à gauche) → menu **Rang et titres** : récompenses à réclamer à certains rangs (pastille rouge quand une est prête), titres de rang (Écuyer → Roi) et de hauts faits (boss, Tour, raids, index) avec leur avancement, à équiper (ou « Automatique » : meilleur titre de rang) |
+| Titre et rang au-dessus du joueur | Nom Roblox par défaut | Plaque au-dessus de chaque joueur : **titre** dans sa couleur, nom, **RANG N** (le nom Roblox par défaut est masqué) |
+| Mur des légendes au spawn : top dépenses Robux, top puissance d'équipe, top rang, statue du n°1 de chaque tableau | Deux panneaux près de la tour (record de la Tour, ennemis vaincus) | **Mur des légendes** juste derrière le point d'apparition, face à la place : deux ailes crénelées et une arche au-dessus de la rue du sud, trois panneaux (**Mécènes du royaume** : Robux dépensés, **Équipes les plus puissantes**, **Plus hauts rangs**) et, au sommet, la **statue dorée du n°1** de chacun (son avatar Roblox, ou un chevalier sculpté si l'avatar n'est pas disponible) avec une plaque « N°1 · nom ». Classements mondiaux (OrderedDataStore), mis à jour toutes les 90 s |
+| Tableau de classement des étages de la tour à côté de la tour | Panneau à 45 studs de la tour, au bord de la rue | Panneau **« Étages de la Tour »** déplacé au pied de la tour, à côté de l'entrée ; le panneau des chasseurs reste un peu plus loin |
+
+Les Robux dépensés sont comptés à partir de cette version (passes et produits achetés en jeu) : les achats
+antérieurs ne sont pas connus du profil. La puissance d'équipe du classement ne compte pas les potions.
+
+### Valeurs par défaut à valider
+
+| Réglage | Valeur | Fichier |
+| --- | --- | --- |
+| Récompenses de rang | rang 5 : 50 gemmes · 10 : 100 gemmes + 1 rune · 15 : 2 jetons de fusion · 20 : 200 gemmes + 2 runes · 25 : 5 jetons de talent · 30 : 300 gemmes + 3 jetons de fusion · 40 : 500 gemmes + 3 runes · 50 : 750 gemmes + 10 jetons de talent · 60 : 1 000 gemmes + 5 runes + 5 jetons de fusion | `Config/Titles.luau` (`RankRewards`) |
+| Titres de rang | Écuyer 1, Sergent 5, Chevalier 10, Baron 15, Comte 20, Duc 30, Prince 40, Roi 60 | `Config/Titles.luau` |
+| Titres de hauts faits | Fléau des citrouilles (Roi-Citrouille ×10), Dompteur de tempêtes (Vyrmax ×5), Maître de la Tour (étage 40), Pilleur de cryptes (25 raids), Grand collectionneur (20 héros) | `Config/Titles.luau` |
+| Touche de la carte | M | `UI/Hud.luau` |
+| Statue du n°1 | avatar en or, échelle ×1,6 | `World/Statue.luau` |
+| Fréquence des classements | 90 s | `Services/LeaderboardService.luau` |
+
+Le passe Robux « Voyage express » doit être créé dans le Creator Hub puis son identifiant renseigné dans
+`Config/Shop.luau` (comme les autres passes).
+
+### Vérifications
+
+- `config.spec` : titres (une condition chacun, boss existants, rangs croissants), récompenses de rang (rangs
+  croissants, objets existants, jamais vides), voyage express à 1 500 gemmes / 200 Robux et ses trois stations,
+  points de passage retirés, pierre de retour de chaque camp.
+- `logic.spec` : titre affiché (meilleur titre de rang, titre choisi, titre verrouillé ignoré), avancement des
+  hauts faits, puissance d'équipe.
+- `world_smoke` : point de passage refusé, arrivée au camp du monde 2 ; voyage express refusé sans le passe, achat
+  à 1 500 gemmes puis arrivée près de la Tour, des raids et de la Forge des talents ; récompense de rang (une
+  seule fois, rang atteint), titres (choisi, verrouillé refusé, haut fait, automatique) visibles dans les
+  attributs publics ; classements Robux / puissance / rang / Tour remplis, statues des trois n°1 et leurs
+  plaques sur le mur des légendes, 5 panneaux remplis.
+- `ui_smoke` : menu « Rang et titres » (récompenses, titres), pastille du rang, clic sur le rang, plaque au-dessus
+  du joueur (titre, rang), touche M → carte de voyage avec tous ses lieux, choix d'un lieu dans le cartouche.
+- Vue : `docs/images/vues/30_mur_des_legendes.jpg`.

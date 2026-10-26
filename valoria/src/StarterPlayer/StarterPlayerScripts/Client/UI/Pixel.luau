@@ -156,6 +156,32 @@ function Pixel.Checker(key: string, a: Color3, b: Color3, alpha: number?): Edita
 	end)
 end
 
+-- Grain de parchemin 64×64 (taches et fibres, à répéter en mosaïque) : fond de la carte de voyage.
+function Pixel.Parchment(): EditableImage?
+	return cached("parchment", function()
+		return make(64, 64, function(buf)
+			local seed = 1234567
+			local function rnd(): number
+				seed = (seed * 1103515245 + 12345) % 2147483648
+				return seed / 2147483648
+			end
+			for y = 0, 63 do
+				for x = 0, 63 do
+					local n = rnd()
+					-- fibres horizontales et taches plus sombres
+					local fiber = 0.5 + 0.5 * math.sin((y + rnd() * 2) * 0.9)
+					local shade = 0.06 * fiber + (if n > 0.985 then 0.25 elseif n > 0.93 then 0.1 else 0)
+					local o = (y * 64 + x) * 4
+					buffer.writeu8(buf, o, math.floor(120 - shade * 80))
+					buffer.writeu8(buf, o + 1, math.floor(80 - shade * 60))
+					buffer.writeu8(buf, o + 2, math.floor(40 - shade * 30))
+					buffer.writeu8(buf, o + 3, math.floor(math.clamp(18 + shade * 420 + n * 14, 0, 255)))
+				end
+			end
+		end)
+	end)
+end
+
 -- Affiche une image générée dans un ImageLabel / ImageButton ; renvoie false si indisponible.
 function Pixel.Apply(label: ImageLabel | ImageButton, img: EditableImage?): boolean
 	if not img then

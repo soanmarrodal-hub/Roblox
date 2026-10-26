@@ -1,6 +1,6 @@
 --!strict
 -- Outils communs aux constructeurs de mondes : dispersion de décors, ponts aux croisements
--- chemin / rivière, menhirs de points de passage.
+-- chemin / rivière, limites des mondes.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -161,17 +161,6 @@ function Common.Bridges(folder: Instance, w: Worlds.World, river: { { x: number,
 				end
 			end
 		end
-	end
-end
-
--- Pierre de point de passage (rune lumineuse) sur chaque point de téléportation interne.
-function Common.Waypoints(folder: Instance, w: Worlds.World, grid: Kit.Grid, color: Color3)
-	for _, wp in w.waypoints do
-		local x, z = w.origin.X + wp.x, w.origin.Z + wp.z
-		local h = Kit.Height(grid, w.origin, x, z) or (w.origin.Y + wp.h)
-		local stone = Kit.Block(folder, Vector3.new(3, 9, 2), CFrame.new(x + 6, h + 4, z), Kit.C.stoneDark, Enum.Material.Slate)
-		Kit.Block(folder, Vector3.new(1, 5, 0.3), stone.CFrame * CFrame.new(0, 0, -1.05), color, Enum.Material.Neon)
-		Kit.Sign(stone, wp.name, "Point de passage", color, 7)
 	end
 end
 
