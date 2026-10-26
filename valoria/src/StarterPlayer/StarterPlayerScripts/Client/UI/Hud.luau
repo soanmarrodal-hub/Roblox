@@ -62,7 +62,7 @@ local sessionStart = os.clock()
 local giftsTaken: { [number]: boolean } = {}
 
 -- Contrôleur d'ennemis (branché par Main) : boss vivant de la zone.
-Hud.findBoss = function(): (string?, number, number)
+Hud.findBoss = function(_from: Vector3?, _maxDist: number?): (string?, number, number)
 	return nil, 0, 0
 end
 
@@ -618,8 +618,13 @@ local function onRunState(msg: any)
 		end
 	else
 		local raid = Raids.List[msg.raid]
-		runTitle.Text = if msg.phase == "boss" then (msg.boss and msg.boss.name or "Boss") else string.format("Vague %d / %d", math.min(msg.wave, msg.waves), msg.waves)
-		runInfo.Text = string.format("%s  ENNEMIS %d", if raid then Format.Upper(raid.name) else "", msg.enemies or 0)
+		runTitle.Text = if msg.phase == "boss"
+			then (msg.boss and msg.boss.name or "Boss")
+			elseif msg.phase == "path" then string.format("Parcours %d / %d", msg.wave, msg.waves - 1)
+			else string.format("Salle %d / %d", math.min(msg.wave, msg.waves), msg.waves)
+		runInfo.Text = if msg.phase == "path"
+			then string.format("%s  PORTE OUVERTE", if raid then Format.Upper(raid.name) else "")
+			else string.format("%s  ENNEMIS %d", if raid then Format.Upper(raid.name) else "", msg.enemies or 0)
 		if msg.phase == "victory" then
 			local entries = RewardView.FromGains(msg.gains or {})
 			local sub = "Le raid est terminé !"
@@ -648,7 +653,7 @@ local function tick()
 	-- chrono de la tour / du raid
 	if runState then
 		local left = math.max(0, (runState.remaining or 0) - (os.clock() - runAt))
-		local total = if runState.kind == "Tower" then (if runState.guardian then 120 else 60) else 300
+		local total = if runState.kind == "Tower" then (if runState.guardian then 120 else 60) else (runState.total or 600)
 		runBar:Set(left / total, Format.Time(left))
 	end
 	if lobby then
@@ -658,15 +663,19 @@ local function tick()
 			info.Text = string.format("%s · %d/%d · DEPART %ds", tostring(info:GetAttribute("Diff") or ""), #lobby.players, lobby.max or 4, math.ceil(left))
 		end
 	end
-	-- boss
-	local name, hp, max = Hud.findBoss()
+	-- boss : barre de vie (ou réapparition) seulement à proximité
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local here = root and root.Position
+	local name, hp, max = Hud.findBoss(here, Worlds.BossBarDistance)
 	local info = State.zoneInfo
 	local ws = if info.kind == "World" then bossState[info.world] else nil
-	if name then
+	local nearArena = ws ~= nil and here ~= nil and typeof(ws.pos) == "Vector3" and (ws.pos - here).Magnitude <= Worlds.BossBarDistance
+	if name and here then
 		bossPanel.Visible = true
 		bossName.Text = name .. (if ws and ws.enraged then "  · EN RAGE" else "")
 		bossBar:Set(hp / math.max(1, max), Format.Short(hp) .. " / " .. Format.Short(max))
-	elseif ws and not ws.alive and ws.nextSpawn > 0 then
+	elseif ws and nearArena and not ws.alive and ws.nextSpawn > 0 then
 		bossPanel.Visible = true
 		bossName.Text = ws.name
 		local left = math.max(0, ws.nextSpawn - os.time())

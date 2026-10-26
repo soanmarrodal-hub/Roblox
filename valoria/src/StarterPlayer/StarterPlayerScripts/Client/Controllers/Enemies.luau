@@ -85,11 +85,20 @@ function EnemyController.Center(e: Enemy): Vector3
 	return e.pos + Vector3.new(0, e.height * 0.55 + (if e.def.flying then 3 else 0), 0)
 end
 
-function EnemyController.FindBoss(): (string?, number, number)
+-- Boss le plus proche de `from` à moins de `maxDist` studs (la barre de vie ne s'affiche qu'à proximité).
+function EnemyController.FindBoss(from: Vector3?, maxDist: number?): (string?, number, number)
+	local best: Enemy? = nil
+	local bestD = maxDist or math.huge
 	for _, e in list do
 		if e.boss and not e.dying then
-			return e.def.name, e.hp, e.max
+			local d = if from then (e.pos - from).Magnitude else 0
+			if d <= bestD then
+				best, bestD = e, d
+			end
 		end
+	end
+	if best then
+		return best.def.name, best.hp, best.max
 	end
 	return nil, 0, 0
 end

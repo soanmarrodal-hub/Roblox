@@ -126,6 +126,46 @@ test("raids et tour", function()
 	end
 end)
 
+-- distance horizontale entre deux rectangles (x0, x1, z0, z1)
+local function rectGap(a, b)
+	local dx = math.max(0, math.max(a[1], b[1]) - math.min(a[2], b[2]))
+	local dz = math.max(0, math.max(a[3], b[3]) - math.min(a[4], b[4]))
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+test("donjons des raids : une salle par vague, parcours franchissables", function()
+	local L = Raids.Layout
+	for _, key in Raids.Order do
+		local r = Raids.List[key]
+		local plan = Raids.Plan(#r.waves + 1)
+		eq(#plan.rooms, #r.waves + 1, key .. " : une salle par vague + le boss")
+		eq(#plan.courses, #r.waves, key .. " : un parcours entre deux salles")
+		check(plan.rooms[#plan.rooms].boss and plan.rooms[#plan.rooms].z == 0, key .. " : le boss dans la dernière salle")
+		check(r.time >= 600, key .. " : temps doublé")
+		-- les salles se suivent sans se chevaucher, reliées par leur parcours
+		for k, c in plan.courses do
+			local south, north = plan.rooms[k], plan.rooms[k + 1]
+			near(c.south, south.z - south.half, 1e-6, key .. " parcours " .. k .. " côté sud")
+			near(c.north, north.z + north.half, 1e-6, key .. " parcours " .. k .. " côté nord")
+			check(c.south - c.north == L.course, key .. " longueur du parcours " .. k)
+			-- chaque saut est faisable : écart horizontal ≤ 6 studs, montée ≤ 3 studs
+			local w = L.width / 2
+			local prev = { rect = { -w, w, c.south - L.landing, c.south }, top = 0 }
+			local list = table.clone(c.steps)
+			table.insert(list, { x = 0, z = c.north + L.landing / 2, sx = L.width, sz = L.landing, top = 0 })
+			for i, st in list do
+				local rect = { st.x - st.sx / 2, st.x + st.sx / 2, st.z - st.sz / 2, st.z + st.sz / 2 }
+				local gap = rectGap(prev.rect, rect)
+				check(gap > 0.5 and gap <= 6, string.format("%s parcours %d, saut %d : écart %.1f", key, k, i, gap))
+				check(st.top - prev.top <= 3, string.format("%s parcours %d, saut %d : montée", key, k, i))
+				check(math.abs(st.x) + st.sx / 2 <= w, key .. " plate-forme dans la salle")
+				prev = { rect = rect, top = st.top }
+			end
+		end
+		check(plan.length < 700, key .. " : donjon plus court que l'écart entre deux mondes")
+	end
+end)
+
 test("quêtes et récompenses", function()
 	for world, chain in Quests.Chains do
 		for i, q in chain do

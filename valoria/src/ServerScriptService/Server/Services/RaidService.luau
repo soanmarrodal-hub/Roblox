@@ -1,7 +1,10 @@
 --!strict
 -- Raids en groupe : salle d'attente au portail (compte à rebours, le chef peut lancer tout de suite),
--- arène instanciée, quatre vagues puis le boss (mécaniques + renforts), chrono, butin (jetons, accessoire,
--- or, expérience) et boutique des raids.
+-- donjon instancié (World/Arenas) : chaque vague dans sa salle, puis le boss (mécaniques + renforts) dans
+-- la dernière. Une vague vaincue ouvre la porte de sa salle ; la vague suivante commence quand un joueur
+-- entre dans la salle suivante, après la salle de parcours (chute dans le fossé → retour au début du
+-- parcours ; un joueur resté en arrière pendant une vague est ramené auprès du groupe).
+-- Chrono, butin (jetons, accessoire, or, expérience) et boutique des raids.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,20 +23,26 @@ local Router = require(script.Parent.Parent.Router)
 local RaidService = {}
 
 type Lobby = { key: string, raid: Raids.Raid, diff: Raids.Difficulty, players: { Player }, leader: Player, startAt: number }
+-- Phases : « intro » (arrivée), « wave » (vague en cours), « path » (vague vaincue, porte ouverte, on
+-- traverse le parcours), « boss ».
 type Run = {
 	raid: Raids.Raid,
 	diff: Raids.Difficulty,
 	players: { Player },
 	slot: number,
 	zone: string,
+	arena: any,
 	wave: number,
+	phase: string,
 	deadline: number,
 	alive: { [number]: boolean },
 	active: boolean,
 	scale: number,
 	boss: any?,
-	betweenUntil: number,
+	fightSince: number,
 }
+
+local DOOR_DROP = 17 -- une porte ouverte s'enfonce dans le sol
 
 local lobbies: { [string]: Lobby } = {}
 local lobbyOf: { [Player]: Lobby } = {}
@@ -43,6 +52,38 @@ local rng = Random.new()
 
 local function rand(): number
 	return rng:NextNumber()
+end
+
+local function rootPos(p: Player): Vector3?
+	local char = p.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	return root and root.Position
+end
+
+local function inRoom(room: any, pos: Vector3): boolean
+	local d = pos - room.center
+	return math.abs(d.X) <= room.half and math.abs(d.Z) <= room.half and d.Y > -8 and d.Y < 40
+end
+
+-- Ouvre (abaisse) ou referme la porte de sortie d'une salle.
+local function setDoor(room: any, open: boolean, instant: boolean?)
+	local d: Model? = room.door
+	local cf: CFrame? = room.doorCF
+	if not d or not cf then
+		return
+	end
+	local target = if open then cf - Vector3.new(0, DOOR_DROP, 0) else cf
+	if instant then
+		d:PivotTo(target)
+		return
+	end
+	task.spawn(function()
+		local from = d:GetPivot()
+		for i = 1, 15 do
+			d:PivotTo(from:Lerp(target, i / 15))
+			task.wait(0.06)
+		end
+	end)
 end
 
 local function lobbyState(l: Lobby)
@@ -94,6 +135,7 @@ local function runState(run: Run, phase: string, extra: { [string]: any }?)
 		phase = phase,
 		wave = run.wave,
 		waves = #run.raid.waves + 1,
+		total = run.raid.time,
 		remaining = math.max(0, run.deadline - os.clock()),
 		enemies = alive,
 		boss = if run.boss and run.boss.alive then { hp = run.boss.hp, max = run.boss.maxHp, name = run.boss.def.name } else nil,
@@ -111,11 +153,14 @@ local function runState(run: Run, phase: string, extra: { [string]: any }?)
 end
 
 function RaidService._spawnWave(self: any, run: Run)
-	local arena = R.WorldService:Arena(run.raid.key, run.slot)
+	local arena = run.arena
 	local raid, diff = run.raid, run.diff
 	table.clear(run.alive)
+	run.fightSince = os.clock()
 	local w = run.wave
 	if w <= #raid.waves then
+		run.phase = "wave"
+		local room = arena.rooms[w]
 		local wave = raid.waves[w]
 		local mult = raid.waveMult[w]
 		local total = 0
@@ -128,8 +173,8 @@ function RaidService._spawnWave(self: any, run: Run)
 			for _ = 1, g.count do
 				i += 1
 				local a = (i / total) * math.pi * 2 + rng:NextNumber(-0.25, 0.25)
-				local rr = rng:NextNumber(arena.radius * 0.3, arena.radius * 0.65)
-				local pos = arena.center + Vector3.new(math.cos(a) * rr, 0, math.sin(a) * rr)
+				local rr = rng:NextNumber(room.half * 0.3, room.half * 0.65)
+				local pos = room.center + Vector3.new(math.cos(a) * rr, 0, math.sin(a) * rr)
 				local hp = raid.hpBase * mult * (if def then def.hpMult or 1 else 1) * diff.hpMult * run.scale
 				local e = R.EnemyService:Spawn(run.zone, g.enemy, pos, { hp = hp, run = run })
 				if e then
@@ -139,6 +184,7 @@ function RaidService._spawnWave(self: any, run: Run)
 		end
 		runState(run, "wave")
 	else
+		run.phase = "boss"
 		local hp = raid.hpBase * raid.bossHp * diff.hpMult * run.scale
 		local bpos = arena.center + Vector3.new(0, 0, -arena.radius * 0.35)
 		local boss = R.EnemyService:Spawn(run.zone, raid.boss, bpos, { hp = hp, run = run, boss = true, yaw = 0 })
@@ -239,22 +285,27 @@ function RaidService._startRun(self: any, l: Lobby)
 		end
 		return
 	end
+	local arena = R.WorldService:Arena(raid.key, slot)
 	local run: Run = {
 		raid = raid,
 		diff = l.diff,
 		players = players,
 		slot = slot,
 		zone = raid.key .. ":" .. slot,
+		arena = arena,
 		wave = 1,
+		phase = "intro",
 		deadline = os.clock() + raid.time + 6,
 		alive = {},
 		active = true,
 		scale = 1 + 0.6 * (#players - 1),
 		boss = nil,
-		betweenUntil = 0,
+		fightSince = os.clock(),
 	}
 	slots[raid.key][slot] = run
-	local arena = R.WorldService:Arena(raid.key, slot)
+	for _, room in arena.rooms do
+		setDoor(room, false, true)
+	end
 	for i, p in players do
 		runOf[p] = run
 		local off = CFrame.new((i - (#players + 1) / 2) * 5, 0, 0)
@@ -266,6 +317,58 @@ function RaidService._startRun(self: any, l: Lobby)
 			self:_spawnWave(run)
 		end
 	end)
+end
+
+-- Avancée dans le donjon : chutes, vague vaincue → porte ouverte, entrée dans la salle suivante → vague
+-- suivante, rattrapage des retardataires.
+function RaidService._progress(self: any, run: Run, now: number)
+	local arena = run.arena
+	local L = Raids.Layout
+	for _, p in run.players do
+		local pos = rootPos(p)
+		if not pos then
+			continue
+		end
+		for _, c in arena.courses do
+			if math.abs(pos.X - c.center.X) <= c.halfX + 2 and pos.Z >= c.minZ and pos.Z <= c.maxZ and pos.Y < c.floorY - L.fall then
+				R.TeleportService:Move(p, c.start)
+				R.PlayerService:Notify(p, "Chute ! Retour au début du parcours.", "warn")
+			end
+		end
+	end
+	if run.phase == "wave" and next(run.alive) == nil then
+		run.phase = "path"
+		setDoor(arena.rooms[run.wave], true)
+		runState(run, "path")
+		for _, p in run.players do
+			R.PlayerService:Notify(p, "La porte s'ouvre : traverse la salle de parcours !", "success")
+		end
+	elseif run.phase == "path" then
+		local nextRoom = arena.rooms[run.wave + 1]
+		for _, p in run.players do
+			local pos = rootPos(p)
+			if nextRoom and pos and inRoom(nextRoom, pos) then
+				run.wave += 1
+				self:_spawnWave(run)
+				break
+			end
+		end
+	elseif (run.phase == "wave" or run.phase == "boss") and now - run.fightSince > L.catchUp then
+		local room = arena.rooms[run.wave]
+		for _, p in run.players do
+			local pos = rootPos(p)
+			if pos and not inRoom(room, pos) then
+				R.TeleportService:Move(p, room.entry)
+				R.PlayerService:Notify(p, "Tu as été ramené auprès de ton groupe.", "info")
+			end
+		end
+	end
+end
+
+-- État d'avancée d'un joueur en raid (banc d'essai, débogage).
+function RaidService.Progress(self: any, player: Player): { wave: number, phase: string, arena: any }?
+	local run = runOf[player]
+	return if run then { wave = run.wave, phase = run.phase, arena = run.arena } else nil
 end
 
 function RaidService.Init(self: any)
@@ -422,13 +525,8 @@ function RaidService.Start(self: any)
 						self:_finish(run, false)
 					elseif now > run.deadline then
 						self:_finish(run, false)
-					elseif next(run.alive) == nil and run.betweenUntil == 0 and not run.boss then
-						run.betweenUntil = now + 3
-						runState(run, "between")
-					elseif run.betweenUntil > 0 and now >= run.betweenUntil then
-						run.betweenUntil = 0
-						run.wave += 1
-						self:_spawnWave(run)
+					else
+						self:_progress(run, now)
 					end
 				end
 			end

@@ -344,6 +344,51 @@ def v_temple(s, m):
     return dict(target=t, eye=sr.look(t, 10, 30, 125), fov=52, light='temple', shadow_extent=170)
 
 
+def _water_disc(m, cx, cz, r, y, col, alpha, seg=40):
+    for i in range(seg):
+        a0, a1 = i / seg * math.tau, (i + 1) / seg * math.tau
+        tri = [[cx, y, cz], [cx + math.cos(a1) * r, y, cz + math.sin(a1) * r], [cx + math.cos(a0) * r, y, cz + math.sin(a0) * r]]
+        m.add([tri], [[0, 1, 0]], col, alpha)
+
+
+# Donjons des raids (Config/Raids.Plan) : salle du boss en z = 0, salles de vague 1 à 4 vers le sud.
+ROOMS_Z = (508, 388, 268, 148)
+
+
+def v_donjon_crypte(s, m):
+    t = (CRYPT[0], CRYPT[1], CRYPT[2] + 272)
+    s.parts.add_to(m, t, 330, ymin=CRYPT[1] - 60, ymax=CRYPT[1] + 12)  # vue en coupe : murs arasés, sans voûtes
+    y = CRYPT[1]
+    s.squad(m, ['Paladin', 'Monk', 'GreenKnight', 'Archer'], CRYPT[0], CRYPT[2] + 520, (CRYPT[0], CRYPT[2] + 480), spread=5, y=y)
+    s.pack(m, 'Skeleton', CRYPT[0], CRYPT[2] + 500, 5, 12, 93, face=(CRYPT[0], CRYPT[2] + 530), y=y)
+    s.pack(m, 'Ghoul', CRYPT[0], CRYPT[2] + 268, 3, 12, 94, face=(CRYPT[0], CRYPT[2] + 300), y=y)
+    s.actor(m, 'Morvald', CRYPT[0], CRYPT[2] - 16, yaw_to((0, 0, -16), (0, 0, 24)), y=y)
+    return dict(target=t, eye=sr.look(t, 66, 50, 600), fov=50, light='tower', shadow_extent=440)
+
+
+def v_donjon_temple(s, m):
+    t = (TEMPLE[0], TEMPLE[1], TEMPLE[2] + 272)
+    s.parts.add_to(m, t, 340, ymin=TEMPLE[1] - 60, ymax=TEMPLE[1] + 80)
+    # eau du terrain (parvis et salles de vague) sur un fond de sable
+    for z, r in [(0, 75)] + [(z, 58) for z in ROOMS_Z]:
+        _water_disc(m, TEMPLE[0], TEMPLE[2] + z, r, TEMPLE[1] - 14, (0.76, 0.70, 0.52), 1.0)
+        _water_disc(m, TEMPLE[0], TEMPLE[2] + z, r, TEMPLE[1] - 1, (0.20, 0.48, 0.62), 0.72)
+    y = TEMPLE[1]
+    s.squad(m, ['TideTemplar', 'Harpooner', 'RedDragon', 'StormKnight'], TEMPLE[0], TEMPLE[2] + 520, (TEMPLE[0], TEMPLE[2] + 480), spread=5, y=y)
+    s.pack(m, 'Fishman', TEMPLE[0], TEMPLE[2] + 500, 5, 12, 103, face=(TEMPLE[0], TEMPLE[2] + 530), y=y)
+    s.actor(m, 'Kraken', TEMPLE[0], TEMPLE[2] - 22, yaw_to((0, 0, -22), (0, 0, 24)), y=y - 3)
+    return dict(target=t, eye=sr.look(t, 66, 50, 600), fov=50, light='tower', shadow_extent=440)
+
+
+def v_parcours(s, m):
+    c = (CRYPT[0], CRYPT[1] - 4, CRYPT[2] + 448)
+    # coupe à hauteur d'homme : murs et voûte retirés, plates-formes et fossé visibles
+    s.parts.add_to(m, c, 120, ymin=CRYPT[1] - 60, ymax=CRYPT[1] + 9)
+    y = CRYPT[1]
+    s.squad(m, ['Paladin', 'Monk'], CRYPT[0], CRYPT[2] + 472, (CRYPT[0], CRYPT[2] + 430), spread=4, y=y)
+    return dict(target=c, eye=sr.look(c, 62, 38, 80), fov=52, light='tower', shadow_extent=140)
+
+
 VIEWS = [
     ('01_village_panorama', v_village_panorama),
     ('02_village_place', v_village_place),
@@ -369,6 +414,9 @@ VIEWS = [
     ('22_salle_des_epreuves', v_salle_des_epreuves),
     ('23_crypte_du_roi_dechu', v_crypte),
     ('24_temple_englouti', v_temple),
+    ('25_donjon_crypte', v_donjon_crypte),
+    ('26_donjon_temple', v_donjon_temple),
+    ('27_salle_de_parcours', v_parcours),
 ]
 
 

@@ -50,6 +50,19 @@ function TeleportService.ToZone(self: any, player: Player, key: string, cf: CFra
 	Net.Event("Zone"):FireClient(player, key, zoneInfo(key))
 end
 
+-- Déplace le joueur sans changer de zone (chute dans un parcours, rattrapage dans un donjon).
+function TeleportService.Move(self: any, player: Player, cf: CFrame)
+	local char = player.Character
+	if not char then
+		return
+	end
+	char:PivotTo(cf + Vector3.new(0, 3, 0))
+	local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if root then
+		root.AssemblyLinearVelocity = Vector3.zero
+	end
+end
+
 function TeleportService.ToStation(self: any, player: Player, station: string)
 	local cf = R.WorldService:StationCF(station) or R.WorldService:SpawnCF("Hub")
 	self:ToZone(player, "Hub", cf)

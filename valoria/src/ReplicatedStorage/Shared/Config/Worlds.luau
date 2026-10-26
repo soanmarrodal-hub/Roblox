@@ -147,10 +147,15 @@ function Worlds.ToWorld(w: World, x: number, h: number, z: number): Vector3
 end
 
 -- Emplacements des arènes instanciées (tour, raids). Une copie de l'arène par emplacement.
+-- Un donjon de raid s'étire vers le sud (+Z, voir Raids.Plan) : ses copies sont alignées d'est en ouest.
 Worlds.Arenas = {
 	Tower = { base = Vector3.new(0, 1400, 7000), step = Vector3.new(420, 0, 0), slots = 12 },
-	Raid1 = { base = Vector3.new(7000, 600, -7000), step = Vector3.new(0, 0, 700), slots = 4 },
-	Raid2 = { base = Vector3.new(-7000, 600, -7000), step = Vector3.new(0, 0, 700), slots = 4 },
+	Raid1 = { base = Vector3.new(7000, 600, -7000), step = Vector3.new(400, 0, 0), slots = 4 },
+	Raid2 = { base = Vector3.new(-7000, 600, -7000), step = Vector3.new(-400, 0, 0), slots = 4 },
 }
+
+-- La barre de vie d'un boss (et le compte à rebours de sa réapparition) ne s'affiche qu'à proximité.
+-- VALEUR PAR DÉFAUT (non précisée dans le cahier des corrections) : modifiable ici.
+Worlds.BossBarDistance = 110 -- studs entre le joueur et le boss (ou le centre de son arène)
 
 return Worlds

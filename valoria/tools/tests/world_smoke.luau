@@ -303,6 +303,8 @@ services.ReplicatedStorage = rsNode
 H.bind(rsNode, RealInstance.new("Folder"))
 
 local sent = {} -- événements envoyés aux clients : nom → nombre
+local broadcasts = {} -- textes des annonces envoyées à tout le serveur
+local announced = {} -- textes des annonces envoyées à un joueur
 local events = {}
 local func = { OnServerInvoke = nil }
 local function event(name)
@@ -311,9 +313,15 @@ local function event(name)
 		e = { OnServerEvent = newSignal() }
 		function e:FireClient(_p, ...)
 			sent[name] = (sent[name] or 0) + 1
+			if name == "Announce" then
+				table.insert(announced, (...))
+			end
 		end
 		function e:FireAllClients(...)
 			sent[name] = (sent[name] or 0) + 1
+			if name == "Announce" then
+				table.insert(broadcasts, (...))
+			end
 		end
 		events[name] = e
 	end
@@ -540,6 +548,16 @@ step("boss du Val", function()
 	settle(10)
 	local data = R.DataService:Get(player)
 	assert((data.bossKills.PumpkinKing or 0) >= 1, "victoire sur le boss non comptée")
+	-- annonces du boss : seulement aux joueurs du monde concerné
+	lunetask.wait(1)
+	local toPlayer = false
+	for _, t in announced do
+		toPlayer = toPlayer or string.find(t, "vaincu", 1, true) ~= nil
+	end
+	assert(toPlayer, "annonce de la défaite du boss non reçue dans le monde")
+	for _, t in broadcasts do
+		assert(not string.find(t, "est apparu", 1, true) and not string.find(t, "vaincu", 1, true), "annonce de boss envoyée à tout le serveur : " .. t)
+	end
 end)
 
 step("quêtes et récompenses", function()
@@ -618,18 +636,54 @@ step("raid", function()
 	assert(R.RaidService:InRaid(player), "le raid n'a pas commencé")
 	lunetask.wait(3)
 	local zone = player:GetAttribute("Zone")
-	-- vagues et boss
+	-- donjon : une salle par vague, une salle de parcours entre deux salles
+	local prog = R.RaidService:Progress(player)
+	local arena = prog.arena
+	assert(arena.rooms and #arena.rooms == 5, "5 salles attendues dans le donjon")
+	assert(#arena.courses == 4, "4 salles de parcours attendues")
+	local r1 = arena.rooms[1]
+	local p0 = root().CFrame.Position
+	assert(math.abs(p0.Z - r1.center.Z) <= r1.half and math.abs(p0.X - r1.center.X) <= r1.half, "arrivée attendue dans la salle 1")
 	local data = R.DataService:Get(player)
 	local clears0 = data.raids.Raid1.clears
 	local t1 = os.clock()
-	while R.RaidService:InRaid(player) and os.clock() - t1 < 90 do
-		for _, e in R.EnemyService:All(zone) do
-			if e.alive and not e.immune then
-				R.EnemyService:Damage(e, e.maxHp, player)
+	local seen, fell = {}, false
+	while R.RaidService:InRaid(player) and os.clock() - t1 < 120 do
+		prog = R.RaidService:Progress(player)
+		if prog then
+			seen[prog.phase .. prog.wave] = true
+			if prog.phase == "path" then
+				-- porte ouverte : la première fois, chute dans le fossé (retour au début), puis salle suivante
+				local c = arena.courses[prog.wave]
+				local door = arena.rooms[prog.wave].door
+				if door then
+					assert(door:GetPivot().Position.Y < arena.rooms[prog.wave].doorCF.Position.Y - 5, "porte restée fermée")
+				end
+				if not fell then
+					goTo(c.center - Vector3.new(0, 14, 0))
+					lunetask.wait(0.6)
+					local pz = root().CFrame.Position
+					assert(math.abs(pz.Z - c.start.Position.Z) < 1 and pz.Y > c.floorY, "chute : retour au début du parcours attendu")
+					fell = true
+				end
+				goTo(arena.rooms[prog.wave + 1].center)
+			else
+				for _, e in R.EnemyService:All(zone) do
+					if e.alive and not e.immune then
+						local room = arena.rooms[prog.wave]
+						local d = e.pos - room.center
+						assert(math.abs(d.X) <= room.half and math.abs(d.Z) <= room.half, "ennemi hors de la salle " .. prog.wave)
+						R.EnemyService:Damage(e, e.maxHp, player)
+					end
+				end
 			end
 		end
 		lunetask.wait(0.5)
 	end
+	for k = 1, 4 do
+		assert(seen["wave" .. k] and seen["path" .. k], "vague / parcours " .. k .. " non vus")
+	end
+	assert(seen.boss5, "salle du boss non atteinte")
 	settle(20)
 	print(string.format("Session : raids gagnés %d → %d, accessoires %d", clears0, data.raids.Raid1.clears, (function()
 		local n = 0

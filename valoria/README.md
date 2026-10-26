@@ -130,7 +130,9 @@ automatique**) et tes héros courent vers lui, se placent selon leur portée et 
 Le serveur calcule les coups (10 fois par seconde) ; le client anime chaque attaque pour que l'impact tombe au bon
 moment (projectiles pour l'arc, le bâton et le souffle). Chiffres de dégâts en pixels, critiques, capacités
 spéciales, butin qui jaillit et vole vers le joueur. Les **boss** télégraphient des cercles d'attaque qui
-**étourdissent** les héros s'ils restent dedans, puis entrent en rage.
+**étourdissent** les héros s'ils restent dedans, puis entrent en rage. L'apparition et la défaite d'un boss de
+monde ne sont annoncées qu'aux joueurs de ce monde, et sa barre de vie (ou le compte à rebours de sa
+réapparition) ne s'affiche qu'à proximité (`Worlds.BossBarDistance`).
 
 ### Tour des Épreuves
 
@@ -145,9 +147,13 @@ classement mondial sur le panneau du village.
 | **Crypte du Roi Déchu** | Val d'Automne | Morvald, le Roi Déchu | Heaume du Roi Déchu, Amulette spectrale, Anneau d'os |
 | **Temple Englouti** | Falaises | Le Kraken ancestral | Anneau de corail, Perle abyssale, Cape du Léviathan |
 
-1 à 4 joueurs (salon avec compte à rebours), 4 vagues puis le boss, 3 difficultés (Normal, Héroïque, Cauchemar)
-qui changent les PV et la rareté des accessoires. Boutique des raids : coffres d'accessoires (aléatoire ou au
-choix) et runes.
+1 à 4 joueurs (salon avec compte à rebours), 3 difficultés (Normal, Héroïque, Cauchemar) qui changent les PV et
+la rareté des accessoires. Chaque raid est un **donjon de 5 salles** : 4 salles de vague puis la salle du boss,
+reliées par 4 **salles de parcours** (plates-formes au-dessus d'un fossé : une chute ramène au début du parcours).
+Une vague vaincue ouvre la porte de sa salle, la vague suivante commence quand un joueur entre dans la salle
+suivante, et un joueur resté en arrière est ramené auprès du groupe. Temps imparti : 10 minutes (doublé). Plan et
+réglages : `Raids.Layout` et `Raids.Plan` (`Config/Raids.luau`). Boutique des raids : coffres d'accessoires
+(aléatoire ou au choix) et runes.
 
 ### Récompenses et boutique
 
@@ -193,7 +199,8 @@ pas dessinée.
 | | |
 | --- | --- |
 | ![Une salle de la Tour des Épreuves](docs/images/vues/22_salle_des_epreuves.jpg)<br>Une salle de la Tour des Épreuves | ![Raid : la Crypte du Roi Déchu](docs/images/vues/23_crypte_du_roi_dechu.jpg)<br>Raid : la Crypte du Roi Déchu |
-| ![Raid : le Temple Englouti](docs/images/vues/24_temple_englouti.jpg)<br>Raid : le Temple Englouti |  |
+| ![Raid : le Temple Englouti](docs/images/vues/24_temple_englouti.jpg)<br>Raid : le Temple Englouti | ![Donjon de la Crypte (vue en coupe)](docs/images/vues/25_donjon_crypte.jpg)<br>Donjon de la Crypte : 4 salles de vague, 4 parcours, la salle du boss (vue en coupe) |
+| ![Donjon du Temple](docs/images/vues/26_donjon_temple.jpg)<br>Donjon du Temple Englouti | ![Une salle de parcours](docs/images/vues/27_salle_de_parcours.jpg)<br>Une salle de parcours (coupe à hauteur d'homme) |
 
 ## À configurer avant publication
 
@@ -251,7 +258,8 @@ TOOLS=/chemin/vers/outils ROBLOX_TYPES=/chemin/globalTypes.d.luau ./tools/check.
    de combat simulé (ennemis, coups, morts, butin, télégraphes), détails au sol posés autour du joueur.
 3. **Banc d'essai du serveur** (`tools/tests/world_smoke.luau`) : le vrai serveur démarre, construit le village,
    les deux mondes et les arènes, puis un joueur simulé se connecte, invoque, s'équipe, s'améliore, combat, bat le
-   boss, gravit la Tour, gagne un raid, polit un accessoire, fait évoluer un héros et se déconnecte.
+   boss, gravit la Tour, traverse les 5 salles d'un raid (chute dans un parcours comprise) et le gagne, polit un
+   accessoire, fait évoluer un héros et se déconnecte.
 4. **Kit de sol** : export du `.rbxmx`, relu et vérifié (emprises, collisions), assembleur du fichier exécuté.
 5. **Analyse de types** stricte (luau-lsp) et **construction** de la place (Rojo).
 

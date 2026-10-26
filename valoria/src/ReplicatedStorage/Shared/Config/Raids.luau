@@ -1,5 +1,7 @@
 --!strict
 -- Raids en groupe (1 à 4 joueurs) : quatre vagues puis un boss, dans le temps imparti.
+-- Chaque vague a sa salle (5 vagues = 5 salles, le boss dans la dernière) et une petite salle de parcours
+-- relie deux salles : le temps imparti est doublé (600 s au lieu de 300).
 -- Récompenses : jetons du raid, un accessoire (rareté selon la difficulté), or et expérience.
 
 export type Wave = { { enemy: string, count: number } }
@@ -88,7 +90,7 @@ Raids.List = {
 		boss = "Morvald",
 		bossHp = 60,
 		adds = { enemy = "Skeleton", count = 2, every = 20 },
-		time = 300,
+		time = 600,
 		maxPlayers = 4,
 		difficulties = difficulties(20000, 6),
 		accessories = { "CryptHelm", "SpectralAmulet", "BoneRing" },
@@ -111,7 +113,7 @@ Raids.List = {
 		boss = "Kraken",
 		bossHp = 60,
 		adds = { enemy = "Jellyfish", count = 2, every = 22 },
-		time = 300,
+		time = 600,
 		maxPlayers = 4,
 		difficulties = difficulties(4000000, 12),
 		accessories = { "CoralRing", "AbyssPearl", "LeviathanCape" },
@@ -121,6 +123,63 @@ Raids.List = {
 } :: { [string]: Raid }
 
 Raids.Order = { "Raid1", "Raid2" }
+
+-- Donjon d'un raid, en coordonnées locales à l'emplacement (z vers le sud) : la salle du boss (l'arène,
+-- centrée en 0) puis, au sud, les salles de vague reliées par des salles de parcours. On arrive dans la
+-- salle 1 (la plus au sud) et on remonte vers le nord : vague 1 → parcours 1 → vague 2 → … → boss.
+-- VALEURS PAR DÉFAUT (non précisées dans le cahier des corrections) : modifiables ici.
+Raids.Layout = {
+	hall = 60, -- demi-profondeur de la salle du boss (son entrée est au sud, en z = +60)
+	room = 32, -- demi-côté d'une salle de vague
+	course = 56, -- longueur d'une salle de parcours
+	width = 22, -- largeur intérieure d'une salle de parcours
+	door = 14, -- largeur des passages entre les salles
+	landing = 9, -- paliers de départ et d'arrivée d'un parcours
+	pit = 16, -- profondeur du fossé d'un parcours
+	fall = 5, -- studs sous le niveau du sol : chute dans le fossé → retour au début du parcours
+	catchUp = 20, -- secondes : un joueur resté en arrière pendant une vague est ramené auprès du groupe
+}
+
+export type RoomPlan = { index: number, z: number, half: number, boss: boolean }
+export type Step = { x: number, z: number, sx: number, sz: number, top: number }
+export type CoursePlan = { index: number, south: number, north: number, steps: { Step } }
+export type Plan = { rooms: { RoomPlan }, courses: { CoursePlan }, length: number }
+
+-- Plates-formes d'un parcours, entre le palier sud (a) et le palier nord (b) : pierres en zigzag qui
+-- montent puis redescendent (parcours impairs) ou poutres étroites décalées (parcours pairs).
+local function steps(k: number, a: number, b: number): { Step }
+	local out: { Step } = {}
+	if k % 2 == 1 then
+		local tops = { 0.5, 1.5, 2.5, 1.5, 0.5 }
+		local span = (a - b) / #tops
+		for i, top in tops do
+			table.insert(out, { x = if i % 2 == 1 then -4 else 4, z = a - (i - 0.5) * span, sx = 5, sz = 5, top = top })
+		end
+	else
+		local xs, tops, gap = { -2, 2, -1 }, { 0, 1, 0 }, 2.5
+		local len = ((a - b) - gap * (#xs + 1)) / #xs
+		for i, x in xs do
+			table.insert(out, { x = x, z = a - gap * i - len * (i - 0.5), sx = 2.6, sz = len, top = tops[i] })
+		end
+	end
+	return out
+end
+
+-- Plan d'un donjon de `n` salles (la n-ième est celle du boss).
+function Raids.Plan(n: number): Plan
+	local L = Raids.Layout
+	local rooms: { RoomPlan } = {}
+	local courses: { CoursePlan } = {}
+	rooms[n] = { index = n, z = 0, half = L.hall, boss = true }
+	local north = L.hall
+	for k = n - 1, 1, -1 do
+		local south = north + L.course
+		courses[k] = { index = k, south = south, north = north, steps = steps(k, south - L.landing, north + L.landing) }
+		rooms[k] = { index = k, z = south + L.room, half = L.room, boss = false }
+		north = south + 2 * L.room
+	end
+	return { rooms = rooms, courses = courses, length = north }
+end
 
 Raids.LobbyCountdown = 15 -- secondes d'attente dans le portail avant le départ
 Raids.SoloCountdown = 5

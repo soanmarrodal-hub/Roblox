@@ -1,7 +1,8 @@
 --!strict
--- Boss : boss de monde (Roi-Citrouille, Vyrmax) avec réapparition, et mécaniques partagées par tous les
--- boss (tour et raids compris) : zones d'impact télégraphiées qui étourdissent les héros des joueurs pris
--- dedans, rage sous 30 % de PV, régénération si le boss est abandonné, renforts optionnels.
+-- Boss : boss de monde (Roi-Citrouille, Vyrmax) avec réapparition (annoncée aux seuls joueurs du monde),
+-- et mécaniques partagées par tous les boss (tour et raids compris) : zones d'impact télégraphiées qui
+-- étourdissent les héros des joueurs pris dedans, rage sous 30 % de PV, régénération si le boss est
+-- abandonné, renforts optionnels.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -44,6 +45,8 @@ local function state(w: Worlds.World)
 		nextSpawn = if st then st.nextSpawn else 0,
 		enraged = e ~= nil and mechs[e] ~= nil and mechs[e].enraged,
 		id = if e then e.id else nil,
+		-- centre de l'arène : le client n'affiche la barre de vie qu'à proximité
+		pos = w.origin + Vector3.new(w.boss.x, w.boss.h, w.boss.z),
 	}
 end
 
@@ -180,7 +183,7 @@ function BossService._spawnWorldBoss(self: any, w: Worlds.World)
 	end
 	worldBoss[w.id] = { e = e, nextSpawn = 0 }
 	self:Attach(e, { center = pos, radius = b.radius })
-	R.AnnouncementService:Broadcast(e.def.name .. " est apparu : " .. b.name .. " (" .. w.name .. ") !", Color3.fromRGB(255, 120, 80))
+	R.AnnouncementService:ToZone(w.key, e.def.name .. " est apparu : " .. b.name .. " !", Color3.fromRGB(255, 120, 80))
 	broadcast(w)
 end
 
@@ -212,7 +215,7 @@ function BossService.Start(self: any)
 						R.DataService:Sync(p, "bossKills", "stats")
 					end
 				end
-				R.AnnouncementService:Broadcast(e.def.name .. " a été vaincu !", Color3.fromRGB(255, 220, 120))
+				R.AnnouncementService:ToZone(w.key, e.def.name .. " a été vaincu !", Color3.fromRGB(255, 220, 120))
 				broadcast(w)
 				task.delay(w.boss.respawn, function()
 					self:_spawnWorldBoss(w)
