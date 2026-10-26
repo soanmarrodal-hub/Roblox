@@ -74,6 +74,8 @@ local SETTINGS = {
 	{ key = "autoAttack", name = "Attaque automatique", icon = "Sword" },
 	{ key = "othersHeroes", name = "Héros des autres joueurs", icon = "Team" },
 	{ key = "damageNumbers", name = "Chiffres de dégâts", icon = "Target" },
+	{ key = "multiTarget", name = "Héros en multi-cible", icon = "Sword" },
+	{ key = "showRange", name = "Cercle de la zone d'action", icon = "Target" },
 }
 
 local QUALITY = { "Basse", "Moyenne", "Haute" }
@@ -134,6 +136,6 @@ local function settings(ctx: MenuManager.Ctx): MenuManager.View
 end
 
 MenuManager.Register("Bag", { title = "Sac", icon = "Bag", color = C.brown, size = Vector2.new(760, 540), build = bag })
-MenuManager.Register("Settings", { title = "Réglages", icon = "Gear", color = C.gray, size = Vector2.new(820, 480), build = settings })
+MenuManager.Register("Settings", { title = "Réglages", icon = "Gear", color = C.gray, size = Vector2.new(820, 560), build = settings })
 
 return {}

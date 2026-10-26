@@ -13,6 +13,7 @@ local Enemies = require(Shared.Config.Enemies)
 local Items = require(Shared.Config.Items)
 local Format = require(Shared.Util.Format)
 local Signal = require(Shared.Util.Signal)
+local Stats = require(Shared.Logic.Stats)
 local State = require(script.Parent.Parent.State)
 local Remote = require(script.Parent.Parent.Remote)
 local Theme = require(script.Parent.Parent.UI.Theme)
@@ -358,6 +359,12 @@ local function nearest(maxDist: number): Enemy?
 	return best
 end
 
+-- Rayon de la zone d'action du joueur (les héros n'engagent que les ennemis à l'intérieur).
+local function actionRange(): number
+	local d = State.data
+	return Stats.ActionRange(if d then d.upgrades else {})
+end
+
 local function autoTarget()
 	if State.Setting("autoAttack") ~= true then
 		return
@@ -367,14 +374,15 @@ local function autoTarget()
 	if not root then
 		return
 	end
+	local range = actionRange()
 	local e = cur and list[cur]
-	if e and not e.dying and (e.pos - root.Position).Magnitude < 85 then
+	if e and not e.dying and (e.pos - root.Position).Magnitude - e.radius < range + 10 then
 		return
 	end
 	if os.clock() - lastAutoPick < 0.4 then
 		return
 	end
-	local n = nearest(70)
+	local n = nearest(range)
 	if n then
 		lastAutoPick = os.clock()
 		EnemyController.SetTarget(n.id)
@@ -610,8 +618,14 @@ function EnemyController.Init()
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			local id = pick(Vector2.new(input.Position.X, input.Position.Y))
-			if id then
-				EnemyController.SetTarget(id)
+			local e = id and list[id]
+			local root = rootPart()
+			if id and e and root then
+				if (e.pos - root.Position).Magnitude - e.radius > actionRange() then
+					Remote.notify("Trop loin : approche-toi pour qu'il entre dans ta zone d'action.", "warn")
+				else
+					EnemyController.SetTarget(id)
+				end
 			end
 		end
 	end)

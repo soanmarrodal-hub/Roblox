@@ -301,6 +301,139 @@ function Effects.Projectile(from: Vector3, to: Vector3, kind: string, color: Col
 	end)
 end
 
+------------------------------------------------------------------ primitives des attaques spéciales
+
+-- Colonne de lumière (ou d'eau, de feu) qui jaillit du sol puis s'efface.
+function Effects.Pillar(pos: Vector3, radius: number, height: number, color: Color3, life: number?)
+	local t = life or 0.6
+	local col = part(Vector3.new(0.2, radius * 2, radius * 2), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), color)
+	col.Shape = Enum.PartType.Cylinder
+	col.Transparency = 0.15
+	tween(col, t * 0.35, { Size = Vector3.new(height, radius * 2, radius * 2), CFrame = CFrame.new(pos + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2) })
+	task.delay(t * 0.35, function()
+		if col.Parent then
+			tween(col, t * 0.65, { Size = Vector3.new(height, 0.2, 0.2), Transparency = 1 })
+		end
+	end)
+	Debris:AddItem(col, t + 0.05)
+end
+
+-- Arc de taille (croissant de petits blocs) ; `cf` : centre et orientation (l'arc est dans le plan XZ local).
+function Effects.Arc(cf: CFrame, radius: number, color: Color3, sweep: number?, thickness: number?)
+	local sw = sweep or math.pi * 0.8
+	local n = math.max(6, math.floor(sw * radius / 1.4))
+	local th = thickness or 0.5
+	for i = 0, n - 1 do
+		local a = -sw / 2 + sw * (i + 0.5) / n
+		local w = th * math.sin(math.pi * (i + 0.5) / n) + 0.1
+		local seg = part(Vector3.new(w, 0.25, sw * radius / n + 0.15), cf * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -radius), color)
+		seg.Transparency = 0.1
+		local delay = i / n * 0.08
+		task.delay(delay, function()
+			if seg.Parent then
+				tween(seg, 0.3, { Transparency = 1, Size = seg.Size * Vector3.new(0.3, 1, 1.4) })
+			end
+		end)
+		Debris:AddItem(seg, 0.45)
+	end
+end
+
+-- Éclair en zigzag de `from` à `to`.
+function Effects.Bolt(from: Vector3, to: Vector3, color: Color3)
+	local n = 7
+	local prev = from
+	for i = 1, n do
+		local f = i / n
+		local nxt = from:Lerp(to, f)
+		if i < n then
+			nxt += Vector3.new(rng:NextNumber(-1.6, 1.6), 0, rng:NextNumber(-1.6, 1.6))
+		end
+		local len = (nxt - prev).Magnitude
+		local seg = part(Vector3.new(0.35, 0.35, len), CFrame.lookAt(prev:Lerp(nxt, 0.5), nxt), color)
+		tween(seg, 0.25, { Transparency = 1 })
+		Debris:AddItem(seg, 0.3)
+		prev = nxt
+	end
+	local flash = part(Vector3.new(2, 2, 2), CFrame.new(to), Color3.new(1, 1, 1))
+	flash.Shape = Enum.PartType.Ball
+	tween(flash, 0.2, { Size = Vector3.new(6, 6, 6), Transparency = 1 })
+	Debris:AddItem(flash, 0.25)
+end
+
+-- Pluie de projectiles (flèches, braises…) sur un disque, étalée sur `duration` secondes.
+function Effects.Rain(center: Vector3, radius: number, count: number, kind: string, color: Color3, duration: number?)
+	local dur = duration or 0.4
+	for i = 1, count do
+		task.delay((i - 1) / count * dur, function()
+			local a, r = rng:NextNumber(0, math.pi * 2), math.sqrt(rng:NextNumber()) * radius
+			local to = center + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r)
+			Effects.Projectile(to + Vector3.new(rng:NextNumber(-3, 3), 22, rng:NextNumber(-3, 3)), to, kind, color, function()
+				Effects.Burst(to + Vector3.new(0, 0.3, 0), { color, Color3.new(1, 1, 1) }, 3, 8, 0.25, 0.35)
+			end)
+		end)
+	end
+end
+
+-- Souffle en cône : chapelet de boules qui grossissent de `from` vers `to`.
+function Effects.Cone(from: Vector3, to: Vector3, color: Color3, width: number?)
+	local w = width or 5
+	for i = 1, 9 do
+		task.delay(i * 0.035, function()
+			local off = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-0.5, 0.5), rng:NextNumber(-1, 1)) * w * 0.4
+			local puff = part(Vector3.new(1, 1, 1), CFrame.new(from), color:Lerp(Color3.new(1, 1, 0.6), rng:NextNumber(0, 0.4)))
+			puff.Shape = Enum.PartType.Ball
+			puff.Transparency = 0.15
+			local d = w * rng:NextNumber(0.6, 1)
+			tween(puff, 0.35, { CFrame = CFrame.new(to + off), Size = Vector3.new(d, d, d) })
+			task.delay(0.3, function()
+				if puff.Parent then
+					tween(puff, 0.2, { Transparency = 1 })
+				end
+			end)
+			Debris:AddItem(puff, 0.55)
+		end)
+	end
+end
+
+-- Hélice de petits cubes qui monte autour d'un point (charge d'énergie).
+function Effects.Spiral(pos: Vector3, radius: number, color: Color3, height: number?)
+	local h = height or 6
+	for i = 1, 14 do
+		local a = i / 14 * math.pi * 4
+		local b = part(Vector3.new(0.4, 0.4, 0.4), CFrame.new(pos + Vector3.new(math.cos(a) * radius, i / 14 * h * 0.3, math.sin(a) * radius)), color)
+		tween(b, 0.5, { CFrame = CFrame.new(pos + Vector3.new(math.cos(a + 1.5) * radius * 0.4, h, math.sin(a + 1.5) * radius * 0.4)), Transparency = 1, Size = Vector3.new(0.15, 0.15, 0.15) })
+		Debris:AddItem(b, 0.55)
+	end
+end
+
+-- Éclats (rochers, cristaux) qui jaillissent du sol en cercle puis retombent.
+function Effects.Shards(pos: Vector3, radius: number, color: Color3, count: number?, mat: Enum.Material?)
+	local n = count or 8
+	for i = 1, n do
+		local a = i / n * math.pi * 2 + rng:NextNumber(-0.2, 0.2)
+		local r = radius * rng:NextNumber(0.5, 1)
+		local h = rng:NextNumber(1.5, 3.2)
+		local base = pos + Vector3.new(math.cos(a) * r, -h / 2, math.sin(a) * r)
+		local sh = part(Vector3.new(h * 0.45, h, h * 0.45), CFrame.new(base) * CFrame.Angles(rng:NextNumber(-0.4, 0.4), a, rng:NextNumber(-0.4, 0.4)), color, mat or Enum.Material.Slate)
+		tween(sh, 0.12, { CFrame = sh.CFrame + Vector3.new(0, h * 0.8, 0) })
+		task.delay(0.45, function()
+			if sh.Parent then
+				tween(sh, 0.25, { CFrame = sh.CFrame - Vector3.new(0, h, 0), Transparency = 1 })
+			end
+		end)
+		Debris:AddItem(sh, 0.75)
+	end
+end
+
+-- Dôme translucide qui gonfle (éclat sacré, brume, flash).
+function Effects.Dome(pos: Vector3, radius: number, color: Color3)
+	local d = part(Vector3.new(1, 1, 1), CFrame.new(pos), color, Enum.Material.ForceField)
+	d.Shape = Enum.PartType.Ball
+	d.Transparency = 0.1
+	tween(d, 0.4, { Size = Vector3.new(radius * 2, radius * 2, radius * 2), Transparency = 1 })
+	Debris:AddItem(d, 0.45)
+end
+
 ------------------------------------------------------------------ ennemis vaincus, butin
 
 function Effects.Shatter(model: Model, center: Vector3, scale: number)

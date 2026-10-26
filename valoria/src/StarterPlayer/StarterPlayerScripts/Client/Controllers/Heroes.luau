@@ -1,8 +1,10 @@
 --!strict
 -- Héros compagnons (les siens et ceux des autres joueurs de la zone) : formation derrière le maître,
--- course vers la cible désignée et placement autour d'elle selon la portée, attaques animées calées sur
--- les coups envoyés par le serveur (impact au bon moment, projectiles pour l'arc, le bâton et le souffle),
--- capacités spéciales, étourdissements, montées de niveau.
+-- course vers la cible désignée (ou vers sa propre cible en mode multi-cible) et placement autour d'elle
+-- selon la portée, attaques animées calées sur les coups envoyés par le serveur (impact au bon moment,
+-- projectiles pour l'arc, le bâton et le souffle), attaques spéciales (animation et effets propres à chaque
+-- héros), étourdissements, montées de niveau. Nom, niveau et étoiles au-dessus de chaque héros.
+-- Aussi : le cercle de la zone d'action autour du joueur, et l'apparence empruntée à un héros (« Morph »).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -10,10 +12,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Heroes = require(Shared.Config.Heroes)
+local Stats = require(Shared.Logic.Stats)
 local State = require(script.Parent.Parent.State)
 local Remote = require(script.Parent.Parent.Remote)
 local Effects = require(script.Parent.Effects)
 local Models = require(script.Parent.Models)
+local Specials = require(script.Parent.Specials)
 local EnemyController = require(script.Parent.Enemies)
 
 local HeroController = {}
@@ -32,13 +36,20 @@ type Follower = {
 	stunUntil: number,
 	attackUntil: number,
 	faceTarget: Vector3?,
+	lvl: number,
+	stars: number,
+	label: TextLabel?,
 }
 
 type Squad = { player: Player, team: string, list: { [number]: Follower } }
+type Morph = { id: string, built: Models.Built, yaw: number }
 
 local localPlayer = Players.LocalPlayer
 local folder: Folder
 local squads: { [Player]: Squad } = {}
+local morphs: { [Player]: Morph } = {}
+local ring: Model? = nil
+local ringRadius = 0
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 local rng = Random.new()
@@ -98,6 +109,47 @@ local function destroyFollower(f: Follower)
 	end
 end
 
+-- Étiquette au-dessus du héros : nom, niveau, étoiles.
+local function makeLabel(b: Models.Built, def: Heroes.Hero): TextLabel
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "Etiquette"
+	bb.Adornee = b.root
+	bb.Size = UDim2.fromOffset(170, 38)
+	bb.StudsOffsetWorldSpace = Vector3.new(0, b.height + 1.6 + (if b.flying then 3.2 else 0), 0)
+	bb.MaxDistance = 70
+	bb.LightInfluence = 0
+	bb.Parent = b.model
+	local name = Instance.new("TextLabel")
+	name.Name = "Nom"
+	name.BackgroundTransparency = 1
+	name.Size = UDim2.new(1, 0, 0.55, 0)
+	name.Font = Enum.Font.FredokaOne
+	name.TextScaled = true
+	name.Text = def.name
+	name.TextColor3 = Color3.new(1, 1, 1)
+	name.TextStrokeTransparency = 0.2
+	name.Parent = bb
+	local info = Instance.new("TextLabel")
+	info.Name = "Info"
+	info.BackgroundTransparency = 1
+	info.Position = UDim2.fromScale(0, 0.55)
+	info.Size = UDim2.new(1, 0, 0.45, 0)
+	info.Font = Enum.Font.FredokaOne
+	info.TextScaled = true
+	info.RichText = true
+	info.TextColor3 = Color3.fromRGB(255, 255, 255)
+	info.TextStrokeTransparency = 0.3
+	info.Parent = bb
+	return info
+end
+
+local function setLabel(f: Follower)
+	local l = f.label
+	if l then
+		l.Text = string.format('Nv %d  <font color="#FFD34A">%s</font>', f.lvl, string.rep("★", f.stars))
+	end
+end
+
 local function makeFollower(owner: Player, id: string, slot: number, near: Vector3): Follower?
 	local def = Heroes.Get(id)
 	if not def then
@@ -112,7 +164,7 @@ local function makeFollower(owner: Player, id: string, slot: number, near: Vecto
 	b.model.Parent = folder
 	local start = near + Vector3.new(rng:NextNumber(-4, 4), 0, rng:NextNumber(3, 7))
 	Effects.Burst(start + Vector3.new(0, 1.5, 0), { Color3.fromRGB(255, 255, 255), Effects.ElementColor(def.element) }, 8, 12, 0.3, 0.5)
-	return {
+	local f: Follower = {
 		id = id,
 		def = def,
 		slot = slot,
@@ -126,7 +178,11 @@ local function makeFollower(owner: Player, id: string, slot: number, near: Vecto
 		stunUntil = 0,
 		attackUntil = 0,
 		faceTarget = nil,
+		lvl = 1,
+		stars = 0,
+		label = makeLabel(b, def),
 	}
+	return f
 end
 
 local function parseTeam(s: string): { { id: string, stars: number, lvl: number } }
@@ -176,6 +232,11 @@ local function syncSquad(p: Player)
 			if f then
 				s.list[slot] = f
 			end
+		end
+		local f = s.list[slot]
+		if f then
+			f.lvl, f.stars = w.lvl, w.stars
+			setLabel(f)
 		end
 	end
 	s.team = team
@@ -227,12 +288,148 @@ local function combatSpot(f: Follower, e: EnemyController.Enemy, ownerPos: Vecto
 	return e.pos + Vector3.new(math.sin(a) * dist, 0, math.cos(a) * dist)
 end
 
+------------------------------------------------------------------ zone d'action (cercle autour du joueur)
+
+local RING_COLOR = Color3.fromRGB(255, 214, 120)
+
+local function buildRing(radius: number): Model
+	local m = Instance.new("Model")
+	m.Name = "ZoneAction"
+	local pivot = Instance.new("Part")
+	pivot.Name = "Centre"
+	pivot.Anchored = true
+	pivot.CanCollide = false
+	pivot.CanQuery = false
+	pivot.CanTouch = false
+	pivot.Transparency = 1
+	pivot.Size = Vector3.new(0.2, 0.2, 0.2)
+	pivot.Parent = m
+	m.PrimaryPart = pivot
+	local n = 48
+	local len = 2 * math.pi * radius / n + 0.15
+	for i = 0, n - 1 do
+		local a = i / n * math.pi * 2
+		local seg = Instance.new("Part")
+		seg.Anchored = true
+		seg.CanCollide = false
+		seg.CanQuery = false
+		seg.CanTouch = false
+		seg.CastShadow = false
+		seg.Material = Enum.Material.Neon
+		seg.Color = RING_COLOR
+		seg.Transparency = if i % 2 == 0 then 0.35 else 0.6
+		seg.Size = Vector3.new(0.35, 0.12, len)
+		seg.CFrame = CFrame.Angles(0, -a, 0) * CFrame.new(radius, 0, 0)
+		seg.Parent = m
+	end
+	return m
+end
+
+local function stepRing()
+	local root = rootOf(localPlayer)
+	local d = State.data
+	local show = root ~= nil and d ~= nil and State.Setting("showRange") ~= false and State.zoneInfo.kind ~= "Hub"
+	if not show or not root or not d then
+		if ring then
+			ring.Parent = nil
+		end
+		return
+	end
+	local radius = Stats.ActionRange(d.upgrades)
+	if not ring or radius ~= ringRadius then
+		if ring then
+			ring:Destroy()
+		end
+		ring = buildRing(radius)
+		ringRadius = radius
+	end
+	local r = ring :: Model
+	r.Parent = folder
+	local gy = ground(root.Position, root.Position.Y - 3) or (root.Position.Y - 3)
+	r:PivotTo(CFrame.new(root.Position.X, gy + 0.12, root.Position.Z))
+end
+
+------------------------------------------------------------------ apparence empruntée à un héros
+
+local function hideCharacter(char: Model, hidden: boolean)
+	local k = if hidden then 1 else 0
+	for _, d in char:GetDescendants() do
+		if d:IsA("BasePart") or d:IsA("Decal") then
+			(d :: any).LocalTransparencyModifier = k
+		end
+	end
+end
+
+local function dropMorph(p: Player)
+	local mo = morphs[p]
+	if mo then
+		mo.built.anim:Destroy()
+		mo.built.model:Destroy()
+		morphs[p] = nil
+	end
+	if p.Character then
+		hideCharacter(p.Character, false)
+	end
+end
+
+local function stepMorphs(dt: number, camPos: Vector3, parts: { BasePart }, cfs: { CFrame })
+	for _, p in Players:GetPlayers() do
+		local id = p:GetAttribute("Morph")
+		local root = rootOf(p)
+		local char = p.Character
+		if type(id) ~= "string" or not root or not char or not (p == localPlayer or sameZone(p)) then
+			if morphs[p] then
+				dropMorph(p)
+			end
+			continue
+		end
+		local mo = morphs[p]
+		if not mo or mo.id ~= id then
+			if mo then
+				dropMorph(p)
+			end
+			local def = Heroes.Get(id)
+			local b = def and Models.Build(id, { style = def.style, seed = p.UserId % 1000 })
+			if not b then
+				continue
+			end
+			b.model.Name = p.Name .. "_Apparence"
+			b.model.Parent = folder
+			local created: Morph = { id = id, built = b, yaw = 0 }
+			morphs[p] = created
+			mo = created
+		end
+		local m = mo :: Morph
+		hideCharacter(char, true)
+		local look = root.CFrame.LookVector
+		if Vector3.new(look.X, 0, look.Z).Magnitude > 0.05 then
+			m.yaw = math.atan2(-look.X, -look.Z)
+		end
+		local gy = ground(root.Position, root.Position.Y - 3) or (root.Position.Y - 3)
+		local hover = if m.built.flying then 3.2 + math.sin(os.clock() * 2.2) * 0.45 else 0
+		local cf = CFrame.new(root.Position.X, gy + hover, root.Position.Z) * CFrame.Angles(0, m.yaw, 0)
+		table.insert(parts, m.built.root)
+		table.insert(cfs, cf)
+		local dist = (camPos - root.Position).Magnitude
+		if dist < 200 then
+			m.built.anim:Update(dt, { vel = root.AssemblyLinearVelocity, cf = cf, combat = false, lod = if dist > 60 then 1 else 0 })
+		end
+	end
+	for p in morphs do
+		if not p.Parent then
+			dropMorph(p)
+		end
+	end
+end
+
 local function step(dt: number)
 	local now = os.clock()
 	local cam = workspace.CurrentCamera
 	local camPos = if cam then cam.CFrame.Position else Vector3.zero
 	local parts: { BasePart } = {}
 	local cfs: { CFrame } = {}
+	stepRing()
+	stepMorphs(dt, camPos, parts, cfs)
 	for p, sq in squads do
 		local root = rootOf(p)
 		if not root then
@@ -240,11 +437,24 @@ local function step(dt: number)
 		end
 		local n = slotCount(sq)
 		local tid = p:GetAttribute("Target")
-		local target = if type(tid) == "number" then EnemyController.Get(tid) else nil
+		local primary = if type(tid) == "number" then EnemyController.Get(tid) else nil
+		-- multi-cible : « emplacement:ennemi, … » envoyé par le serveur
+		local own: { [number]: number } = {}
+		local ts = p:GetAttribute("Targets")
+		if primary and type(ts) == "string" then
+			for sl, id in string.gmatch(ts, "(%d+):(%d+)") do
+				own[tonumber(sl) :: number] = tonumber(id) :: number
+			end
+		end
 		for _, f in sq.list do
 			local b = f.built
 			if not b then
 				continue
+			end
+			local target = primary
+			local oid = own[f.slot]
+			if oid then
+				target = EnemyController.Get(oid) or primary
 			end
 			local goal: Vector3
 			local fighting = target ~= nil and now >= f.stunUntil
@@ -358,14 +568,32 @@ local function onHits(key: string, batch: { any })
 		end
 		local special = bit32.band(flags, Effects.FLAG_SPECIAL) ~= 0
 		local impact = 0.25
+		local ctx: Specials.Ctx? = nil
 		if not secondary then
-			local sp = math.clamp(1 / math.max(0.45, f.def.interval), 1, 2.2)
-			impact = b.anim:Attack(f.def.style, if special then 1.35 else 1, sp)
-			f.attackUntil = os.clock() + impact + 0.25
-			primaryAt[userId * 10 + slot] = impact
-			if special and f.owner == localPlayer then
-				Effects.Float(f.pos + Vector3.new(0, b.height + 2, 0), f.def.special.name, Color3.fromRGB(220, 170, 255), 30)
+			if special then
+				-- attaque spéciale : animation et effets propres au héros
+				impact = b.anim:Attack(f.def.special.anim, 1, 1)
+				f.attackUntil = os.clock() + impact + 0.5
+				local look = CFrame.lookAt(f.pos, Vector3.new(e.pos.X, f.pos.Y, e.pos.Z) + Vector3.new(0, 0, 1e-3))
+				ctx = {
+					from = heroPoint(f),
+					feet = f.pos,
+					to = EnemyController.Center(e),
+					ground = e.pos,
+					color = Effects.ElementColor(f.def.element),
+					radius = f.def.special.radius or 8,
+					look = look,
+				}
+				Specials.Start(f.id, ctx :: Specials.Ctx)
+				if f.owner == localPlayer then
+					Effects.Float(f.pos + Vector3.new(0, b.height + 2, 0), f.def.special.name, Color3.fromRGB(220, 170, 255), 30)
+				end
+			else
+				local sp = math.clamp(1 / math.max(0.45, f.def.interval), 1, 2.2)
+				impact = b.anim:Attack(f.def.style, 1, sp)
+				f.attackUntil = os.clock() + impact + 0.25
 			end
+			primaryAt[userId * 10 + slot] = impact
 		else
 			impact = (primaryAt[userId * 10 + slot] or 0.2) + rng:NextNumber(0.08, 0.25)
 		end
@@ -383,11 +611,14 @@ local function onHits(key: string, batch: { any })
 				local te2 = EnemyController.Get(enemyId)
 				local c2 = if te2 then EnemyController.Center(te2) else center
 				Effects.Spark(c2, color, special)
-				if special and f.def.special.radius then
-					Effects.Ring((if te2 then te2.pos else center) + Vector3.new(0, 0.2, 0), f.def.special.radius, color)
+				if ctx then
+					local c = ctx :: Specials.Ctx
+					c.to = c2
+					c.ground = if te2 then te2.pos else c.ground
+					Specials.Impact(f.id, c)
 				end
 			end
-			if kind then
+			if kind and not special then
 				Effects.Projectile(heroPoint(f), center, kind, color, land)
 			else
 				land()

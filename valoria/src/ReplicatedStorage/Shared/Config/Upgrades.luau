@@ -118,6 +118,17 @@ Upgrades.List = {
 		per = 30,
 		order = 9,
 	},
+	Portee = {
+		key = "Portee",
+		name = "Zone d'action",
+		desc = "+4 studs de portée d'action (cercle autour du héros)",
+		icon = "Target",
+		max = 15,
+		base = 300,
+		growth = 1.45,
+		per = 4,
+		order = 11,
+	},
 	Bottes = {
 		key = "Bottes",
 		name = "Bottes de sept lieues",
@@ -131,7 +142,7 @@ Upgrades.List = {
 	},
 } :: { [string]: Upgrade }
 
-Upgrades.Order = { "Force", "Butin", "Celerite", "Critique", "Fortune", "Savoir", "Pourfendeur", "Escouade", "Ecurie", "Bottes" }
+Upgrades.Order = { "Force", "Butin", "Celerite", "Critique", "Fortune", "Savoir", "Pourfendeur", "Portee", "Escouade", "Ecurie", "Bottes" }
 
 -- Coût pour passer du niveau `level` au niveau `level + 1` (nil si maximum atteint).
 function Upgrades.Cost(key: string, level: number): number?
@@ -151,5 +162,9 @@ Upgrades.BaseStorage = 100
 Upgrades.BaseCrit = 0.05
 Upgrades.BaseCritMult = 2.0
 Upgrades.BaseWalkSpeed = 20
+-- Zone d'action : rayon (studs) autour du joueur dans lequel ses héros engagent les ennemis.
+-- VALEUR PAR DÉFAUT (« petite au départ, améliorable » : valeurs non précisées) : modifiable ici et dans
+-- l'amélioration « Portee » ci-dessus.
+Upgrades.BaseActionRange = 20
 
 return Upgrades

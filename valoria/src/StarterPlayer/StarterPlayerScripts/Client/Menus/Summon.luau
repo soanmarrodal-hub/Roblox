@@ -230,12 +230,12 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 	Kit.Text(side, "VENTE AUTO (DÉJÀ DANS L'INDEX)", { light = false, pixel = true, size = 13, color = Theme.Muted, sizeUD = UDim2.new(1, 0, 0, 16), pos = UDim2.fromOffset(0, 174), alignX = Enum.TextXAlignment.Left })
 	local row = Kit.new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.fromOffset(0, 192), ZIndex = 11, Parent = side })
 	Kit.ListLayout(row, 6, true)
-	for i, key in { "Commun", "Rare", "Epique" } do
+	for i, key in { "Commun", "Rare", "Epique", "Legendaire" } do
 		toggles[key] = Kit.Button(row, {
 			text = Format.Clip(Rarities.Get(key).name, 4),
 			color = C.gray,
-			size = UDim2.fromOffset(84, 38),
-			textSize = 16,
+			size = UDim2.fromOffset(64, 38),
+			textSize = 15,
 			order = i,
 			onClick = function()
 				local on = State.data.summon.autoDelete[key] ~= true

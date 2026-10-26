@@ -46,6 +46,42 @@ test("héros valides", function()
 	eq(count, 23, "nombre de héros")
 end)
 
+test("attaques spéciales : recharge, animation propre, améliorations", function()
+	local Poses = require(Shared.Anim.Poses)
+	local FAMILY = { Biped = "Biped", Golem = "Biped", Gargoyle = "Biped", Quadruped = "Quadruped", Dragon = "Quadruped", Flyer = "Flyer", Crab = "Crab" }
+	local seen = {}
+	for _, h in Heroes.Ordered do
+		local sp = h.special
+		check(type(sp.cooldown) == "number" and sp.cooldown >= 2 and sp.cooldown <= 15, h.id .. " recharge")
+		check(sp.every == nil, h.id .. " : l'ancienne règle « toutes les N attaques » a disparu")
+		check(not seen[sp.anim], h.id .. " : animation déjà utilisée par " .. tostring(seen[sp.anim]))
+		seen[sp.anim] = h.id
+		local model = require(Shared.Voxel.Models[h.id])
+		local fam = FAMILY[model.rig]
+		check(fam ~= nil, h.id .. " famille de squelette " .. tostring(model.rig))
+		local c = Poses[fam] and Poses[fam][sp.anim]
+		check(c ~= nil, h.id .. " : animation " .. sp.anim .. " absente de Poses." .. tostring(fam))
+		if c then
+			check(c.impact > 0 and c.impact < c.dur and c.dur <= Heroes.SpecialLock + 0.35, h.id .. " durée de l'animation")
+		end
+		-- coûts croissants, nuls au maximum
+		for _, which in { "cd", "dmg" } do
+			local max = if which == "cd" then Heroes.SpecialUpgrade.cdMax else Heroes.SpecialUpgrade.dmgMax
+			local prev = 0
+			for lvl = 0, max - 1 do
+				local cost = Heroes.SpecialCost(h.id, which, lvl)
+				check(cost and cost > prev, h.id .. " coût " .. which .. " " .. lvl)
+				prev = cost
+			end
+			eq(Heroes.SpecialCost(h.id, which, max), nil, h.id .. " " .. which .. " au maximum")
+		end
+	end
+	for w, cost in Heroes.SpecialUpgrade.worldCost do
+		eq(cost, Banners.List["W" .. w].cost, "coût d'invocation du monde " .. w)
+	end
+	check(Heroes.SpecialUpgrade.cdPer * Heroes.SpecialUpgrade.cdMax < 0.9, "la recharge ne tombe jamais à zéro")
+end)
+
 test("bannières : chaque rareté représentée", function()
 	for _, key in Banners.Order do
 		local b = Banners.List[key]

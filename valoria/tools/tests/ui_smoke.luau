@@ -477,10 +477,94 @@ step("contrôleurs : combat", function()
 		error(string.format("détails au sol manquants : %d tranches, %d pièces", nChunks, nParts))
 	end
 	print(string.format("Contrôleurs : détails au sol, %d tranches, %d pièces", nChunks, nParts))
+	-- multi-cible : chaque héros vers sa propre cible
+	localPlayer:SetAttribute("Targets", "1:2,2:4,3:2")
+	localPlayer:SetAttribute("Target", 2)
+	frames(20)
+	-- zone d'action : cercle autour du joueur hors du village
+	local heros = workspaceMock:FindFirstChild("Heros")
+	if not heros:FindFirstChild("ZoneAction") then
+		error("cercle de la zone d'action absent")
+	end
+	-- étiquettes nom / niveau / étoiles au-dessus des héros
+	local labels = 0
+	for _, m in heros:GetChildren() do
+		local bb = m:FindFirstChild("Etiquette")
+		if bb then
+			labels += 1
+			local info = bb:FindFirstChild("Info")
+			if not info or not string.find(info.Text, "Nv", 1, true) then
+				error("étiquette du héros incomplète : " .. m.Name)
+			end
+		end
+	end
+	if labels < 3 then
+		error("étiquettes des héros manquantes : " .. labels)
+	end
+	-- apparence empruntée
+	localPlayer:SetAttribute("Morph", "Fox")
+	frames(10)
+	if not heros:FindFirstChild("Testeur_Apparence") then
+		error("apparence empruntée non affichée")
+	end
+	localPlayer:SetAttribute("Morph", nil)
+	frames(5)
+	if heros:FindFirstChild("Testeur_Apparence") then
+		error("apparence empruntée non retirée")
+	end
+	print(string.format("Contrôleurs : zone d'action, %d étiquettes, apparence empruntée", labels))
+	localPlayer:SetAttribute("Targets", nil)
 	remotes.EnemyDeath.OnClientEvent:Fire("W1", 2, {}, true)
 	remotes.Zone.OnClientEvent:Fire("Tower:1", { kind = "Tower", slot = 1 })
 	remotes.EnemySnapshot.OnClientEvent:Fire("Tower:1", {})
 	frames(10)
+end)
+settle(10)
+
+-- attaques spéciales : l'animation et l'effet de chaque héros
+step("attaques spéciales de chaque héros", function()
+	local Heroes = req(rsNode.Shared.Config.Heroes)
+	local Models = req(Controllers.Models)
+	local Specials = req(Controllers.Specials)
+	local n = 0
+	for _, h in Heroes.Ordered do
+		if not Specials.Has(h.id) then
+			error("effet d'attaque spéciale manquant : " .. h.id)
+		end
+		local b = Models.Build(h.id, { style = h.style })
+		if not b then
+			error("modèle introuvable : " .. h.id)
+		end
+		b.model.Parent = workspaceMock
+		local impact = b.anim:Attack(h.special.anim, 1, 1)
+		if impact <= 0 then
+			error("animation spéciale sans impact : " .. h.id)
+		end
+		local cf = roblox.CFrame.new(3830, 20, 290)
+		for _ = 1, 50 do
+			b.anim:Update(1 / 30, { vel = roblox.Vector3.zero, cf = cf, combat = true })
+		end
+		if b.anim:IsAttacking() then
+			error("animation spéciale sans fin : " .. h.id)
+		end
+		local ctx = {
+			from = roblox.Vector3.new(3830, 24, 290),
+			feet = roblox.Vector3.new(3830, 20, 290),
+			to = roblox.Vector3.new(3830, 23, 278),
+			ground = roblox.Vector3.new(3830, 20, 278),
+			color = roblox.Color3.new(1, 0.5, 0.2),
+			radius = h.special.radius or 8,
+			look = roblox.CFrame.lookAt(roblox.Vector3.new(3830, 20, 290), roblox.Vector3.new(3830, 20, 278)),
+		}
+		Specials.Start(h.id, ctx)
+		Specials.Impact(h.id, ctx)
+		frames(2)
+		b.anim:Destroy()
+		b.model:Destroy()
+		n += 1
+	end
+	frames(20)
+	print(string.format("Contrôleurs : %d attaques spéciales jouées (animation + effets)", n))
 end)
 settle(10)
 

@@ -1,8 +1,10 @@
 --!strict
--- Combat côté serveur (10 fois par seconde) : chaque joueur désigne une cible, ses héros équipés frappent
--- selon leur cadence (après le temps de trajet jusqu'à la cible), avec critiques, bonus contre les boss et
--- capacités spéciales (zone, volée, saignement). Les coups sont envoyés par lots aux joueurs de la zone pour
--- que chaque client anime les héros (les siens comme ceux des autres) au bon moment.
+-- Combat côté serveur (10 fois par seconde) : chaque joueur désigne une cible dans sa zone d'action (rayon
+-- autour de lui, améliorable), ses héros équipés frappent selon leur cadence (après le temps de trajet
+-- jusqu'à la cible), avec critiques, bonus contre les boss et une attaque spéciale par héros dès que sa
+-- recharge est terminée (zone, volée, saignement). En mode multi-cible (réglage), chaque héros frappe un
+-- ennemi différent de la zone d'action. Les coups sont envoyés par lots aux joueurs de la zone pour que
+-- chaque client anime les héros (les siens comme ceux des autres) au bon moment.
 -- Récompenses des ennemis de monde : or, expérience (héros + rang), butin, quêtes.
 
 local Players = game:GetService("Players")
@@ -12,12 +14,13 @@ local Shared = ReplicatedStorage.Shared
 local Net = require(Shared.Net)
 local Stats = require(Shared.Logic.Stats)
 local Items = require(Shared.Config.Items)
+local Heroes = require(Shared.Config.Heroes)
 local R = require(script.Parent.Parent.Registry)
 
 local CombatService = {}
 
 local TICK = 0.1
-local MAX_TARGET_DIST = 95
+local RANGE_SLACK = 15 -- marge avant de lâcher une cible sortie de la zone d'action
 
 local FLAG_CRIT = 1
 local FLAG_SPECIAL = 2
@@ -25,8 +28,8 @@ local FLAG_SPLASH = 4
 local FLAG_EXTRA = 8
 local FLAG_DOT = 16
 
-type Slot = { next: number, count: number }
-type State = { target: number?, zone: string?, slots: { [string]: Slot }, stunUntil: number, setAt: number }
+type Slot = { next: number, nextSpecial: number, target: number? }
+type State = { target: number?, zone: string?, slots: { [string]: Slot }, stunUntil: number, setAt: number, targets: string }
 
 local states: { [Player]: State } = {}
 local dots: { { e: any, player: Player, per: number, ticks: number, next: number, slot: number } } = {}
@@ -35,7 +38,7 @@ local rng = Random.new()
 local function stateOf(player: Player): State
 	local s = states[player]
 	if not s then
-		s = { target = nil, zone = nil, slots = {}, stunUntil = 0, setAt = 0 }
+		s = { target = nil, zone = nil, slots = {}, stunUntil = 0, setAt = 0, targets = "" }
 		states[player] = s
 	end
 	return s
@@ -47,11 +50,25 @@ local function charPos(player: Player): Vector3?
 	return root and root.Position
 end
 
+-- Rayon de la zone d'action du joueur (studs).
+function CombatService.Range(self: any, player: Player): number
+	local data = R.DataService:Get(player)
+	return if data then Stats.ActionRange(data.upgrades) else Stats.ActionRange({})
+end
+
+local function setTargets(player: Player, s: State, list: string)
+	if s.targets ~= list then
+		s.targets = list
+		player:SetAttribute("Targets", if list == "" then nil else list)
+	end
+end
+
 function CombatService.ClearTarget(self: any, player: Player)
 	local s = stateOf(player)
 	s.target = nil
 	s.zone = nil
 	player:SetAttribute("Target", nil)
+	setTargets(player, s, "")
 end
 
 function CombatService.TeamChanged(self: any, player: Player)
@@ -89,7 +106,7 @@ function CombatService.Target(self: any, player: Player, id: any)
 	if not e or not e.alive then
 		return
 	end
-	if not R.EnemyService:InRange(player, e, MAX_TARGET_DIST) then
+	if not R.EnemyService:InRange(player, e, self:Range(player)) then
 		return
 	end
 	if s.target ~= id then
@@ -107,7 +124,7 @@ function CombatService.Target(self: any, player: Player, id: any)
 			if slot then
 				slot.next = math.max(slot.next, nxt)
 			else
-				s.slots[m.uid] = { next = nxt, count = 0 }
+				s.slots[m.uid] = { next = nxt, nextSpecial = now + m.stats.spCooldown * 0.5, target = nil }
 			end
 		end
 		player:SetAttribute("Target", id)
@@ -194,12 +211,13 @@ function CombatService._tick(self: any)
 		if not player.Parent or not s.target or not s.zone then
 			continue
 		end
-		local e = R.EnemyService:Get(s.zone, s.target)
-		if not e or not e.alive or R.EnemyService:PlayerZone(player) ~= s.zone then
+		local primary = R.EnemyService:Get(s.zone, s.target)
+		if not primary or not primary.alive or R.EnemyService:PlayerZone(player) ~= s.zone then
 			self:ClearTarget(player)
 			continue
 		end
-		if not R.EnemyService:InRange(player, e, MAX_TARGET_DIST + 15) then
+		local range = self:Range(player)
+		if not R.EnemyService:InRange(player, primary, range + RANGE_SLACK) then
 			self:ClearTarget(player)
 			continue
 		end
@@ -207,20 +225,54 @@ function CombatService._tick(self: any)
 			continue
 		end
 		local team = R.HeroService:Team(player)
-		for _, m in team do
+		-- multi-cible : un ennemi différent de la zone d'action par héros (la cible choisie d'abord)
+		local pool: { any }? = nil
+		local data = R.DataService:Get(player)
+		if data and data.settings.multiTarget == true and #team > 1 then
+			local pos = charPos(player)
+			local list = {}
+			if pos then
+				for _, o in R.EnemyService:Near(s.zone, pos, range) do
+					if o ~= primary and o.alive and not o.immune then
+						table.insert(list, o)
+					end
+				end
+				table.sort(list, function(a, b)
+					return (a.pos - pos).Magnitude < (b.pos - pos).Magnitude
+				end)
+			end
+			table.insert(list, 1, primary)
+			pool = list
+		end
+		local ids: { string } = {}
+		for i, m in team do
 			local slot = s.slots[m.uid]
 			if not slot then
-				slot = { next = now + 0.4, count = 0 }
+				slot = { next = now + 0.4, nextSpecial = now + m.stats.spCooldown * 0.5, target = nil }
 				s.slots[m.uid] = slot
 			end
+			local e = primary
+			if pool then
+				e = pool[(i - 1) % #pool + 1]
+			end
+			if slot.target ~= e.id then
+				-- nouvelle cible : le temps d'y courir
+				if slot.target ~= nil then
+					slot.next = math.max(slot.next, now + 0.4)
+				end
+				slot.target = e.id
+			end
+			table.insert(ids, m.slot .. ":" .. e.id)
 			if now < slot.next or not e.alive then
 				continue
 			end
-			slot.next = now + m.stats.interval * rng:NextNumber(0.95, 1.05)
-			slot.count += 1
 			local st = m.stats
 			local sp = m.def.special
-			local special = slot.count % sp.every == 0
+			local special = now >= slot.nextSpecial
+			slot.next = now + (if special then math.max(st.interval, Heroes.SpecialLock) else st.interval) * rng:NextNumber(0.95, 1.05)
+			if special then
+				slot.nextSpecial = now + st.spCooldown
+			end
 			local mult = rng:NextNumber(0.93, 1.07)
 			if e.boss then
 				mult *= st.boss
@@ -231,7 +283,7 @@ function CombatService._tick(self: any)
 			end
 			local flags = (if crit then FLAG_CRIT else 0) + (if special then FLAG_SPECIAL else 0)
 			if special then
-				mult *= sp.mult
+				mult *= st.spMult
 				if sp.kind == "Volley" then
 					local hits = sp.hits or 3
 					for i = 1, hits do
@@ -263,6 +315,7 @@ function CombatService._tick(self: any)
 				hitRecord(batch, s.zone, player, m.slot, e, st.dmg * mult, flags)
 			end
 		end
+		setTargets(player, s, if pool then table.concat(ids, ",") else "")
 	end
 	-- saignements
 	for i = #dots, 1, -1 do

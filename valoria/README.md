@@ -105,19 +105,27 @@ beige, falaises en couches de roche, feuilles d'automne, petites fleurs. Une pal
 
 23 héros (12 dans le Val, 11 sur les Falaises), de Commun à Mythique, dont deux héros **Secrets** obtenus en
 butin rare sur les boss. Chaque héros a sa classe, son élément, son style d'attaque (taille, arc, bâton, souffle,
-charge…) et une **capacité spéciale** (volée, zone, saignement…).
+charge…) et une **attaque spéciale** à recharge (volée, zone, saignement…), avec une **animation et des effets
+propres à chaque héros** ; sa recharge et ses dégâts s'améliorent sur la fiche du héros (contre de l'or).
 
+- Au-dessus de chaque héros : son **nom, son niveau et ses étoiles**.
+- **Zone d'action** : cercle autour du joueur, petite au départ et améliorable (« Zone d'action ») ; les héros
+  n'engagent que les ennemis qui s'y trouvent. Réglage **multi-cible** : chaque héros frappe un ennemi différent.
+- Sur la fiche d'un héros possédé : **prendre son apparence** (le personnage du joueur devient ce héros).
 - Invocation ×1 / ×10 (au moins un Rare), **garanties** Légendaire (120) et Mythique (700), chance améliorable.
-- **Vente automatique** des raretés choisies, **index** de collection avec récompense par monde.
+- **Vente automatique** (recyclage à l'autel) des raretés choisies, Légendaires compris, **index** de collection
+  avec récompense par monde.
 - Révélation animée : parchemins qui tremblent selon la rareté, retournement, rayons pour les Légendaires et plus.
 
 ![Portraits](docs/images/portraits.png)
+
+![Les 23 attaques spéciales (animation de chaque héros, de la préparation au coup)](docs/images/attaques_speciales.jpg)
 
 ### Progression
 
 - **Niveaux** (expérience gagnée en combattant) et **étoiles** (copies du même héros + or), niveau maximum par étoile.
 - **Améliorations** à la Forge : dégâts, or, vitesse d'attaque, critique, chance, expérience, dégâts aux boss,
-  héros équipés en plus, places de héros, vitesse de marche.
+  zone d'action, héros équipés en plus, places de héros, vitesse de marche.
 - **Bénédictions** (traits) contre des Runes du destin : 14 bénédictions, du Commun au Secret.
 - **Accessoires** de raid : 6 types (heaume, amulette, anneaux, perle, cape), 4 raretés, statistiques secondaires,
   **polissage** avec les jetons du raid, recyclage.

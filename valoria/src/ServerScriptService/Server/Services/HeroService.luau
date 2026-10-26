@@ -1,7 +1,8 @@
 --!strict
 -- Héros du joueur : inventaire, équipe, verrouillage, relâche, évolution (étoiles), bénédictions,
--- accessoires (équiper, polir, recycler), expérience, index. Calcule et met en cache les statistiques de
--- combat de l'équipe utilisées par CombatService.
+-- améliorations de l'attaque spéciale, apparence empruntée à un héros possédé, accessoires (équiper, polir,
+-- recycler), expérience, index. Calcule et met en cache les statistiques de combat de l'équipe utilisées
+-- par CombatService.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -239,6 +240,9 @@ function HeroService.Init(self: any)
 		end
 		R.PlayerService:AddGold(player, gold)
 		R.DataService:Sync(player, "heroes", "accessories")
+		if data.morph ~= "" then
+			R.PlayerService:RefreshPublic(player) -- l'apparence empruntée peut disparaître avec le héros
+		end
 		return true, { count = n, gold = gold }
 	end, 2)
 	Router.Register("Evolve", function(player: Player, uid: any, fodder: any)
@@ -285,6 +289,41 @@ function HeroService.Init(self: any)
 		changed(self, player, { "heroes", "accessories", "stats" }, table.find(data.team, uid) ~= nil)
 		return true, inst.stars
 	end, 2)
+	Router.Register("UpgradeSpecial", function(player: Player, uid: any, which: any)
+		local data = R.DataService:Get(player)
+		local inst = owned(data, uid)
+		local w = Router.Str(which)
+		if not inst or (w ~= "cd" and w ~= "dmg") then
+			return false, "Requête invalide."
+		end
+		local field = if w == "cd" then "spCd" else "spDmg"
+		local level = inst[field] or 0
+		local cost = Heroes.SpecialCost(inst.id, w :: string, level)
+		if not cost then
+			return false, "Amélioration déjà au maximum."
+		end
+		if not R.PlayerService:Spend(player, "gold", cost) then
+			return false, "Pas assez d'or."
+		end
+		inst[field] = level + 1
+		changed(self, player, { "heroes" }, false)
+		return true, level + 1
+	end)
+	Router.Register("Morph", function(player: Player, uid: any)
+		local data = R.DataService:Get(player)
+		if uid == nil then
+			data.morph = ""
+		else
+			local inst = owned(data, uid)
+			if not inst then
+				return false, "Héros introuvable."
+			end
+			data.morph = inst.id
+		end
+		R.DataService:Sync(player, "morph")
+		R.PlayerService:RefreshPublic(player)
+		return true, data.morph
+	end)
 	Router.Register("RollTrait", function(player: Player, uid: any)
 		local data = R.DataService:Get(player)
 		local inst = owned(data, uid)

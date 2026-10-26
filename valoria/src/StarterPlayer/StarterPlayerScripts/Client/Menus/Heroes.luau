@@ -1,6 +1,7 @@
 --!strict
 -- Menu « Héros » : collection (équipés d'abord), fiche détaillée (statistiques, niveau, étoiles,
--- bénédiction, accessoire, capacité), équiper / retirer / verrouiller / relâcher, relâche multiple.
+-- bénédiction, accessoire, attaque spéciale et ses améliorations), équiper / retirer / prendre son
+-- apparence / verrouiller / relâcher, relâche multiple.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -109,36 +110,79 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 		local acc = inst.acc and d.accessories[inst.acc]
 		local accType = acc and Accessories.Type(acc.type)
 		statLine(list, if accType then accType.icon else "Ring", "Accessoire", if accType then accType.name else "—", 7)
-		-- capacité spéciale
-		local sp = Kit.Text(detail, string.format("<b>%s</b> (toutes les %d attaques)\n%s", def.special.name, def.special.every, def.desc), {
+		-- attaque spéciale : recharge, dégâts, améliorations
+		local uid = selected :: string
+		local spCd = if st then st.spCooldown else def.special.cooldown
+		local spMult = if st then st.spMult else def.special.mult
+		local sp = Kit.Text(detail, string.format("<b>%s</b> · recharge %.1f s · dégâts ×%.1f\n%s", def.special.name, spCd, spMult, def.desc), {
 			light = false,
 			rich = true,
 			wrap = true,
 			size = 15,
-			sizeUD = UDim2.new(1, 0, 0, 74),
+			sizeUD = UDim2.new(1, 0, 0, 62),
 			pos = UDim2.fromOffset(0, 312),
 			alignX = Enum.TextXAlignment.Left,
 			alignY = Enum.TextYAlignment.Top,
 			z = 12,
 		})
 		sp.Name = "Special"
+		local U = Heroes.SpecialUpgrade
+		for i, which in { "cd", "dmg" } do
+			local level = (if which == "cd" then inst.spCd else inst.spDmg) or 0
+			local max = if which == "cd" then U.cdMax else U.dmgMax
+			local cost = Heroes.SpecialCost(def.id, which, level)
+			local label = if which == "cd"
+				then string.format("Recharge −%d %%", math.floor(U.cdPer * 100 + 0.5))
+				else string.format("Dégâts +%d %%", math.floor(U.dmgPer * 100 + 0.5))
+			local b = Kit.Button(detail, {
+				text = if cost then string.format("%s · %s", label, Format.Short(cost)) else string.format("%s · MAX", label),
+				icon = if which == "cd" then "Hourglass" else "Bolt",
+				color = if cost then C.purple else C.gray,
+				size = UDim2.new(0.5, -4, 0, 40),
+				pos = UDim2.new((i - 1) * 0.5, if i == 1 then 0 else 4, 0, 378),
+				textSize = 14,
+				z = 12,
+				onClick = function()
+					if cost then
+						Remote.Call("UpgradeSpecial", uid, which)
+					end
+				end,
+			})
+			b.root.Name = if which == "cd" then "SpecialCd" else "SpecialDmg"
+			Kit.Text(b.root, string.format("%d/%d", level, max), { pixel = true, size = 11, sizeUD = UDim2.fromOffset(40, 12), pos = UDim2.new(1, -44, 0, -6), z = 14 })
+		end
 		-- actions
-		local uid = selected :: string
+		local morphed = d.morph == inst.id
 		Kit.Button(detail, {
 			text = if equipped then "Retirer" else "Équiper",
 			color = if equipped then C.orange else C.green,
-			size = UDim2.new(0.5, -4, 0, 46),
+			size = UDim2.new(0.38, -4, 0, 46),
 			pos = UDim2.new(0, 0, 1, -50),
 			z = 12,
 			onClick = function()
 				Remote.Call(if equipped then "Unequip" else "Equip", uid)
 			end,
 		})
+		-- prendre (ou quitter) l'apparence de ce héros
+		local morphBtn = Kit.Button(detail, {
+			icon = "Helm",
+			color = if morphed then C.purple else C.blue,
+			size = UDim2.new(0.2, -4, 0, 46),
+			pos = UDim2.new(0.38, 4, 1, -50),
+			z = 12,
+			onClick = function()
+				local ok = Remote.Call("Morph", if morphed then nil else uid)
+				if ok then
+					Remote.notify(if morphed then "Tu reprends ta propre apparence." else "Tu prends l'apparence de " .. def.name .. " !", "success")
+				end
+			end,
+		})
+		morphBtn.root.Name = "Apparence"
 		Kit.Button(detail, {
 			icon = "Lock",
 			color = if inst.locked then C.gold else C.gray,
-			size = UDim2.new(0.22, -4, 0, 46),
-			pos = UDim2.new(0.5, 4, 1, -50),
+			size = UDim2.new(0.18, -4, 0, 46),
+			pos = UDim2.new(0.58, 4, 1, -50),
 			z = 12,
 			onClick = function()
 				Remote.Call("Lock", uid, not inst.locked)
@@ -147,8 +191,8 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 		Kit.Button(detail, {
 			icon = "Trash",
 			color = C.red,
-			size = UDim2.new(0.28, -4, 0, 46),
-			pos = UDim2.new(0.72, 4, 1, -50),
+			size = UDim2.new(0.24, -4, 0, 46),
+			pos = UDim2.new(0.76, 4, 1, -50),
 			z = 12,
 			onClick = function()
 				if inst.locked or equipped then
@@ -256,13 +300,13 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 	end })
 	refresh()
 	return {
-		watch = { "heroes", "team", "accessories", "upgrades", "passes", "boosts" },
+		watch = { "heroes", "team", "accessories", "upgrades", "passes", "boosts", "morph" },
 		refresh = function()
 			refresh()
 		end,
 	}
 end
 
-MenuManager.Register("Heroes", { title = "Héros", icon = "Team", color = C.blue, size = Vector2.new(900, 570), build = build })
+MenuManager.Register("Heroes", { title = "Héros", icon = "Team", color = C.blue, size = Vector2.new(900, 630), build = build })
 
 return {}

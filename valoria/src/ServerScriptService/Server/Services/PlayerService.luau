@@ -76,6 +76,21 @@ function PlayerService.RefreshPublic(self: any, player: Player)
 		end
 	end
 	player:SetAttribute("Team", table.concat(parts, ","))
+	-- apparence empruntée : seulement tant qu'un exemplaire du héros est possédé
+	if data.morph ~= "" then
+		local has = false
+		for _, h in data.heroes do
+			if h.id == data.morph then
+				has = true
+				break
+			end
+		end
+		if not has then
+			data.morph = ""
+			R.DataService:Sync(player, "morph")
+		end
+	end
+	player:SetAttribute("Morph", if data.morph ~= "" then data.morph else nil)
 	local ls: Instance? = player:FindFirstChild("leaderstats")
 	if not ls then
 		local f = Instance.new("Folder")

@@ -15,6 +15,8 @@ export type HeroInst = {
 	acc: string?, -- uid de l'accessoire porté
 	locked: boolean?,
 	t: number?, -- date d'obtention
+	spCd: number?, -- niveau d'amélioration de la recharge de l'attaque spéciale
+	spDmg: number?, -- niveau d'amélioration des dégâts de l'attaque spéciale
 }
 
 export type AccInst = {
@@ -48,6 +50,7 @@ local function template(): { [string]: any }
 			Escouade = 0,
 			Ecurie = 0,
 			Bottes = 0,
+			Portee = 0,
 		},
 		rank = 1,
 		rankXp = 0,
@@ -59,7 +62,7 @@ local function template(): { [string]: any }
 				W2 = { leg = 0, myth = 0 },
 			},
 			total = 0,
-			autoDelete = { Commun = false, Rare = false, Epique = false },
+			autoDelete = { Commun = false, Rare = false, Epique = false, Legendaire = false },
 		},
 		index = {} :: { [string]: boolean },
 		indexClaimed = {} :: { [string]: boolean },
@@ -100,7 +103,10 @@ local function template(): { [string]: any }
 			othersHeroes = true,
 			damageNumbers = true,
 			quality = 3,
+			multiTarget = false, -- chaque héros frappe un ennemi différent de la zone d'action
+			showRange = true, -- cercle de la zone d'action
 		},
+		morph = "", -- apparence empruntée à un héros possédé (identifiant du héros, "" = la sienne)
 		tutorial = 1,
 		purchases = {} :: { string },
 		nextUid = 1,

@@ -16,6 +16,10 @@ local Animator = {}
 Animator.__index = Animator
 
 local TAU = math.pi * 2
+
+local function wrapAngle(a: number): number
+	return (a + math.pi) % TAU - math.pi
+end
 local ZERO = Vector3.zero
 
 export type Info = {
@@ -690,6 +694,10 @@ function Animator.Update(self: any, dt: number, info: Info)
 		end
 		if atk.t >= atk.clip.dur then
 			self.attack = nil
+			-- un tour complet (tourbillon) revient à zéro sans tourner en sens inverse
+			for bone, c in self.cur do
+				self.cur[bone] = Vector3.new(wrapAngle(c.X), wrapAngle(c.Y), wrapAngle(c.Z))
+			end
 		end
 	end
 	if self.flinchClip then

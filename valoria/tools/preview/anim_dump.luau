@@ -124,9 +124,12 @@ if scenario == "walk" then
 	speed = 9
 elseif scenario == "run" then
 	speed = 24
-elseif scenario == "attack" or scenario == "special" then
+elseif scenario == "attack" then
 	combat = true
 	duration = 1.3
+elseif scenario == "special" then
+	combat = true
+	duration = 1.45
 elseif scenario == "fly" then
 	speed = 14
 end
@@ -136,7 +139,11 @@ local fired = false
 while t < startCapture + duration do
 	if (scenario == "attack" or scenario == "special") and not fired and t >= startCapture then
 		fired = true
-		anim:Attack(style, if scenario == "special" then 1.3 else 1)
+		if scenario == "special" and def then
+			anim:Attack(def.special.anim, 1, 1) -- attaque spéciale propre au héros
+		else
+			anim:Attack(style, 1)
+		end
 	end
 	anim:Update(dt, { vel = roblox.Vector3.new(0, 0, -speed), cf = cf, combat = combat, lod = 0 })
 	t += dt

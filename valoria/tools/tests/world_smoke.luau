@@ -305,6 +305,7 @@ H.bind(rsNode, RealInstance.new("Folder"))
 local sent = {} -- événements envoyés aux clients : nom → nombre
 local broadcasts = {} -- textes des annonces envoyées à tout le serveur
 local announced = {} -- textes des annonces envoyées à un joueur
+local specialHits = 0 -- coups marqués « attaque spéciale »
 local events = {}
 local func = { OnServerInvoke = nil }
 local function event(name)
@@ -315,6 +316,13 @@ local function event(name)
 			sent[name] = (sent[name] or 0) + 1
 			if name == "Announce" then
 				table.insert(announced, (...))
+			elseif name == "Hits" then
+				local _, list = ...
+				for _, h in list do
+					if bit32.band(h[6], 2) ~= 0 then
+						specialHits += 1
+					end
+				end
 			end
 		end
 		function e:FireAllClients(...)
@@ -526,6 +534,83 @@ step("combat dans le Val", function()
 	end
 	print(string.format("Session : %d ennemis vaincus, or %s, coups envoyés %d", data.stats.kills - kills0, tostring(data.gold), sent.Hits or 0))
 	assert(data.stats.kills > kills0, "aucun ennemi vaincu")
+end)
+
+step("héros : zone d'action, multi-cible, attaques spéciales, apparence", function()
+	local data = R.DataService:Get(player)
+	local zone = R.EnemyService:Zone("W1")
+	local range = R.CombatService:Range(player)
+	-- un ennemi hors de la zone d'action ne peut pas être ciblé
+	local far = nil
+	for _, e in zone.enemies do
+		if e.alive and not e.boss then
+			far = e
+			break
+		end
+	end
+	assert(far, "aucun ennemi")
+	R.CombatService:ClearTarget(player)
+	goTo(far.pos + Vector3.new(range + far.def.radius * far.scale + 25, 0, 0))
+	events.Target.OnServerEvent:Fire(player, far.id)
+	assert(player:GetAttribute("Target") == nil, "cible hors de la zone d'action acceptée")
+	-- multi-cible : trois ennemis autour du joueur, un par héros
+	local ok, err = act("Settings", "multiTarget", true)
+	assert(ok, "réglage multi-cible : " .. tostring(err))
+	local center = far.pos + Vector3.new(0, 0, 60)
+	goTo(center)
+	local pack = {}
+	for i = 1, 3 do
+		local e = R.EnemyService:Spawn("W1", far.def.id, center + Vector3.new(i * 4 - 8, 0, 6), { hp = 1e9 })
+		table.insert(pack, e)
+	end
+	events.Target.OnServerEvent:Fire(player, pack[2].id)
+	lunetask.wait(1.5)
+	local ts = player:GetAttribute("Targets")
+	assert(type(ts) == "string", "cibles par héros non envoyées")
+	local distinct = {}
+	for id in string.gmatch(ts, "%d+:(%d+)") do
+		distinct[id] = true
+	end
+	local nd = 0
+	for _ in distinct do
+		nd += 1
+	end
+	assert(nd >= math.min(3, #data.team), "multi-cible : " .. ts)
+	-- attaques spéciales : au moins une par héros au bout de quelques recharges
+	local hits0, sp0 = sent.Hits or 0, specialHits
+	lunetask.wait(6)
+	assert((sent.Hits or 0) > hits0, "aucun coup en multi-cible")
+	assert(specialHits > sp0, "aucune attaque spéciale en 6 s")
+	print(string.format("Session : multi-cible %s, %d attaques spéciales en 6 s", ts, specialHits - sp0))
+	for _, e in pack do
+		R.EnemyService:Damage(e, e.maxHp, player)
+	end
+	ok, err = act("Settings", "multiTarget", false)
+	assert(ok, "réglage : " .. tostring(err))
+	-- améliorations de l'attaque spéciale
+	local uid = data.team[1]
+	data.gold += 1e7
+	ok, err = act("UpgradeSpecial", uid, "cd")
+	assert(ok, "amélioration de la recharge : " .. tostring(err))
+	ok, err = act("UpgradeSpecial", uid, "dmg")
+	assert(ok, "amélioration des dégâts : " .. tostring(err))
+	assert(data.heroes[uid].spCd == 1 and data.heroes[uid].spDmg == 1, "niveaux d'amélioration")
+	local team = R.HeroService:Team(player)
+	assert(team[1].stats.spCooldown < team[1].def.special.cooldown, "recharge non réduite")
+	ok = act("UpgradeSpecial", uid, "vitesse")
+	assert(not ok, "amélioration inconnue acceptée")
+	-- apparence d'un héros possédé
+	ok, err = act("Morph", uid)
+	assert(ok, "apparence : " .. tostring(err))
+	assert(player:GetAttribute("Morph") == data.heroes[uid].id, "attribut d'apparence")
+	ok = act("Morph", "inconnu")
+	assert(not ok, "apparence d'un héros non possédé acceptée")
+	ok, err = act("Morph", nil)
+	assert(ok and player:GetAttribute("Morph") == nil, "retour à sa propre apparence")
+	-- recyclage automatique des Légendaires à l'autel
+	ok, err = act("SetAutoDelete", "Legendaire", true)
+	assert(ok and data.summon.autoDelete.Legendaire == true, "vente auto des Légendaires : " .. tostring(err))
+	act("SetAutoDelete", "Legendaire", false)
 end)
 
 step("boss du Val", function()

@@ -31,6 +31,8 @@ export type HeroStats = {
 	range: number,
 	speed: number,
 	dps: number,
+	spCooldown: number, -- recharge de l'attaque spéciale (s), améliorations comprises
+	spMult: number, -- multiplicateur de dégâts de l'attaque spéciale, améliorations comprises
 }
 
 local function up(ctx: Ctx, key: string): number
@@ -112,6 +114,9 @@ function Stats.Hero(inst: any, ctx: Ctx): HeroStats?
 	end
 
 	local avgHit = dmg * (1 + crit * (critMult - 1))
+	local U = Heroes.SpecialUpgrade
+	local spCooldown = def.special.cooldown * (1 - U.cdPer * math.clamp(inst.spCd or 0, 0, U.cdMax))
+	local spMult = def.special.mult * (1 + U.dmgPer * math.clamp(inst.spDmg or 0, 0, U.dmgMax))
 	return {
 		dmg = dmg,
 		interval = interval,
@@ -122,6 +127,8 @@ function Stats.Hero(inst: any, ctx: Ctx): HeroStats?
 		range = def.range,
 		speed = def.speed,
 		dps = avgHit / interval,
+		spCooldown = spCooldown,
+		spMult = spMult,
 	}
 end
 
@@ -158,6 +165,11 @@ function Stats.Storage(upgrades: { [string]: number }, passes: { [string]: boole
 	return Upgrades.BaseStorage
 		+ (upgrades.Ecurie or 0) * Upgrades.List.Ecurie.per
 		+ (if passes.Storage then Shop.PassBonus.Storage.storage else 0)
+end
+
+-- Rayon de la zone d'action (studs) autour du joueur.
+function Stats.ActionRange(upgrades: { [string]: number }): number
+	return Upgrades.BaseActionRange + (upgrades.Portee or 0) * Upgrades.List.Portee.per
 end
 
 function Stats.WalkSpeed(upgrades: { [string]: number }): number

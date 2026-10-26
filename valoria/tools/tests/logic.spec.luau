@@ -169,6 +169,27 @@ test("Stats : héros et contexte", function()
 	eq(Stats.Storage({ Ecurie = 2 }, {}), 160)
 end)
 
+test("Stats : attaque spéciale et zone d'action", function()
+	local data = DataTemplate.New()
+	data.heroes["1"] = { id = "Squire", lvl = 1, xp = 0, stars = 0 }
+	data.team = { "1" }
+	local ctx = Stats.Context(data, {}, {})
+	local s = Stats.Hero(data.heroes["1"], ctx)
+	near(s.spCooldown, Heroes.Get("Squire").special.cooldown, 1e-9, "recharge de base")
+	near(s.spMult, Heroes.Get("Squire").special.mult, 1e-9, "dégâts de base")
+	data.heroes["1"].spCd = 4
+	data.heroes["1"].spDmg = 2
+	s = Stats.Hero(data.heroes["1"], ctx)
+	near(s.spCooldown, 5 * (1 - 0.05 * 4), 1e-9, "recharge améliorée")
+	near(s.spMult, 3 * (1 + 0.15 * 2), 1e-9, "dégâts améliorés")
+	data.heroes["1"].spCd = 99
+	s = Stats.Hero(data.heroes["1"], ctx)
+	near(s.spCooldown, 5 * (1 - 0.05 * 10), 1e-9, "niveau plafonné")
+	eq(Stats.ActionRange(data.upgrades), Upgrades.BaseActionRange, "zone d'action de départ")
+	eq(Stats.ActionRange({ Portee = 3 }), Upgrades.BaseActionRange + 12, "zone d'action améliorée")
+	check(Upgrades.BaseActionRange <= 25, "petite au départ")
+end)
+
 test("Upgrades : coûts croissants", function()
 	for _, key in Upgrades.Order do
 		local prev = 0
