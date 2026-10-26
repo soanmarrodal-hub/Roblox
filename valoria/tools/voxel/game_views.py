@@ -406,11 +406,11 @@ def v_autel_du_val(s, m):
 
 
 def v_mur_des_legendes(s, m):
-    t = (0, G + 14, 62)
-    s.terrains['Hub'].add_to(m, t, 200)
-    s.parts.add_to(m, t, 130)
-    s.squad(m, ['Paladin', 'Archer', 'Fox'], 0, 34, (0, 62), spread=5)
-    return dict(target=t, eye=sr.look(t, 196, 16, 74), fov=55, light='hub', shadow_extent=120)
+    t = (0, G + 17, 62)
+    s.terrains['Hub'].add_to(m, t, 220)
+    s.parts.add_to(m, t, 150)
+    s.squad(m, ['Paladin', 'Archer', 'Fox'], 0, 44, (0, 62), spread=5)
+    return dict(target=t, eye=sr.look(t, 198, 13, 100), fov=55, light='hub', shadow_extent=140)
 
 
 VIEWS = [

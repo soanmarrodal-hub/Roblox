@@ -165,7 +165,8 @@ function Hub.Build(root: Instance): Result
 	-- rues : lanternes de part et d'autre
 	local streets = Kit.Folder(folder, "Rues")
 	for z = -90, 130, 24 do
-		if math.abs(z) > 50 then
+		-- (pas devant le mur des légendes : ses braseros l'éclairent)
+		if math.abs(z) > 50 and not (z > 44 and z < 72) then
 			Buildings.LanternPost(streets, CFrame.new(8, ground(8, z), z) * CFrame.Angles(0, math.pi, 0))
 			Buildings.LanternPost(streets, CFrame.new(-8, ground(-8, z), z))
 		end
