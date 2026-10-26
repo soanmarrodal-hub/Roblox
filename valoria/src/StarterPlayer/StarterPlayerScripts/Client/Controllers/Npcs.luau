@@ -18,7 +18,7 @@ local Npcs = {}
 local CAST: { [string]: { model: string, name: string } } = {
 	Npc1 = { model = "Paladin", name = "Sire Aldric" },
 	Npc2 = { model = "TideTemplar", name = "Maëlle" },
-	Forge = { model = "Militia", name = "Bran le forgeron" },
+	Talents = { model = "Militia", name = "Bran, forgeron des talents" },
 	Enchanter = { model = "MistWitch", name = "Ysolde" },
 	Evolution = { model = "Monk", name = "Frère Anselme" },
 	Jeweler = { model = "Archer", name = "Lysandre" },

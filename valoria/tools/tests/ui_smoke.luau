@@ -306,7 +306,7 @@ settle(20)
 
 -- chaque menu : ouverture, rafraîchissement complet, clic sur chaque bouton
 local menuNames = {
-	"Heroes", "Summon1", "Summon2", "Upgrades", "Traits", "Evolve", "Jeweler", "Teleport", "Tower", "TowerShop",
+	"Heroes", "Summon1", "Summon2", "Upgrades", "Traits", "Talents", "Evolve", "Jeweler", "Teleport", "Tower", "TowerShop",
 	"Raid1", "Raid2", "RaidShop", "Quests", "QuestNpc1", "QuestNpc2", "Daily", "Gifts", "Index", "GemShop", "Bag", "Settings",
 }
 local function buttonsIn(root)
@@ -319,7 +319,7 @@ local function buttonsIn(root)
 	return out
 end
 local clicked = 0
-for _, name in menuNames do
+local function exercise(name)
 	step("menu " .. name, function()
 		MenuManager.Open(name, name)
 		settle(4)
@@ -379,6 +379,23 @@ for _, name in menuNames do
 		MenuManager.Close()
 		settle(3)
 	end)
+end
+for _, name in menuNames do
+	exercise(name)
+end
+-- progression débloquée (monde 2, talents) : emplacement 2 à 6 étoiles, verrous, tirages animés
+step("progression débloquée", function()
+	local d = State.data
+	d.worlds["2"] = true
+	d.bossKills.Vyrmax = 1
+	d.items.Talent = 5
+	d.heroes.u1.stars = 6
+	d.heroes.u1.trait2 = "Larron"
+	d.heroes.u1.tal = { dmg = "S", speed = "B", crit = "F" }
+	State.Changed:Fire("*")
+end)
+for _, name in { "Traits", "Talents", "Evolve", "Heroes" } do
+	exercise(name)
 end
 
 -- contrôleurs de jeu : personnage, équipe, ennemis, coups, morts, butin, télégraphes

@@ -1,5 +1,5 @@
 --!strict
--- Grille de sélection de héros réutilisée par plusieurs menus (bénédictions, évolution, accessoires).
+-- Grille de sélection de héros réutilisée par plusieurs menus (enchantements, talents, évolution, accessoires).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

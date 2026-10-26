@@ -1,6 +1,6 @@
 --!strict
 -- Bourg-Lanterne, le village de départ : place pavée et fontaine, grand chêne aux lanternes, maisons à
--- colombages, Cercle des Runes (téléporteur), quartier de la Forge (améliorations, bénédictions,
+-- colombages, Cercle des Runes (téléporteur), quartier de la Forge (talents, enchantements,
 -- évolution, accessoires), salle des raids et ses deux portails, Tour des Épreuves, tableaux et marché.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -307,11 +307,16 @@ function Hub.Build(root: Instance): Result
 	Buildings.RuneCircle(folder, CFrame.new(tp.pos.X, ground(tp.pos.X, tp.pos.Z), tp.pos.Z), tp.radius, tp.color)
 	Buildings.Stairs(folder, Vector3.new(0, G - 0.4, -64), Vector3.new(0, G + 7, -97), 12)
 
-	-- quartier de la Forge (zone d'amélioration)
+	-- quartier de la Forge : Forge des talents (reroll des statistiques des héros), Enchanteresse, évolution
 	local forge = Kit.Folder(folder, "QuartierForge")
-	local fs = (Stations.Get("Forge") :: Stations.Station).pos
+	local fs = (Stations.Get("Talents") :: Stations.Station).pos
 	Buildings.Forge(forge, facing(Vector3.new(fs.X + 22, ground(fs.X + 22, fs.Z), fs.Z), fs))
 	Buildings.Anvil(forge, CFrame.new(fs.X + 6, ground(fs.X + 6, fs.Z + 5), fs.Z + 5))
+	-- cristal des talents qui flotte au-dessus de l'enclume
+	local crystal = Kit.Block(forge, Vector3.new(1.6, 2.6, 1.6), CFrame.new(fs.X + 6, ground(fs.X + 6, fs.Z + 5) + 7, fs.Z + 5) * CFrame.Angles(0, 0, math.rad(45)), Color3.fromRGB(255, 200, 90), Enum.Material.Neon, { CanCollide = false })
+	Buildings.Tag(crystal, "Spin", 0.6)
+	Buildings.Tag(crystal, "Bob", 0.5)
+	Kit.Light(crystal, Color3.fromRGB(255, 200, 120), 18, 1.6)
 	local en = (Stations.Get("Enchanter") :: Stations.Station).pos
 	Buildings.Tent(forge, facing(Vector3.new(en.X + 14, ground(en.X + 14, en.Z - 10), en.Z - 10), en), Color3.fromRGB(120, 70, 170), 1.1)
 	local ev = (Stations.Get("Evolution") :: Stations.Station).pos

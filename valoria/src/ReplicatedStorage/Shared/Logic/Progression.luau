@@ -6,7 +6,7 @@ local Heroes = require(script.Parent.Parent.Config.Heroes)
 
 local Progression = {}
 
-Progression.MaxStars = 5
+Progression.MaxStars = 6 -- 6 étoiles : second emplacement d'enchantement (Config/Traits)
 Progression.LevelsPerStar = 25
 
 function Progression.MaxLevel(stars: number): number

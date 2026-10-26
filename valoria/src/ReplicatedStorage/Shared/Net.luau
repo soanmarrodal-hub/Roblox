@@ -28,6 +28,7 @@ Net.Events = {
 	"Lobby", -- (état) : salle d'attente de raid
 	-- client -> serveur
 	"Target", -- (enemyId | nil)
+	"Click", -- () : clic sur l'écran ou le bouton « Frapper » (dégâts en plus sur la cible)
 }
 
 Net.Unreliable = {

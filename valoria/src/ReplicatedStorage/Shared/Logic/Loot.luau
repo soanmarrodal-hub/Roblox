@@ -1,9 +1,10 @@
 --!strict
--- Tirages de butin : accessoires de raid et bénédictions (traits).
+-- Tirages de butin : accessoires de raid, enchantements (Config/Traits) et talents (Config/Talents).
 
 local Config = script.Parent.Parent.Config
 local Accessories = require(Config.Accessories)
 local Traits = require(Config.Traits)
+local Talents = require(Config.Talents)
 local Rarities = require(Config.Rarities)
 local Weighted = require(script.Parent.Parent.Util.Weighted)
 
@@ -57,10 +58,28 @@ end
 function Loot.RaidAccessory(types: { string }, weights: { [string]: number }, luck: number, rand: () -> number, forcedType: string?): any
 	local rarity = Loot.AccessoryRarity(weights, luck, rand)
 	local typeKey = forcedType or types[math.clamp(math.floor(rand() * #types) + 1, 1, #types)]
-	return Loot.Accessory(typeKey, rarity, rand)
+	-- Note de talent aléatoire.
+function Loot.Grade(rand: () -> number): string
+	local entries = {}
+	for _, g in Talents.Grades do
+		table.insert(entries, { value = g.key, weight = g.weight })
+	end
+	return Weighted.Pick(entries, rand()) or Talents.Default
 end
 
--- Bénédiction aléatoire ; la chance favorise les paliers Épique et au-delà.
+-- Nouveau tirage des talents d'un héros ; les talents de `locked` gardent leur note.
+function Loot.Talents(inst: any, locked: { [string]: boolean }, rand: () -> number): { [string]: string }
+	local out: { [string]: string } = {}
+	for _, t in Talents.List do
+		out[t.key] = if locked[t.key] then Talents.GradeOf(inst, t.key) else Loot.Grade(rand)
+	end
+	return out
+end
+
+return Loot.Accessory(typeKey, rarity, rand)
+end
+
+-- Enchantement aléatoire ; la chance favorise les paliers Épique et au-delà.
 function Loot.Trait(luck: number, rand: () -> number): string
 	local entries = {}
 	for _, key in Traits.Order do
@@ -74,7 +93,7 @@ function Loot.Trait(luck: number, rand: () -> number): string
 	return Weighted.Pick(entries, rand()) or "Vigueur1"
 end
 
--- Probabilités affichées des bénédictions.
+-- Probabilités affichées des enchantements.
 function Loot.TraitRates(luck: number): { [string]: number }
 	local total = 0
 	local ws: { [string]: number } = {}
@@ -91,6 +110,24 @@ function Loot.TraitRates(luck: number): { [string]: number }
 		ws[k] = w / total
 	end
 	return ws
+end
+
+-- Note de talent aléatoire.
+function Loot.Grade(rand: () -> number): string
+	local entries = {}
+	for _, g in Talents.Grades do
+		table.insert(entries, { value = g.key, weight = g.weight })
+	end
+	return Weighted.Pick(entries, rand()) or Talents.Default
+end
+
+-- Nouveau tirage des talents d'un héros ; les talents de `locked` gardent leur note.
+function Loot.Talents(inst: any, locked: { [string]: boolean }, rand: () -> number): { [string]: string }
+	local out: { [string]: string } = {}
+	for _, t in Talents.List do
+		out[t.key] = if locked[t.key] then Talents.GradeOf(inst, t.key) else Loot.Grade(rand)
+	end
+	return out
 end
 
 return Loot

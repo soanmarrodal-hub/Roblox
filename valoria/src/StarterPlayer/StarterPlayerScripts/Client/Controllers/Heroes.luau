@@ -3,7 +3,8 @@
 -- course vers la cible désignée (ou vers sa propre cible en mode multi-cible) et placement autour d'elle
 -- selon la portée, attaques animées calées sur les coups envoyés par le serveur (impact au bon moment,
 -- projectiles pour l'arc, le bâton et le souffle), attaques spéciales (animation et effets propres à chaque
--- héros), étourdissements, montées de niveau. Nom, niveau et étoiles au-dessus de chaque héros.
+-- héros), étourdissements, montées de niveau. Nom, niveau et étoiles au-dessus de chaque héros ; aura
+-- selon la rareté du meilleur enchantement, taille (Colosse, Farfadet…), téléportation (Pas de l'ombre).
 -- Aussi : le cercle de la zone d'action autour du joueur, et l'apparence empruntée à un héros (« Morph »).
 
 local Players = game:GetService("Players")
@@ -12,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Heroes = require(Shared.Config.Heroes)
+local Rarities = require(Shared.Config.Rarities)
 local Stats = require(Shared.Logic.Stats)
 local State = require(script.Parent.Parent.State)
 local Remote = require(script.Parent.Parent.Remote)
@@ -39,6 +41,11 @@ type Follower = {
 	lvl: number,
 	stars: number,
 	label: TextLabel?,
+	aura: number, -- rang de rareté du meilleur enchantement (0 = aucun)
+	scale: number,
+	blink: boolean,
+	auraFx: { Instance },
+	nextBlink: number,
 }
 
 type Squad = { player: Player, team: string, list: { [number]: Follower } }
@@ -150,13 +157,51 @@ local function setLabel(f: Follower)
 	end
 end
 
-local function makeFollower(owner: Player, id: string, slot: number, near: Vector3): Follower?
+-- Aura d'enchantement : étincelles qui montent, de la couleur de la rareté, plus denses avec la rareté.
+local function setAura(f: Follower, rank: number)
+	for _, x in f.auraFx do
+		x:Destroy()
+	end
+	table.clear(f.auraFx)
+	f.aura = rank
+	local b = f.built
+	if rank <= 0 or not b then
+		return
+	end
+	local key = Rarities.Order[math.clamp(rank, 1, #Rarities.Order)]
+	local color = Rarities.Get(key).color
+	local e = Instance.new("ParticleEmitter")
+	e.Name = "Aura"
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.35), color)
+	e.LightEmission = 1
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.25 + rank * 0.05), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.8, 1.4)
+	e.Rate = 2 + rank * 3
+	e.Speed = NumberRange.new(0.5, 1.5)
+	e.Acceleration = Vector3.new(0, 3 + rank, 0)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Parent = b.root
+	table.insert(f.auraFx, e)
+	if rank >= 4 then
+		local l = Instance.new("PointLight")
+		l.Name = "Aura"
+		l.Color = color
+		l.Range = 6 + rank * 2
+		l.Brightness = 0.8 + (rank - 4) * 0.6
+		l.Parent = b.root
+		table.insert(f.auraFx, l)
+	end
+end
+
+local function makeFollower(owner: Player, id: string, slot: number, near: Vector3, scale: number?): Follower?
 	local def = Heroes.Get(id)
 	if not def then
 		return nil
 	end
 	local quality = State.Setting("quality") or 3
-	local b = Models.Build(id, { style = def.style, seed = owner.UserId % 1000 + slot * 17, lowDetail = owner ~= localPlayer and quality < 3 })
+	local b = Models.Build(id, { style = def.style, seed = owner.UserId % 1000 + slot * 17, lowDetail = owner ~= localPlayer and quality < 3, scale = scale })
 	if not b then
 		return nil
 	end
@@ -181,16 +226,32 @@ local function makeFollower(owner: Player, id: string, slot: number, near: Vecto
 		lvl = 1,
 		stars = 0,
 		label = makeLabel(b, def),
+		aura = 0,
+		scale = scale or 1,
+		blink = false,
+		auraFx = {},
+		nextBlink = 0,
 	}
 	return f
 end
 
-local function parseTeam(s: string): { { id: string, stars: number, lvl: number } }
-	local out = {}
+type Wanted = { id: string, stars: number, lvl: number, aura: number, scale: number, blink: boolean }
+
+-- « héros:étoiles:niveau[:aura:taille:téléportation], … » (attribut Team, PlayerService.RefreshPublic)
+local function parseTeam(s: string): { Wanted }
+	local out: { Wanted } = {}
 	for part in string.gmatch(s, "[^,]+") do
-		local id, st, lv = string.match(part, "^([%w_]+):(%d+):(%d+)$")
-		if id then
-			table.insert(out, { id = id, stars = tonumber(st) or 0, lvl = tonumber(lv) or 1 })
+		local f = string.split(part, ":")
+		local id = f[1]
+		if id and string.match(id, "^[%w_]+$") and f[3] then
+			table.insert(out, {
+				id = id,
+				stars = tonumber(f[2]) or 0,
+				lvl = tonumber(f[3]) or 1,
+				aura = tonumber(f[4]) or 0,
+				scale = math.clamp(tonumber(f[5]) or 1, 0.5, 2),
+				blink = f[6] == "1",
+			})
 		end
 	end
 	return out
@@ -221,22 +282,25 @@ local function syncSquad(p: Player)
 	-- garde les héros déjà présents au même emplacement
 	for slot, f in s.list do
 		local w = wanted[slot]
-		if not w or w.id ~= f.id then
+		if not w or w.id ~= f.id or math.abs(w.scale - f.scale) > 0.01 then
 			destroyFollower(f)
 			s.list[slot] = nil
 		end
 	end
 	for slot, w in wanted do
 		if not s.list[slot] then
-			local f = makeFollower(p, w.id, slot, root.Position - Vector3.new(0, 3, 0))
+			local f = makeFollower(p, w.id, slot, root.Position - Vector3.new(0, 3, 0), w.scale)
 			if f then
 				s.list[slot] = f
 			end
 		end
 		local f = s.list[slot]
 		if f then
-			f.lvl, f.stars = w.lvl, w.stars
+			f.lvl, f.stars, f.blink = w.lvl, w.stars, w.blink
 			setLabel(f)
+			if f.aura ~= w.aura then
+				setAura(f, w.aura)
+			end
 		end
 	end
 	s.team = team
@@ -462,6 +526,14 @@ local function step(dt: number)
 				goal = combatSpot(f, target, root.Position, n)
 			else
 				goal = formation(root.CFrame, f.slot, n)
+			end
+			-- Pas de l'ombre : le héros se téléporte vers sa cible
+			if f.blink and fighting and now >= f.nextBlink and (goal - f.pos).Magnitude > 6 then
+				f.nextBlink = now + 0.8
+				Effects.Burst(f.pos + Vector3.new(0, 1.5, 0), { Color3.fromRGB(150, 80, 230), Color3.new(0, 0, 0) }, 8, 10, 0.3, 0.4)
+				f.pos = goal
+				f.vel = Vector3.zero
+				Effects.Burst(goal + Vector3.new(0, 1.5, 0), { Color3.fromRGB(150, 80, 230), Color3.new(1, 1, 1) }, 8, 10, 0.3, 0.4)
 			end
 			-- trop loin du maître : on le rejoint d'un bond
 			if (f.pos - root.Position).Magnitude > 90 then

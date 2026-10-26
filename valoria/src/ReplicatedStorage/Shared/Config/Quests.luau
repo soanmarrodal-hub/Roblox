@@ -33,12 +33,12 @@ Quests.Chains = {
 		{ key = "W1_2", title = "Des renforts", text = "Invoque 3 héros à l'autel du Val.", kind = "Summon", count = 3, reward = { gold = 400 } },
 		{ key = "W1_3", title = "Une vraie escouade", text = "Équipe 3 héros en même temps.", kind = "Equip", count = 3, reward = { gems = 20 } },
 		{ key = "W1_4", title = "Épouvantails !", text = "Brûle la paille de 20 épouvantails hantés.", kind = "Kill", target = "Scarecrow", count = 20, reward = { gold = 1200 } },
-		{ key = "W1_5", title = "Le marteau et l'enclume", text = "Achète 3 améliorations à la Forge de Bourg-Lanterne.", kind = "Upgrade", count = 3, reward = { items = { PotionDamage = 1 } } },
+		{ key = "W1_5", title = "Le marteau et l'enclume", text = "Achète 3 améliorations à la Forge (boutique).", kind = "Upgrade", count = 3, reward = { items = { PotionDamage = 1 } } },
 		{ key = "W1_6", title = "Les loups des brumes", text = "Repousse 25 loups dans le Bois Roux.", kind = "Kill", target = "Wolf", count = 25, reward = { gold = 5000, gems = 25 } },
 		{ key = "W1_7", title = "L'appel de la Tour", text = "Atteins l'étage 5 de la Tour des Épreuves.", kind = "TowerFloor", count = 5, reward = { runes = 1 } },
 		{ key = "W1_8", title = "Grabuge gobelin", text = "Chasse 30 gobelins de la Gorge du Torrent.", kind = "Kill", target = "Goblin", count = 30, reward = { gold = 20000 } },
 		{ key = "W1_9", title = "Plus forts ensemble", text = "Fais évoluer un héros à l'Autel d'évolution.", kind = "Evolve", count = 1, reward = { gems = 40 } },
-		{ key = "W1_10", title = "La bénédiction", text = "Tire une bénédiction chez l'Enchanteresse.", kind = "Trait", count = 1, reward = { runes = 1 } },
+		{ key = "W1_10", title = "Le poing du chevalier", text = "Frappe 100 fois une cible (clic ou bouton Frapper).", kind = "Click", count = 100, reward = { runes = 1 } },
 		{ key = "W1_11", title = "Bandits de grand chemin", text = "Démasque 30 bandits aux Ruines du Guet.", kind = "Kill", target = "Bandit", count = 30, reward = { gold = 60000 } },
 		{ key = "W1_12", title = "La crypte oubliée", text = "Termine le raid de la Crypte du Roi Déchu.", kind = "Raid", target = "Raid1", count = 1, reward = { gems = 50 } },
 		{ key = "W1_13", title = "Le plateau des ogres", text = "Terrasse 20 ogres des collines.", kind = "Kill", target = "Ogre", count = 20, reward = { gold = 200000, items = { PotionLuck = 1 } } },
@@ -48,6 +48,7 @@ Quests.Chains = {
 	[2] = {
 		{ key = "W2_1", title = "Les crabes de la crique", text = "Brise la carapace de 15 crabes de roche.", kind = "Kill", target = "RockCrab", count = 15, reward = { gold = 150000 } },
 		{ key = "W2_2", title = "Nouvelles recrues", text = "Invoque 5 héros à l'autel des Falaises.", kind = "Summon", target = "W2", count = 5, reward = { gems = 25 } },
+		{ key = "W2_E", title = "L'enchantement", text = "Tire un enchantement chez l'Enchanteresse.", kind = "Trait", count = 1, reward = { runes = 1 } },
 		{ key = "W2_3", title = "Le cri des harpies", text = "Fais taire 25 harpies sur la corniche.", kind = "Kill", target = "Harpy", count = 25, reward = { gold = 500000 } },
 		{ key = "W2_4", title = "L'aguerri", text = "Monte un héros au niveau 50.", kind = "HeroLevel", count = 50, reward = { runes = 2 } },
 		{ key = "W2_5", title = "Les noyés du port", text = "Renvoie 25 corsaires noyés au fond de l'eau.", kind = "Kill", target = "DrownedCorsair", count = 25, reward = { gold = 2000000 } },
@@ -70,7 +71,7 @@ Quests.DailyPool = {
 	{ key = "D_Summon", title = "Appel aux armes", text = "Invoque 20 héros.", kind = "Summon", count = 20, reward = { gems = 25 } },
 	{ key = "D_Tower", title = "Ascension", text = "Franchis 10 étages de la Tour.", kind = "TowerClear", count = 10, reward = { tokens = { Tower = 15 } } },
 	{ key = "D_Raid", title = "Raid du jour", text = "Termine un raid, quelle que soit la difficulté.", kind = "Raid", count = 1, reward = { gems = 40 } },
-	{ key = "D_Trait", title = "Le destin en main", text = "Tire 2 bénédictions.", kind = "Trait", count = 2, reward = { items = { PotionXp = 1 } } },
+	{ key = "D_Click", title = "Coups de poing", text = "Frappe 300 fois tes cibles.", kind = "Click", count = 300, reward = { items = { PotionXp = 1 } } },
 	{ key = "D_Upgrade", title = "Coup de marteau", text = "Achète 3 améliorations.", kind = "Upgrade", count = 3, reward = { items = { PotionGold = 1 } } },
 } :: { Quest }
 

@@ -306,6 +306,7 @@ local sent = {} -- événements envoyés aux clients : nom → nombre
 local broadcasts = {} -- textes des annonces envoyées à tout le serveur
 local announced = {} -- textes des annonces envoyées à un joueur
 local specialHits = 0 -- coups marqués « attaque spéciale »
+local clickHits = 0 -- coups de clic du joueur
 local events = {}
 local func = { OnServerInvoke = nil }
 local function event(name)
@@ -321,6 +322,9 @@ local function event(name)
 				for _, h in list do
 					if bit32.band(h[6], 2) ~= 0 then
 						specialHits += 1
+					end
+					if bit32.band(h[6], 32) ~= 0 then
+						clickHits += 1
 					end
 				end
 			end
@@ -490,14 +494,16 @@ step("voyage et invocations", function()
 	print(string.format("Session : %d héros, équipe de %d", n, #data.team))
 end)
 
-step("améliorations et bénédictions", function()
+step("améliorations (Forge de la boutique), enchantements verrouillés au monde 1", function()
 	for _, key in { "Force", "Butin", "Celerite", "Escouade" } do
 		local ok, err = act("Upgrade", key, 1)
 		assert(ok, "amélioration " .. key .. " : " .. tostring(err))
 	end
 	local data = R.DataService:Get(player)
+	data.items.Rune = 3
 	local ok, err = act("RollTrait", data.team[1])
-	assert(ok, "bénédiction : " .. tostring(err))
+	assert(not ok and string.find(tostring(err), "monde 2", 1, true), "enchantement avant le monde 2 : " .. tostring(err))
+	assert(data.items.Rune == 3, "rune dépensée malgré le refus")
 	ok, err = act("UsePotion", "PotionDamage", 1)
 	if not ok then
 		data.items.PotionDamage = 1
@@ -674,6 +680,79 @@ step("monde 2", function()
 	assert(ok, "point de passage : " .. tostring(err))
 	settle(5)
 	assert(player:GetAttribute("Zone") == "W2", "zone attendue W2")
+end)
+
+step("progression : enchantements, talents, jetons, clic", function()
+	local data = R.DataService:Get(player)
+	local Talents = req(rsNode.Shared.Config.Talents)
+	local uid = data.team[1]
+	local inst = data.heroes[uid]
+	-- enchantements (monde 2 ouvert) : emplacement 1, puis 2 à 6 étoiles
+	data.items.Rune = 5
+	local ok, err = act("RollTrait", uid, 1)
+	assert(ok and inst.trait, "enchantement : " .. tostring(err))
+	ok = act("RollTrait", uid, 2)
+	assert(not ok, "second emplacement accepté avant 6 étoiles")
+	inst.stars = 6
+	ok, err = act("RollTrait", uid, 2)
+	assert(ok and inst.trait2, "second emplacement : " .. tostring(err))
+	local first = string.split(tostring(player:GetAttribute("Team")), ",")[1]
+	assert(#string.split(first, ":") == 6, "aura et taille dans l'attribut d'équipe : " .. first)
+	-- talents : verrouillés tant que le monde 3 (provisoirement : Vyrmax) n'est pas atteint
+	data.items.Talent = 10
+	ok, err = act("RerollTalents", uid, {})
+	assert(not ok, "talents débloqués trop tôt")
+	data.bossKills.Vyrmax = 1
+	ok, err = act("RerollTalents", uid, {})
+	assert(ok and data.items.Talent == 9, "talents : " .. tostring(err))
+	local keep = inst.tal.dmg
+	ok, err = act("RerollTalents", uid, { "dmg" })
+	assert(ok and inst.tal.dmg == keep and data.items.Talent == 7, "talent verrouillé (coût 2) : " .. tostring(err))
+	ok = act("RerollTalents", uid, { "dmg", "speed", "crit" })
+	assert(not ok, "tout verrouiller est refusé")
+	-- jetons de talent lâchés par les ennemis de monde
+	local chance = Talents.DropChance
+	Talents.DropChance = 1
+	local t0 = data.items.Talent
+	local zone = R.EnemyService:Zone("W2")
+	local n = 0
+	for _, e in zone.enemies do
+		if e.alive and not e.boss and n < 3 then
+			n += 1
+			goTo(e.pos + Vector3.new(4, 0, 0))
+			R.EnemyService:Damage(e, e.maxHp, player)
+		end
+	end
+	settle(5)
+	Talents.DropChance = chance
+	assert(data.items.Talent >= t0 + n, string.format("jetons de talent : %d → %d", t0, data.items.Talent))
+	-- clic : une part des dégâts de l'équipe sur la cible
+	local here = root().CFrame.Position - Vector3.new(0, 3, 0)
+	local dummy = R.EnemyService:Spawn("W2", "RockCrab", here + Vector3.new(5, 0, 0), { hp = 1e15 })
+	events.Target.OnServerEvent:Fire(player, dummy.id)
+	assert(player:GetAttribute("Target") == dummy.id, "cible du clic")
+	local hp0 = dummy.hp
+	local c0 = clickHits
+	events.Click.OnServerEvent:Fire(player)
+	assert(dummy.hp < hp0 and clickHits == c0 + 1, "le clic n'a pas frappé")
+	for _ = 1, 30 do
+		events.Click.OnServerEvent:Fire(player)
+	end
+	assert(clickHits - c0 <= 9, "limite de clics par seconde dépassée : " .. (clickHits - c0))
+	-- clic automatique : 500 gemmes
+	data.gems = 600
+	ok, err = act("BuyPerk", "AutoClick")
+	assert(ok and data.gems == 100 and R.ShopService:Has(player, "AutoClick"), "achat du clic automatique : " .. tostring(err))
+	ok = act("BuyPerk", "AutoClick")
+	assert(not ok, "clic automatique acheté deux fois")
+	lunetask.wait(1.2)
+	local c1 = clickHits
+	lunetask.wait(1.5)
+	assert(clickHits > c1, "le clic automatique ne frappe pas")
+	print(string.format("Session : enchantements %s + %s, talents %s/%s/%s, %d clics", inst.trait, inst.trait2, inst.tal.dmg, inst.tal.speed, inst.tal.crit, clickHits))
+	R.EnemyService:Damage(dummy, dummy.maxHp, player)
+	R.CombatService:ClearTarget(player)
+	data.settings.autoClick = false
 end)
 
 step("Tour des Épreuves", function()

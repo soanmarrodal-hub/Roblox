@@ -10,6 +10,7 @@ local Net = require(Shared.Net)
 local Stats = require(Shared.Logic.Stats)
 local Progression = require(Shared.Logic.Progression)
 local Items = require(Shared.Config.Items)
+local Rarities = require(Shared.Config.Rarities)
 local Rewards = require(Shared.Config.Rewards)
 local Format = require(Shared.Util.Format)
 local R = require(script.Parent.Parent.Registry)
@@ -68,11 +69,20 @@ function PlayerService.RefreshPublic(self: any, player: Player)
 	end
 	player:SetAttribute("Rank", data.rank)
 	player:SetAttribute("Title", Progression.RankTitle(data.rank))
+	-- équipe : héros:étoiles:niveau:aura (rareté du meilleur enchantement, 0 = aucune):taille:téléportation
 	local parts = {}
 	for _, uid in data.team do
 		local h = data.heroes[uid]
 		if h then
-			table.insert(parts, string.format("%s:%d:%d", h.id, h.stars, h.lvl))
+			local aura, scale, blink = 0, 1, 0
+			for _, t in Stats.Enchants(h) do
+				aura = math.max(aura, Rarities.Rank(t.tier))
+				scale *= t.scale or 1
+				if t.blink then
+					blink = 1
+				end
+			end
+			table.insert(parts, string.format("%s:%d:%d:%d:%.2f:%d", h.id, h.stars, h.lvl, aura, scale, blink))
 		end
 	end
 	player:SetAttribute("Team", table.concat(parts, ","))

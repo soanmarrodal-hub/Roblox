@@ -24,6 +24,7 @@ Effects.FLAG_SPECIAL = 2
 Effects.FLAG_SPLASH = 4
 Effects.FLAG_EXTRA = 8
 Effects.FLAG_DOT = 16
+Effects.FLAG_CLICK = 32 -- clic du joueur
 
 local function part(size: Vector3, cf: CFrame, color: Color3, mat: Enum.Material?): Part
 	local p = Instance.new("Part")
@@ -129,8 +130,9 @@ function Effects.Number(pos: Vector3, amount: number, flags: number?)
 	local special = bit32.band(f, Effects.FLAG_SPECIAL) ~= 0
 	local dot = bit32.band(f, Effects.FLAG_DOT) ~= 0
 	local secondary = bit32.band(f, Effects.FLAG_SPLASH + Effects.FLAG_EXTRA) ~= 0
-	local color = Color3.fromRGB(255, 255, 255)
-	local scale = 1
+	local click = bit32.band(f, Effects.FLAG_CLICK) ~= 0
+	local color = if click then Color3.fromRGB(255, 150, 70) else Color3.fromRGB(255, 255, 255)
+	local scale = if click then 1.15 else 1
 	if crit then
 		color = Color3.fromRGB(255, 196, 60)
 		scale = 1.45

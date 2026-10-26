@@ -40,7 +40,7 @@ service est un **cercle lumineux** : y entrer ouvre le menu (comme les marchands
 | Lieu | Rôle |
 | --- | --- |
 | **Cercle des Runes** (nord) | Téléporteur : village, mondes et points de passage, déblocage des mondes |
-| **Quartier de la Forge** (est) | Forge (améliorations), Enchanteresse (bénédictions), Autel d'évolution (étoiles), Bijoutier (accessoires) |
+| **Quartier de la Forge** (est) | Forge des talents (reroll des statistiques des héros), Enchanteresse (enchantements), Autel d'évolution (étoiles), Bijoutier (accessoires) |
 | **Salle des raids** (ouest) | Portails de la Crypte et du Temple, quartier-maître (boutique des raids) |
 | **Tour des Épreuves** (sud) | Ascension par étages, gardien des jetons (boutique), classements |
 | **Place** | Tableau des quêtes du jour, coffre du jour, marché (gemmes), bibliothèque (index des héros) |
@@ -123,10 +123,22 @@ propres à chaque héros** ; sa recharge et ses dégâts s'améliorent sur la fi
 
 ### Progression
 
-- **Niveaux** (expérience gagnée en combattant) et **étoiles** (copies du même héros + or), niveau maximum par étoile.
-- **Améliorations** à la Forge : dégâts, or, vitesse d'attaque, critique, chance, expérience, dégâts aux boss,
-  zone d'action, héros équipés en plus, places de héros, vitesse de marche.
-- **Bénédictions** (traits) contre des Runes du destin : 14 bénédictions, du Commun au Secret.
+Déblocage progressif : **monde 1** fusion d'étoiles, **monde 2** enchantements, **monde 3** talents (`Config/Unlocks`).
+
+- **Niveaux** (expérience gagnée en combattant) et **étoiles** (fusion de copies du même héros + or), jusqu'à
+  6 étoiles, niveau maximum par étoile.
+- **Améliorations** dans l'onglet **Forge** de la boutique : dégâts, or, vitesse d'attaque, critique, chance,
+  expérience, dégâts aux boss, zone d'action, dégâts au clic, chance de jeton de talent, héros équipés en plus,
+  places de héros, vitesse de marche.
+- **Enchantements** (adaptés des *quirks* d'Anime Champions Simulator) contre des Runes du destin : 37
+  enchantements (familles Vigueur, Avarice, Précision, Arcane, Fortune, Sagesse, Célérité, Glaneur en I/II/III,
+  uniques comme Colosse ou Assassin, légendaires comme Titan ou Astral), tirage animé, **second emplacement à
+  6 étoiles**, **aura** sur le héros selon la rareté de son meilleur enchantement.
+- **Talents** (statistiques à la manière d'ACS) : Puissance, Vivacité et Précision notées de F à SSS, retirées à
+  la **Forge des talents** avec des **Jetons de talent** (10 % de chance par ennemi vaincu, améliorable), talents
+  verrouillables (un jeton de plus par verrou).
+- **Clic** : chaque clic (sur l'écran ou le bouton « Frapper ») inflige à la cible une part des dégâts de
+  l'équipe ; **clic automatique** à 500 gemmes ou 50 Robux.
 - **Accessoires** de raid : 6 types (heaume, amulette, anneaux, perle, cape), 4 raretés, statistiques secondaires,
   **polissage** avec les jetons du raid, recyclage.
 - **Rang du joueur** (titres d'Écuyer à Roi), gemmes à chaque rang.

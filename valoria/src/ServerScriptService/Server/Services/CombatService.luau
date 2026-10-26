@@ -5,6 +5,8 @@
 -- recharge est terminée (zone, volée, saignement). En mode multi-cible (réglage), chaque héros frappe un
 -- ennemi différent de la zone d'action. Les coups sont envoyés par lots aux joueurs de la zone pour que
 -- chaque client anime les héros (les siens comme ceux des autres) au bon moment.
+-- Clic : chaque clic du joueur inflige à sa cible une part des dégâts par seconde de l'équipe (clic
+-- automatique pour qui l'a acheté). Les ennemis de monde lâchent des Jetons de talent.
 -- Récompenses des ennemis de monde : or, expérience (héros + rang), butin, quêtes.
 
 local Players = game:GetService("Players")
@@ -15,6 +17,7 @@ local Net = require(Shared.Net)
 local Stats = require(Shared.Logic.Stats)
 local Items = require(Shared.Config.Items)
 local Heroes = require(Shared.Config.Heroes)
+local Upgrades = require(Shared.Config.Upgrades)
 local R = require(script.Parent.Parent.Registry)
 
 local CombatService = {}
@@ -27,9 +30,19 @@ local FLAG_SPECIAL = 2
 local FLAG_SPLASH = 4
 local FLAG_EXTRA = 8
 local FLAG_DOT = 16
+local FLAG_CLICK = 32
 
 type Slot = { next: number, nextSpecial: number, target: number? }
-type State = { target: number?, zone: string?, slots: { [string]: Slot }, stunUntil: number, setAt: number, targets: string }
+type State = {
+	target: number?,
+	zone: string?,
+	slots: { [string]: Slot },
+	stunUntil: number,
+	setAt: number,
+	targets: string,
+	clicks: { number }, -- instants des derniers clics (limite par seconde)
+	nextAuto: number,
+}
 
 local states: { [Player]: State } = {}
 local dots: { { e: any, player: Player, per: number, ticks: number, next: number, slot: number } } = {}
@@ -38,7 +51,7 @@ local rng = Random.new()
 local function stateOf(player: Player): State
 	local s = states[player]
 	if not s then
-		s = { target = nil, zone = nil, slots = {}, stunUntil = 0, setAt = 0, targets = "" }
+		s = { target = nil, zone = nil, slots = {}, stunUntil = 0, setAt = 0, targets = "", clicks = {}, nextAuto = 0 }
 		states[player] = s
 	end
 	return s
@@ -133,12 +146,12 @@ end
 
 ------------------------------------------------------------------ récompenses des ennemis de monde
 
-local function rollDrops(player: Player, e: any, luck: number): { any }
+local function rollDrops(player: Player, e: any, luck: number, dropMult: number): { any }
 	local gains = {}
 	for _, d in e.def.drops or {} do
 		local chance = d.chance
 		if d.chance < 1 then
-			chance = math.min(1, d.chance * luck)
+			chance = math.min(1, d.chance * luck * dropMult)
 		end
 		if rng:NextNumber() < chance then
 			local item = d.item
@@ -181,7 +194,12 @@ function CombatService.RewardKill(self: any, e: any, share: { [Player]: number }
 				R.PlayerService:AddRankXp(p, e.def.xp * 0.25)
 				data.stats.kills += 1
 				R.DataService:Sync(p, "stats")
-				local gains = rollDrops(p, e, luck)
+				local gains = rollDrops(p, e, luck, if ctx then Stats.DropMult(ctx) else 1)
+				-- Jeton de talent (10 % de base, amélioration « Flair », butin d'équipe)
+				if ctx and rng:NextNumber() < Stats.TalentDrop(ctx) then
+					R.PlayerService:AddItem(p, "Talent", 1)
+					table.insert(gains, { kind = "item", key = "Talent", amount = 1 })
+				end
 				table.insert(gains, 1, { kind = "gold", amount = gold })
 				Net.Event("Drops"):FireClient(p, e.pos, gains, e.def.id)
 				R.QuestService:Event(p, if e.boss then "BossKill" else "Kill", e.def.id, 1)
@@ -340,9 +358,66 @@ function CombatService._tick(self: any)
 	end
 end
 
+------------------------------------------------------------------ clic
+
+-- Dégâts d'un clic : une part des dégâts par seconde de toute l'équipe, sur la cible du joueur.
+function CombatService.Click(self: any, player: Player): boolean
+	local s = states[player]
+	if not s or not s.target or not s.zone then
+		return false
+	end
+	local now = os.clock()
+	local recent = s.clicks
+	while recent[1] and now - recent[1] > 1 do
+		table.remove(recent, 1)
+	end
+	if #recent >= Upgrades.Click.rate then
+		return false
+	end
+	table.insert(recent, now)
+	local e = R.EnemyService:Get(s.zone, s.target)
+	if not e or not e.alive or e.immune or not R.EnemyService:InRange(player, e, self:Range(player) + RANGE_SLACK) then
+		return false
+	end
+	local data = R.DataService:Get(player)
+	if not data then
+		return false
+	end
+	local dps = 0
+	for _, m in R.HeroService:Team(player) do
+		dps += m.stats.dps
+	end
+	local dmg = math.max(1, dps * Stats.ClickShare(data.upgrades))
+	R.EnemyService:Damage(e, dmg, player)
+	data.stats.clicks += 1
+	R.QuestService:Event(player, "Click", nil, 1)
+	local ev = Net.Event("Hits")
+	local rec = { { player.UserId, 0, e.id, math.floor(dmg), e.hp, FLAG_CLICK } }
+	for _, p in R.EnemyService:PlayersIn(s.zone) do
+		ev:FireClient(p, s.zone, rec)
+	end
+	return true
+end
+
+-- Clic automatique (passe ou gemmes) et réglage activé.
+local function autoClick(self: any, now: number)
+	for player, s in states do
+		if s.target and now >= s.nextAuto then
+			s.nextAuto = now + 1 / Upgrades.Click.auto
+			local data = R.DataService:Get(player)
+			if data and data.settings.autoClick ~= false and R.ShopService:Has(player, "AutoClick") then
+				self:Click(player)
+			end
+		end
+	end
+end
+
 function CombatService.Init(self: any)
 	Net.Event("Target").OnServerEvent:Connect(function(player: Player, id: any)
 		self:Target(player, id)
+	end)
+	Net.Event("Click").OnServerEvent:Connect(function(player: Player)
+		self:Click(player)
 	end)
 end
 
@@ -359,6 +434,10 @@ function CombatService.Start(self: any)
 		while true do
 			task.wait(TICK)
 			local ok, err = pcall(self._tick, self)
+			if not ok then
+				warn("[CombatService] " .. tostring(err))
+			end
+			ok, err = pcall(autoClick, self, os.clock())
 			if not ok then
 				warn("[CombatService] " .. tostring(err))
 			end

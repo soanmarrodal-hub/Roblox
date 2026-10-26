@@ -24,8 +24,9 @@ local G = Worlds.Hub.ground
 
 local LIST: { Station } = {
 	{ key = "Teleporter", name = "Cercle des Runes", hint = "Voyager vers les mondes", menu = "Teleport", zone = "Hub", pos = Vector3.new(0, G + 7, -122), radius = 13, icon = "Portal", color = Color3.fromRGB(120, 200, 255) },
-	{ key = "Forge", name = "Forge de Bourg-Lanterne", hint = "Améliorations", menu = "Upgrades", zone = "Hub", pos = Vector3.new(128, G, -6), radius = 9, icon = "Anvil", color = Color3.fromRGB(255, 150, 60) },
-	{ key = "Enchanter", name = "L'Enchanteresse", hint = "Bénédictions (runes)", menu = "Traits", zone = "Hub", pos = Vector3.new(146, G, -52), radius = 8, icon = "Rune", color = Color3.fromRGB(190, 120, 255) },
+	-- l'ancienne Forge (améliorations, désormais dans la boutique) retrempe les talents des héros
+	{ key = "Talents", name = "Forge des talents", hint = "Talents des héros (jetons)", menu = "Talents", zone = "Hub", pos = Vector3.new(128, G, -6), radius = 9, icon = "Anvil", color = Color3.fromRGB(255, 150, 60) },
+	{ key = "Enchanter", name = "L'Enchanteresse", hint = "Enchantements (runes)", menu = "Traits", zone = "Hub", pos = Vector3.new(146, G, -52), radius = 8, icon = "Rune", color = Color3.fromRGB(190, 120, 255) },
 	{ key = "Evolution", name = "Autel d'évolution", hint = "Étoiles des héros", menu = "Evolve", zone = "Hub", pos = Vector3.new(162, G, 24), radius = 9, icon = "Star", color = Color3.fromRGB(255, 220, 90) },
 	{ key = "Jeweler", name = "Le Bijoutier", hint = "Accessoires de raid", menu = "Jeweler", zone = "Hub", pos = Vector3.new(124, G, 44), radius = 8, icon = "Ring", color = Color3.fromRGB(90, 230, 200) },
 	{ key = "Raid1", name = "Portail de la Crypte", hint = "Raid : Crypte du Roi Déchu", menu = "Raid1", zone = "Hub", pos = Vector3.new(-150, G, -34), radius = 11, icon = "Skull", color = Color3.fromRGB(110, 230, 140) },

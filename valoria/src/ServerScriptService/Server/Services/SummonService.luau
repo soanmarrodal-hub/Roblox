@@ -1,5 +1,5 @@
 --!strict
--- Invocation de héros aux autels des mondes : coût en or, chance (améliorations, bénédictions, passes,
+-- Invocation de héros aux autels des mondes : coût en or, chance (améliorations, enchantements, passes,
 -- potions), pitié Légendaire / Mythique, suppression automatique par rareté, annonce des tirages rares.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

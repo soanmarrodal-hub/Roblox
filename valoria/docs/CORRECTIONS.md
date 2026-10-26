@@ -79,7 +79,58 @@ facile à mettre en place si c'était le sens voulu.
 - `ui_smoke` : les 23 animations et effets joués, étiquettes au-dessus des héros, cercle de la zone d'action,
   apparence affichée puis retirée, boutons de la fiche du héros cliqués.
 
-## 3. Progression — à venir
+## 3. Progression — fait
+
+| Point du document | Existant | Changement |
+| --- | --- | --- |
+| Intégrer la forge actuelle dans un onglet de la boutique | Améliorations au menu de la Forge, ouvert seulement près de la Forge du village | Onglet « Forge » dans la boutique (accessible partout) avec toutes les améliorations |
+| Remplacer la forge physique au spawn par un reroll de spec/stats (comme ACS) | Forge = améliorations | La station devient la **Forge des talents** (même bâtiment, cristal des talents au-dessus de l'enclume, Bran le forgeron) : reroll des talents des héros |
+| Reroll via jetons lâchés par les mobs (10 %, améliorable) | — | **Jeton de talent** : 10 % par ennemi de monde vaincu, + amélioration « Flair du chasseur » (+0,5 %/niveau) et bonus de butin des enchantements Glaneur |
+| Talents / stats des héros | Statistiques fixes par héros | Puissance (dégâts), Vivacité (vitesse d'attaque), Précision (critique), notées F à SSS ; tout héros commence à C (neutre, l'équilibrage actuel ne bouge pas) ; un talent verrouillé garde sa note (+1 jeton par verrou, au moins un talent tiré) |
+| Enchantements comme le quirk tree d'ACS, quirks repris et adaptés | 14 « bénédictions » | 37 **enchantements** repris des quirks d'ACS avec leurs taux : familles Strong/Rich/Accurate/Mage/Lucky/Genius/Fast/Collector → Vigueur/Avarice/Précision/Arcane/Fortune/Sagesse/Célérité/Glaneur (I, II, III) ; uniques Thief/Sniper/Leprechaun/Giant/Assassin/Archmage → Larron/Tireur d'élite/Farfadet/Colosse/Assassin/Archimage ; Teleport → Pas de l'ombre ; légendaires Titan/Crimson Demon/Celestial/Boxer/Blessed/Black Hole/Atomic → Titan/Démon écarlate/Céleste/Pugiliste/Béni des dieux/Néant/Astral. Les bénédictions déjà obtenues sont converties |
+| Animation de roulement pour les rerolls | Résultat affiché directement | Les noms (enchantements) ou les notes (talents) défilent puis ralentissent avant de s'arrêter sur le résultat |
+| Deuxième emplacement débloquable à 6 étoiles | 5 étoiles au maximum, un emplacement | 6 étoiles possibles ; second emplacement d'enchantement à 6 étoiles |
+| Aura selon la rareté de l'enchantement | — | Étincelles autour du héros à la couleur de la rareté de son meilleur enchantement, plus denses et lumineuses avec la rareté (visibles par tous) ; Colosse, Farfadet et Titan changent aussi la taille du héros, Pas de l'ombre le fait se téléporter vers sa cible |
+| Clic infligeant des dégâts proportionnels à l'équipe, améliorable, autoclick 500 diamants / 50 Robux | — | Clic sur l'écran (ou sur la cible) et bouton « Frapper » : 3 % des dégâts par seconde de l'équipe par clic, + amélioration « Frappe du chevalier » ; **clic automatique** (passe à 50 R$ ou 500 gemmes), activable dans le HUD |
+| Déblocage progressif : monde 1 fusion d'étoiles, monde 2 enchantement, monde 3 reroll des stats | Tout disponible dès le départ | `Config/Unlocks` ; les menus verrouillés affichent la condition, le serveur refuse les actions |
+
+Points à noter :
+
+- « Diamants » = la monnaie premium du jeu, appelée **gemmes**.
+- Le **monde 3 n'existe pas encore** : en attendant, les talents se débloquent en battant Vyrmax (boss du
+  monde 2). Réglage provisoire dans `Config/Unlocks.luau`, à retirer quand le monde 3 sera ajouté.
+- La quête du Val « La bénédiction » (impossible avant le monde 2) devient « Le poing du chevalier » (100 clics) ;
+  la quête d'enchantement passe dans la chaîne des Falaises ; la quête du jour « Tire 2 bénédictions » devient
+  « Frappe 300 fois tes cibles ».
+- Les multiplicateurs des quirks d'ACS sont adaptés à l'équilibrage du jeu (ex. Fast III : ×2 de vitesse dans ACS,
+  +25 % ici) ; les taux de tirage sont ceux d'ACS.
+
+### Valeurs par défaut à valider
+
+| Réglage | Valeur | Fichier |
+| --- | --- | --- |
+| Notes des talents et leurs effets | F ×0,85 … C ×1 … SSS ×1,5 (dégâts) ; poids F 12, E 16, D 20, C 20, B 15, A 10, S 5, SS 1,6, SSS 0,4 | `Config/Talents.luau` |
+| Coût d'un reroll de talents | 1 jeton + 1 par talent verrouillé | `Talents.RerollCost`, `Talents.LockCost` |
+| Amélioration « Flair du chasseur » | +0,5 % par niveau, 20 niveaux | `Config/Upgrades.luau` |
+| Dégâts d'un clic | 3 % des dégâts/s de l'équipe, +1 %/niveau de « Frappe du chevalier » (25 niveaux) | `Upgrades.Click`, `Upgrades.List.Frappe` |
+| Clic automatique | 4 clics/s ; 8 clics/s au maximum | `Upgrades.Click` |
+| Effets des enchantements | voir la liste | `Config/Traits.luau` |
+| Étoiles maximum | 6 | `Logic/Progression.luau` (`MaxStars`) |
+| Déblocage provisoire des talents | Vyrmax vaincu (tant que le monde 3 manque) | `Config/Unlocks.luau` |
+
+### Vérifications
+
+- `config.spec` : taux des enchantements (≈ 100 %, ceux d'ACS), anciennes clés reprises, second emplacement à 6
+  étoiles, notes de talents croissantes et C neutre, 10 % de jeton, déblocages monde 1/2/3, clic automatique
+  500 gemmes / 50 R$.
+- `logic.spec` : deux emplacements, enchantements d'attaque spéciale, talents, verrous, butin et jetons, clic,
+  conversion des anciennes bénédictions, 6 étoiles.
+- `world_smoke` : enchantement refusé au monde 1 (rune non dépensée), accepté au monde 2, second emplacement
+  refusé avant 6 étoiles, aura dans l'attribut d'équipe, talents verrouillés puis débloqués, verrou (coût et
+  note conservée), jetons lâchés par les ennemis, clic (dégâts, limite par seconde), achat du clic automatique en
+  gemmes et frappe automatique.
+- `ui_smoke` : menus Forge (boutique), Enchantements, Forge des talents et Évolution, verrouillés puis débloqués,
+  chaque bouton cliqué.
 
 ## 4. Invocation et boutique — à venir
 

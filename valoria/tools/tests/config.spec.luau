@@ -239,9 +239,47 @@ test("quêtes et récompenses", function()
 	for _, p in Shop.Products do
 		checkReward(p, "produit " .. p.key)
 	end
+end)
+
+test("enchantements, talents et déblocages", function()
+	local Talents = require(Shared.Config.Talents)
+	local Unlocks = require(Shared.Config.Unlocks)
+	local Progression = require(Shared.Logic.Progression)
+	-- enchantements : taux d'ACS (≈ 100 %), raretés connues, anciennes clés reprises
 	local sum = 0
-	for _, t in Traits.List do
+	local fields = { dmg = true, speed = true, crit = true, critDmg = true, gold = true, luck = true, drops = true, boss = true, xp = true, spDmg = true, spCd = true, scale = true, blink = true }
+	for _, key in Traits.Order do
+		local t = Traits.List[key]
 		sum += t.weight
+		check(Rarities.List[t.tier] ~= nil, key .. " rareté")
+		for k in t do
+			check(fields[k] or k == "key" or k == "name" or k == "desc" or k == "weight" or k == "tier", key .. " champ inconnu " .. k)
+		end
 	end
-	near(sum, 100, 0.01, "poids des bénédictions")
+	near(sum, 100, 1, "poids des enchantements")
+	check(#Traits.Order >= 30, "familles I/II/III, uniques et légendaires")
+	for old, new in Traits.Legacy do
+		check(Traits.List[new] ~= nil, "ancienne bénédiction " .. old .. " → " .. new)
+	end
+	check(Traits.SecondSlotStars <= Progression.MaxStars, "second emplacement atteignable")
+	eq(Traits.SecondSlotStars, 6, "second emplacement à 6 étoiles")
+	-- talents : notes croissantes, C neutre
+	for _, t in Talents.List do
+		local prev = -math.huge
+		for _, g in Talents.Grades do
+			local v = t.values[g.key]
+			check(v ~= nil and v > prev, t.key .. " note " .. g.key)
+			prev = v
+		end
+		near(t.values[Talents.Default], if t.key == "crit" then 0 else 1, 1e-9, t.key .. " : C neutre")
+	end
+	eq(Talents.DropChance, 0.10, "jeton de talent : 10 %")
+	check(Talents.MaxLocks < #Talents.List, "au moins un talent reste à tirer")
+	-- déblocage progressif : monde 1, 2, 3
+	eq(Unlocks.List.Evolve.world, 1)
+	eq(Unlocks.List.Enchant.world, 2)
+	eq(Unlocks.List.Talents.world, 3)
+	-- clic automatique : 500 gemmes ou 50 Robux
+	eq(Shop.Perk("AutoClick").cost, 500, "clic automatique en gemmes")
+	eq(Shop.Pass("AutoClick").price, 50, "clic automatique en Robux")
 end)

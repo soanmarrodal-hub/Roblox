@@ -34,6 +34,7 @@ end)
 start("HUD", function()
 	Hud.Init()
 	Hud.findBoss = Enemies.FindBoss
+	Hud.strike = Enemies.Strike
 end)
 -- les menus s'enregistrent auprès du gestionnaire en étant chargés
 for _, m in Client.Menus:GetChildren() do
@@ -59,7 +60,7 @@ local function welcome()
 		task.delay(2, function()
 			Hud.Popup(
 				"Bienvenue, champion !",
-				"Ton écuyer t'attend. Invoque des héros à l'autel du Val, renforce-les à la Forge et grimpe la Tour des Épreuves !",
+				"Ton écuyer t'attend. Invoque des héros à l'autel du Val, renforce-les (Forge de la boutique) et grimpe la Tour des Épreuves !",
 				nil,
 				Theme.C.gold,
 				"Crown",

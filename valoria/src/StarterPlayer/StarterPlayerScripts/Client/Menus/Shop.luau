@@ -1,6 +1,7 @@
 --!strict
--- Boutique : marché en gemmes (potions, runes), gemmes et packs en Robux (produits de développeur),
--- passes de jeu. Les identifiants Roblox des produits / passes se règlent dans Config/Shop.
+-- Boutique : Forge (améliorations permanentes en or), marché en gemmes (potions, runes, clic automatique),
+-- gemmes et packs en Robux (produits de développeur), passes de jeu. Les identifiants Roblox des produits /
+-- passes se règlent dans Config/Shop.
 
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -13,6 +14,7 @@ local Theme = require(script.Parent.Parent.UI.Theme)
 local Kit = require(script.Parent.Parent.UI.Kit)
 local RewardView = require(script.Parent.Parent.UI.RewardView)
 local MenuManager = require(script.Parent.Parent.UI.MenuManager)
+local Forge = require(script.Parent.Forge) :: any
 local State = require(script.Parent.Parent.State)
 local Remote = require(script.Parent.Parent.Remote)
 
@@ -35,8 +37,11 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 	local body = ctx.win.body
 	local holder = Kit.new("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, -54), Position = UDim2.fromOffset(0, 54), ZIndex = 11, Parent = body })
 	local tab = "Market"
-	local refresh: () -> ()
+	local built = ""
+	local forgeRefresh: (() -> ())? = nil
+	local refresh: (string?) -> ()
 	local tabs = Kit.Tabs(body, {
+		{ key = "Forge", text = "Forge", icon = "Anvil" },
 		{ key = "Market", text = "Marché", icon = "Gem" },
 		{ key = "Robux", text = "Gemmes", icon = "Chest" },
 		{ key = "Passes", text = "Passes", icon = "Crown" },
@@ -46,11 +51,40 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 			refresh()
 		end
 	end)
-	refresh = function()
+	refresh = function(section: string?)
+		-- la Forge se met à jour sans être reconstruite (l'or change souvent)
+		if section and tab == "Forge" and built == "Forge" and forgeRefresh then
+			forgeRefresh()
+			return
+		end
+		if section == "gold" or section == "upgrades" then
+			return
+		end
 		Kit.Clear(holder)
+		built = tab
 		local d = State.data
+		if tab == "Forge" then
+			forgeRefresh = Forge.UpgradeList(holder)
+			return
+		end
 		local grid = Kit.Grid(holder, Vector2.new(196, 232), 12)
 		if tab == "Market" then
+			-- avantages permanents (gemmes ou passe)
+			for i, pk in Shop.GemPerks do
+				local has = State.passes[pk.key] == true
+				local c = card(grid, -10 + i, pk.icon, pk.name, pk.desc)
+				local b = Kit.Button(c, { text = if has then "Possédé" else tostring(pk.cost), icon = if has then "Check" else "Gem", color = if has then C.gray else C.purple, size = UDim2.new(1, -20, 0, 46), pos = UDim2.new(0.5, 0, 1, -8), anchor = Vector2.new(0.5, 1), textSize = 18, z = 13, onClick = function()
+					if has then
+						return
+					end
+					local ok = Remote.Call("BuyPerk", pk.key)
+					if ok then
+						Remote.notify(pk.name .. " débloqué !", "success")
+						State.RefreshPasses()
+					end
+				end })
+				b:SetEnabled(not has and d.gems >= pk.cost)
+			end
 			for i, o in Shop.GemShop do
 				local it = Items.Get(o.item)
 				local c = card(grid, i, if it then it.icon else "Bag", o.name, if it then it.desc else "")
@@ -96,8 +130,8 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 			end
 		end
 	end
-	tabs:Select(if ctx.arg == "Robux" then "Robux" else "Market")
-	return { watch = { "gems", "items", "passes" }, refresh = refresh }
+	tabs:Select(if ctx.arg == "Robux" or ctx.arg == "Forge" or ctx.arg == "Passes" then ctx.arg else "Market")
+	return { watch = { "gems", "items", "passes", "upgrades", "gold", "perks" }, refresh = refresh }
 end
 
 MenuManager.Register("GemShop", { title = "Boutique", icon = "Gem", color = C.teal, size = Vector2.new(880, 600), build = build })

@@ -1,6 +1,6 @@
 --!strict
 -- Menu « Héros » : collection (équipés d'abord), fiche détaillée (statistiques, niveau, étoiles,
--- bénédiction, accessoire, attaque spéciale et ses améliorations), équiper / retirer / prendre son
+-- enchantements, talents, accessoire, attaque spéciale et ses améliorations), équiper / retirer / prendre son
 -- apparence / verrouiller / relâcher, relâche multiple.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,7 +9,7 @@ local Shared = ReplicatedStorage.Shared
 local Heroes = require(Shared.Config.Heroes)
 local Rarities = require(Shared.Config.Rarities)
 local Banners = require(Shared.Config.Banners)
-local Traits = require(Shared.Config.Traits)
+local Talents = require(Shared.Config.Talents)
 local Accessories = require(Shared.Config.Accessories)
 local Stats = require(Shared.Logic.Stats)
 local Progression = require(Shared.Logic.Progression)
@@ -102,11 +102,18 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 			statLine(list, "Sword", "Dégâts", Format.Short(st.dmg), 1)
 			statLine(list, "Wing", "Cadence", string.format("%.2fs", st.interval), 2)
 			statLine(list, "Bolt", "Puissance (DPS)", Format.Short(st.dps), 3)
-			statLine(list, "Target", "Portée", tostring(def.range), 4)
+			local grades = {}
+			for _, t in Talents.List do
+				table.insert(grades, Talents.GradeOf(inst, t.key))
+			end
+			statLine(list, "Star", "Talents", table.concat(grades, " · "), 4)
 			statLine(list, "Eye", "Critique", string.format("%d%% · x%.1f", math.floor(st.crit * 100 + 0.5), st.critMult), 5)
 		end
-		local tr = Traits.Get(inst.trait)
-		statLine(list, "Rune", "Bénédiction", if tr then tr.name else "—", 6)
+		local names = {}
+		for _, t in Stats.Enchants(inst) do
+			table.insert(names, t.name)
+		end
+		statLine(list, "Rune", "Enchantements", if #names > 0 then Format.Clip(table.concat(names, " + "), 22) else "—", 6)
 		local acc = inst.acc and d.accessories[inst.acc]
 		local accType = acc and Accessories.Type(acc.type)
 		statLine(list, if accType then accType.icon else "Ring", "Accessoire", if accType then accType.name else "—", 7)

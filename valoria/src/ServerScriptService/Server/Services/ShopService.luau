@@ -1,6 +1,7 @@
 --!strict
 -- Boutique : passes (Robux, vérifiés côté serveur), produits de développeur (reçus idempotents),
--- boutique en gemmes du marché de Bourg-Lanterne.
+-- boutique en gemmes du marché de Bourg-Lanterne, avantages achetables en gemmes ou par passe
+-- (clic automatique).
 
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -58,7 +59,23 @@ function ShopService.Init(self: any)
 		return true, string.format("+%d %s", offer.amount * n, if it then it.name else offer.item)
 	end)
 	Router.Register("Passes", function(player: Player)
-		return true, owned[player] or {}
+		return true, self:Passes(player)
+	end)
+	Router.Register("BuyPerk", function(player: Player, key: any)
+		local perk = Shop.Perk(Router.Str(key) or "")
+		if not perk then
+			return false, "Article introuvable."
+		end
+		local data = R.DataService:Get(player)
+		if self:Has(player, perk.key) then
+			return false, "Tu possèdes déjà cet avantage."
+		end
+		if not R.PlayerService:Spend(player, "gems", perk.cost) then
+			return false, "Pas assez de gemmes."
+		end
+		data.perks[perk.key] = true
+		R.DataService:Sync(player, "perks")
+		return true, perk.key
 	end)
 end
 
@@ -119,13 +136,27 @@ function ShopService.Start(self: any)
 	end
 end
 
+-- Passes possédés, plus les avantages achetés en gemmes.
 function ShopService.Passes(self: any, player: Player): { [string]: boolean }
-	return owned[player] or {}
+	local out = table.clone(owned[player] or {})
+	local data = R.DataService:Get(player)
+	if data then
+		for k, v in data.perks do
+			if v == true then
+				out[k] = true
+			end
+		end
+	end
+	return out
 end
 
 function ShopService.Has(self: any, player: Player, key: string): boolean
 	local s = owned[player]
-	return s ~= nil and s[key] == true
+	if s ~= nil and s[key] == true then
+		return true
+	end
+	local data = R.DataService:Get(player)
+	return data ~= nil and data.perks[key] == true
 end
 
 return ShopService

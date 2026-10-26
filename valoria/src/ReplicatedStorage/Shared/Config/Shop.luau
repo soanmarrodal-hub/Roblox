@@ -24,6 +24,7 @@ local PASSES: { Pass } = {
 	{ key = "FastSummon", name = "Invocation éclair", desc = "Animations d'invocation accélérées et invocation automatique.", id = 0, price = 149, icon = "Scroll" },
 	{ key = "Storage", name = "Grandes écuries", desc = "+150 places de héros.", id = 0, price = 99, icon = "Chest" },
 	{ key = "Vip", name = "VIP", desc = "+10 % de dégâts, titre doré et accès au salon VIP de la taverne.", id = 0, price = 299, icon = "Crown" },
+	{ key = "AutoClick", name = "Clic automatique", desc = "Frappe la cible automatiquement (aussi en gemmes).", id = 0, price = 50, icon = "Fist" },
 }
 Shop.Passes = PASSES
 
@@ -45,6 +46,21 @@ local GEMSHOP: { GemOffer } = {
 	{ key = "PotionXp", name = "Potion de savoir", item = "PotionXp", amount = 1, cost = 30 },
 }
 Shop.GemShop = GEMSHOP
+
+-- Avantages achetables en gemmes (« diamants ») ou avec le passe du même nom.
+export type Perk = { key: string, name: string, desc: string, cost: number, icon: string }
+Shop.GemPerks = {
+	{ key = "AutoClick", name = "Clic automatique", desc = "Frappe la cible automatiquement, pour toujours.", cost = 500, icon = "Fist" },
+} :: { Perk }
+
+function Shop.Perk(key: string): Perk?
+	for _, p in Shop.GemPerks do
+		if p.key == key then
+			return p
+		end
+	end
+	return nil
+end
 
 -- Bonus des passes (appliqués par les formules de Logic/Stats).
 Shop.PassBonus = {

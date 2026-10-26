@@ -138,6 +138,8 @@ test("Progression : niveaux et plafond", function()
 	Progression.AddHeroXp(inst, Progression.HeroXpToNext(25))
 	eq(inst.lvl, 26)
 	eq(Progression.MaxLevel(5), 150)
+	eq(Progression.MaxStars, 6, "6 étoiles")
+	eq(Progression.MaxLevel(6), 175)
 	local d = { rank = 1, rankXp = 0 }
 	Progression.AddRankXp(d, Progression.RankXpToNext(1) + Progression.RankXpToNext(2))
 	eq(d.rank, 3)
@@ -160,10 +162,10 @@ test("Stats : héros et contexte", function()
 	data.heroes["1"].trait = "Vigueur3"
 	ctx = Stats.Context(data, {}, { Damage = true })
 	s = Stats.Hero(data.heroes["1"], ctx)
-	near(s.dmg, 10 * (1 + 1.0 + 0.35) * 2, 1e-6, "Force 10 + Vigueur III + potion")
-	data.heroes["1"].trait = "Cupide"
+	near(s.dmg, 10 * (1 + 1.0 + 0.30) * 2, 1e-6, "Force 10 + Vigueur III + potion")
+	data.heroes["1"].trait = "Avarice3"
 	ctx = Stats.Context(data, { DoubleGold = true }, {})
-	near(Stats.GoldMult(ctx), (1 + 0.3) * 2, 1e-9, "or d'équipe + passe")
+	near(Stats.GoldMult(ctx), (1 + 0.25) * 2, 1e-9, "or d'équipe + passe")
 	eq(Stats.TeamSlots(data.upgrades, {}), 3)
 	eq(Stats.TeamSlots({ Escouade = 3 }, { ExtraSlots = true }), 8)
 	eq(Stats.Storage({ Ecurie = 2 }, {}), 160)
@@ -228,7 +230,7 @@ test("Loot : accessoires", function()
 	near(Stats.AccessoryTotals(acc).Dmg - (acc.subs[1].stat == "Dmg" and acc.subs[1].value or 0), 0.25 * 1.8, 1e-9, "polissage")
 end)
 
-test("Loot : bénédictions", function()
+test("Loot : enchantements", function()
 	local rates = Loot.TraitRates(1)
 	local sum = 0
 	for _, p in rates do
@@ -236,7 +238,61 @@ test("Loot : bénédictions", function()
 	end
 	near(sum, 1, 1e-9)
 	local lucky = Loot.TraitRates(3)
-	check(lucky.SangDragon > rates.SangDragon, "la chance aide les paliers rares")
+	check(lucky.Astral > rates.Astral, "la chance aide les paliers rares")
+	check(rates.Vigueur1 > rates.Vigueur2 and rates.Vigueur2 > rates.Vigueur3, "familles I > II > III")
+end)
+
+test("Enchantements : deux emplacements, talents, butin, clic", function()
+	local Talents = require(Shared.Config.Talents)
+	local Traits = require(Shared.Config.Traits)
+	local data = DataTemplate.New()
+	data.heroes["1"] = { id = "Squire", lvl = 1, xp = 0, stars = 0, trait = "Vigueur1", trait2 = "Vigueur3" }
+	data.team = { "1" }
+	local ctx = Stats.Context(data, {}, {})
+	near(Stats.Hero(data.heroes["1"], ctx).dmg, 10 * 1.10, 1e-6, "second emplacement inactif avant 6 étoiles")
+	data.heroes["1"].stars = 6
+	local s = Stats.Hero(data.heroes["1"], ctx)
+	near(s.dmg, 10 * Progression.StarMult(6) * (1 + 0.10 + 0.30), 1e-6, "deux enchantements à 6 étoiles")
+	-- enchantements d'attaque spéciale
+	data.heroes["1"].trait, data.heroes["1"].trait2 = "Archimage", nil
+	s = Stats.Hero(data.heroes["1"], ctx)
+	near(s.spMult, 3 * 2, 1e-9, "Archimage : spéciale ×2")
+	near(s.spCooldown, 5 * 0.9, 1e-9, "Archimage : recharge -10 %")
+	-- talents
+	data.heroes["1"].trait = nil
+	data.heroes["1"].tal = { dmg = "S", speed = "F", crit = "SSS" }
+	s = Stats.Hero(data.heroes["1"], ctx)
+	near(s.dmg, 10 * Progression.StarMult(6) * 1.2, 1e-6, "talent Puissance S")
+	near(s.interval, 1 / 0.9, 1e-6, "talent Vivacité F")
+	near(s.crit, 0.05 + 0.09, 1e-9, "talent Précision SSS")
+	local rand = Rng.new(5)
+	local r = function()
+		return rand:Float()
+	end
+	for _ = 1, 50 do
+		local tal = Loot.Talents(data.heroes["1"], { dmg = true }, r)
+		eq(tal.dmg, "S", "talent verrouillé conservé")
+		check(Talents.ByKey.speed.values[tal.speed] ~= nil, "note valide")
+	end
+	eq(Talents.Cost(0), 1)
+	eq(Talents.Cost(2), 3)
+	-- butin d'équipe et jetons
+	data.heroes["1"].trait = "Glaneur3"
+	ctx = Stats.Context(data, {}, {})
+	near(Stats.DropMult(ctx), 1.06, 1e-9, "Glaneur III")
+	near(Stats.TalentDrop(ctx), 0.10 * 1.06, 1e-9, "jeton de talent : 10 % × butin")
+	data.upgrades.Flair = 4
+	ctx = Stats.Context(data, {}, {})
+	near(Stats.TalentDrop(ctx), (0.10 + 0.02) * 1.06, 1e-9, "Flair du chasseur")
+	near(Stats.ClickShare({}), 0.03, 1e-9, "clic de base")
+	near(Stats.ClickShare({ Frappe = 5 }), 0.08, 1e-9, "Frappe du chevalier")
+	-- anciennes bénédictions reprises
+	local old = DataTemplate.New()
+	old.heroes["7"] = { id = "Squire", lvl = 1, xp = 0, stars = 0, trait = "SangDragon" }
+	old.heroes["8"] = { id = "Squire", lvl = 1, xp = 0, stars = 0, trait = "Inconnue" }
+	DataTemplate.Reconcile(old)
+	eq(old.heroes["7"].trait, Traits.Legacy.SangDragon, "Sang de dragon → Titan")
+	eq(old.heroes["8"].trait, nil, "clé inconnue retirée")
 end)
 
 test("Tour : points de reprise et récompenses", function()

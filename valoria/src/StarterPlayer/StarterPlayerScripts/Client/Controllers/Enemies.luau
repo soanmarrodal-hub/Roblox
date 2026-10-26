@@ -329,6 +329,10 @@ function EnemyController.ApplyHit(id: number, dmg: number, hpLeft: number, flags
 	if e.immune then
 		Effects.Spark(center, Color3.fromRGB(120, 200, 255))
 	end
+	if bit32.band(flags, Effects.FLAG_CLICK) ~= 0 then
+		-- coup de poing du joueur : éclat orange
+		Effects.Burst(center, { Color3.fromRGB(255, 170, 80), Color3.new(1, 1, 1) }, 5, 12, 0.3, 0.35)
+	end
 end
 
 ------------------------------------------------------------------ ciblage
@@ -340,6 +344,15 @@ end
 
 function EnemyController.SetTarget(id: number?)
 	Remote.Fire("Target", id)
+end
+
+-- Clic de frappe (écran ou bouton « Frapper ») : dégâts en plus sur la cible, calculés par le serveur.
+function EnemyController.Strike(): boolean
+	if not EnemyController.Target() then
+		return false
+	end
+	Remote.Fire("Click")
+	return true
 end
 
 local function nearest(maxDist: number): Enemy?
@@ -621,11 +634,16 @@ function EnemyController.Init()
 			local e = id and list[id]
 			local root = rootPart()
 			if id and e and root then
-				if (e.pos - root.Position).Magnitude - e.radius > actionRange() then
+				if id == EnemyController.Target() then
+					EnemyController.Strike()
+				elseif (e.pos - root.Position).Magnitude - e.radius > actionRange() then
 					Remote.notify("Trop loin : approche-toi pour qu'il entre dans ta zone d'action.", "warn")
 				else
 					EnemyController.SetTarget(id)
 				end
+			elseif not id and State.zoneInfo.kind ~= "Hub" then
+				-- clic dans le vide : frappe la cible en cours
+				EnemyController.Strike()
 			end
 		end
 	end)

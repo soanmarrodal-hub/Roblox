@@ -50,6 +50,8 @@ local runInfo: TextLabel
 local runBar: Kit.Bar
 local lobbyPanel: Frame
 local stunOverlay: Frame
+local strikePanel: Frame
+local autoClickBtn: Kit.Button
 local toastList: Frame
 
 local bossState: { [number]: any } = {}
@@ -64,6 +66,11 @@ local giftsTaken: { [number]: boolean } = {}
 -- Contrôleur d'ennemis (branché par Main) : boss vivant de la zone.
 Hud.findBoss = function(_from: Vector3?, _maxDist: number?): (string?, number, number)
 	return nil, 0, 0
+end
+
+-- branché par Main : clic de frappe sur la cible (Controllers/Enemies.Strike)
+Hud.strike = function(): boolean
+	return false
 end
 
 ------------------------------------------------------------------ notifications
@@ -282,6 +289,46 @@ local function buildBottom()
 	Kit.Text(stunOverlay, "ÉTOURDIS !", { size = 30, z = 9, color = Color3.fromRGB(255, 250, 200) })
 	boostRow = Kit.new("Frame", { Name = "Boosts", BackgroundTransparency = 1, Size = UDim2.fromOffset(300, 44), Position = UDim2.new(0, 16, 1, -16), AnchorPoint = Vector2.new(0, 1), Parent = App.hud })
 	Kit.ListLayout(boostRow, 6, true)
+	-- frappe : bouton « Frapper » (ou clic sur l'écran) et clic automatique (hors du village)
+	strikePanel = Kit.new("Frame", { Name = "Strike", BackgroundTransparency = 1, Size = UDim2.fromOffset(128, 126), Position = UDim2.new(1, -16, 1, -16), AnchorPoint = Vector2.new(1, 1), Visible = false, Parent = App.hud })
+	local strike = Kit.Button(strikePanel, {
+		text = "FRAPPER",
+		icon = "Fist",
+		pixel = true,
+		color = C.orange,
+		size = UDim2.fromOffset(128, 74),
+		pos = UDim2.new(0, 0, 1, 0),
+		anchor = Vector2.new(0, 1),
+		textSize = 16,
+		onClick = function()
+			if not Hud.strike() then
+				Hud.Toast("Choisis d'abord une cible.", "info")
+			end
+		end,
+	})
+	strike.root.Name = "Frapper"
+	autoClickBtn = Kit.Button(strikePanel, {
+		text = "AUTO-CLIC",
+		pixel = true,
+		color = C.gray,
+		size = UDim2.fromOffset(128, 44),
+		textSize = 13,
+		onClick = function()
+			if State.passes.AutoClick == true then
+				Remote.Call("Settings", "autoClick", State.Setting("autoClick") == false)
+			else
+				MenuManager.Open("GemShop", "Market")
+			end
+		end,
+	})
+	autoClickBtn.root.Name = "AutoClic"
+end
+
+local function refreshStrike()
+	local owned = State.passes.AutoClick == true
+	local on = owned and State.Setting("autoClick") ~= false
+	autoClickBtn:SetColor(if on then C.green elseif owned then C.gray else C.purple)
+	autoClickBtn:SetText(if on then "AUTO : OUI" elseif owned then "AUTO : NON" else "AUTO-CLIC")
 end
 
 local function buildRight()
@@ -535,6 +582,7 @@ local function refreshZone()
 	if home then
 		home.Visible = info.kind == "World"
 	end
+	strikePanel.Visible = info.kind ~= "Hub"
 	-- grand titre de zone
 	local big = Kit.Text(App.toasts, name, { size = 54, strokeTh = 4, sizeUD = UDim2.new(1, 0, 0, 70), pos = UDim2.new(0, 0, 0.22, 0) })
 	big.TextTransparency = 1
@@ -716,6 +764,7 @@ function Hud.Init()
 		refreshBoosts()
 		refreshQuest()
 		refreshBadges()
+		refreshStrike()
 	end
 	if State.loaded then
 		full()
@@ -736,6 +785,10 @@ function Hud.Init()
 		end
 		if section == "settings" then
 			refreshAuto()
+			refreshStrike()
+		end
+		if section == "passes" or section == "perks" then
+			refreshStrike()
 		end
 		if section == "boosts" then
 			refreshBoosts()

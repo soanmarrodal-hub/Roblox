@@ -1,5 +1,5 @@
 --!strict
--- Héros du joueur : inventaire, équipe, verrouillage, relâche, évolution (étoiles), bénédictions,
+-- Héros du joueur : inventaire, équipe, verrouillage, relâche, évolution (étoiles), enchantements, talents,
 -- améliorations de l'attaque spéciale, apparence empruntée à un héros possédé, accessoires (équiper, polir,
 -- recycler), expérience, index. Calcule et met en cache les statistiques de combat de l'équipe utilisées
 -- par CombatService.
@@ -12,6 +12,8 @@ local Heroes = require(Shared.Config.Heroes)
 local Rarities = require(Shared.Config.Rarities)
 local Banners = require(Shared.Config.Banners)
 local Traits = require(Shared.Config.Traits)
+local Talents = require(Shared.Config.Talents)
+local Unlocks = require(Shared.Config.Unlocks)
 local Accessories = require(Shared.Config.Accessories)
 local Stats = require(Shared.Logic.Stats)
 local Progression = require(Shared.Logic.Progression)
@@ -252,6 +254,9 @@ function HeroService.Init(self: any)
 		if not inst or not list then
 			return false, "Requête invalide."
 		end
+		if not Unlocks.Has(data, "Evolve") then
+			return false, Unlocks.Hint("Evolve")
+		end
 		if inst.stars >= Progression.MaxStars then
 			return false, "Ce héros a déjà toutes ses étoiles."
 		end
@@ -324,11 +329,19 @@ function HeroService.Init(self: any)
 		R.PlayerService:RefreshPublic(player)
 		return true, data.morph
 	end)
-	Router.Register("RollTrait", function(player: Player, uid: any)
+	-- enchantement (emplacement 1, ou 2 à partir de 6 étoiles)
+	Router.Register("RollTrait", function(player: Player, uid: any, slot: any)
 		local data = R.DataService:Get(player)
 		local inst = owned(data, uid)
 		if not inst then
 			return false, "Héros introuvable."
+		end
+		if not Unlocks.Has(data, "Enchant") then
+			return false, Unlocks.Hint("Enchant")
+		end
+		local s = Router.Int(slot or 1, 1, 2) or 1
+		if s == 2 and inst.stars < Traits.SecondSlotStars then
+			return false, string.format("Le second emplacement se débloque à %d étoiles.", Traits.SecondSlotStars)
 		end
 		if not R.PlayerService:Spend(player, "Rune", Traits.RollCost) then
 			return false, "Il te faut une Rune du destin."
@@ -336,15 +349,54 @@ function HeroService.Init(self: any)
 		local ctx = R.PlayerService:Context(player)
 		local luck = if ctx then Stats.Luck(ctx) else 1
 		local key = Loot.Trait(luck, rand)
-		inst.trait = key
+		if s == 2 then
+			inst.trait2 = key
+		else
+			inst.trait = key
+		end
 		data.stats.traitRolls += 1
 		R.QuestService:Event(player, "Trait", nil, 1)
 		local t = Traits.Get(key)
 		if t and Rarities.Rank(t.tier) >= Rarities.Rank("Mythique") then
-			R.AnnouncementService:Broadcast(string.format("%s a obtenu la bénédiction « %s » !", player.DisplayName, t.name), Rarities.Get(t.tier).color)
+			R.AnnouncementService:Broadcast(string.format("%s a obtenu l'enchantement « %s » !", player.DisplayName, t.name), Rarities.Get(t.tier).color)
 		end
-		changed(self, player, { "heroes", "stats" }, false)
+		changed(self, player, { "heroes", "stats" }, table.find(data.team, uid) ~= nil)
 		return true, key
+	end, 2)
+	-- talents : nouveau tirage des notes, avec des talents verrouillés (plus cher)
+	Router.Register("RerollTalents", function(player: Player, uid: any, locks: any)
+		local data = R.DataService:Get(player)
+		local inst = owned(data, uid)
+		if not inst then
+			return false, "Héros introuvable."
+		end
+		if not Unlocks.Has(data, "Talents") then
+			return false, Unlocks.Hint("Talents")
+		end
+		local empty: { string } = {}
+		local list: { string }? = if locks == nil then empty else Router.StrList(locks, #Talents.List)
+		if not list then
+			return false, "Requête invalide."
+		end
+		local locked: { [string]: boolean } = {}
+		local n = 0
+		for _, k in list do
+			if Talents.ByKey[k] and not locked[k] then
+				locked[k] = true
+				n += 1
+			end
+		end
+		if n > Talents.MaxLocks then
+			return false, "Laisse au moins un talent déverrouillé."
+		end
+		local cost = Talents.Cost(n)
+		if not R.PlayerService:Spend(player, "Talent", cost) then
+			return false, string.format("Il te faut %d Jeton(s) de talent.", cost)
+		end
+		inst.tal = Loot.Talents(inst, locked, rand)
+		data.stats.talentRolls += 1
+		changed(self, player, { "heroes", "stats" }, false)
+		return true, inst.tal
 	end, 2)
 	Router.Register("EquipAcc", function(player: Player, uid: any, accUid: any)
 		local data = R.DataService:Get(player)

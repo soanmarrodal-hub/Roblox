@@ -8,6 +8,7 @@ local Upgrades = require(Config.Upgrades)
 local Traits = require(Config.Traits)
 local Accessories = require(Config.Accessories)
 local Shop = require(Config.Shop)
+local Talents = require(Config.Talents)
 local Progression = require(script.Parent.Progression)
 
 local Stats = {}
@@ -19,6 +20,7 @@ export type Ctx = {
 	accessories: { [string]: any },
 	teamGold: number,
 	teamLuck: number,
+	teamDrops: number,
 }
 
 export type HeroStats = {
@@ -66,14 +68,15 @@ function Stats.Context(data: any, passes: { [string]: boolean }?, boosts: { [str
 		accessories = data.accessories,
 		teamGold = 0,
 		teamLuck = 0,
+		teamDrops = 0,
 	}
 	for _, uid in data.team do
 		local inst = data.heroes[uid]
 		if inst then
-			local tr = Traits.Get(inst.trait)
-			if tr then
+			for _, tr in Stats.Enchants(inst) do
 				ctx.teamGold += tr.gold or 0
 				ctx.teamLuck += tr.luck or 0
+				ctx.teamDrops += tr.drops or 0
 			end
 			if inst.acc then
 				local totals = Stats.AccessoryTotals(data.accessories[inst.acc])
@@ -85,38 +88,65 @@ function Stats.Context(data: any, passes: { [string]: boolean }?, boosts: { [str
 	return ctx
 end
 
+-- Enchantements portés par un héros (emplacement 1, puis 2 à partir de 6 étoiles).
+function Stats.Enchants(inst: any): { Traits.Trait }
+	local out = {}
+	local t1 = Traits.Get(inst.trait)
+	if t1 then
+		table.insert(out, t1)
+	end
+	if (inst.stars or 0) >= Traits.SecondSlotStars then
+		local t2 = Traits.Get(inst.trait2)
+		if t2 then
+			table.insert(out, t2)
+		end
+	end
+	return out
+end
+
+-- Somme d'un bonus sur les enchantements d'un héros.
+local function ench(list: { Traits.Trait }, field: string): number
+	local v = 0
+	for _, t in list do
+		v += (t :: any)[field] or 0
+	end
+	return v
+end
+
 function Stats.Hero(inst: any, ctx: Ctx): HeroStats?
 	local def = Heroes.Get(inst.id)
 	if not def then
 		return nil
 	end
-	local tr = Traits.Get(inst.trait)
+	local tr = Stats.Enchants(inst)
 	local acc: { [string]: number } = if inst.acc then Stats.AccessoryTotals(ctx.accessories[inst.acc]) else {}
 	local vip = if ctx.passes.Vip then Shop.PassBonus.Vip.dmg else 0
 
-	local dmgBonus = 1 + up(ctx, "Force") + (if tr then tr.dmg or 0 else 0) + (acc.Dmg or 0) + vip
-	local dmg = def.dmg * Progression.LevelMult(inst.lvl) * Progression.StarMult(inst.stars) * dmgBonus
+	local dmgBonus = math.max(0.1, 1 + up(ctx, "Force") + ench(tr, "dmg") + (acc.Dmg or 0) + vip)
+	local dmg = def.dmg * Progression.LevelMult(inst.lvl) * Progression.StarMult(inst.stars) * dmgBonus * Talents.Value(inst, "dmg")
 	if ctx.boosts.Damage then
 		dmg *= 2
 	end
 
-	local speedBonus = 1 + up(ctx, "Celerite") + (if tr then tr.speed or 0 else 0) + (acc.Speed or 0)
+	local speedBonus = (1 + up(ctx, "Celerite") + ench(tr, "speed") + (acc.Speed or 0)) * Talents.Value(inst, "speed")
 	local interval = def.interval / math.max(0.3, speedBonus)
 	interval = math.max(0.25, interval)
 
-	local crit = Upgrades.BaseCrit + up(ctx, "Critique") + (if tr then tr.crit or 0 else 0) + (acc.Crit or 0)
+	local crit = Upgrades.BaseCrit + up(ctx, "Critique") + ench(tr, "crit") + (acc.Crit or 0) + Talents.Value(inst, "crit")
 	crit = math.clamp(crit, 0, 0.75)
-	local critMult = Upgrades.BaseCritMult + (if tr then tr.critDmg or 0 else 0) + (acc.CritDmg or 0)
-	local boss = 1 + up(ctx, "Pourfendeur") + (if tr then tr.boss or 0 else 0) + (acc.Boss or 0)
-	local xp = 1 + up(ctx, "Savoir") + (if tr then tr.xp or 0 else 0)
+	local critMult = Upgrades.BaseCritMult + ench(tr, "critDmg") + (acc.CritDmg or 0)
+	local boss = 1 + up(ctx, "Pourfendeur") + ench(tr, "boss") + (acc.Boss or 0)
+	local xp = 1 + up(ctx, "Savoir") + ench(tr, "xp")
 	if ctx.boosts.Xp then
 		xp *= 2
 	end
 
 	local avgHit = dmg * (1 + crit * (critMult - 1))
 	local U = Heroes.SpecialUpgrade
-	local spCooldown = def.special.cooldown * (1 - U.cdPer * math.clamp(inst.spCd or 0, 0, U.cdMax))
-	local spMult = def.special.mult * (1 + U.dmgPer * math.clamp(inst.spDmg or 0, 0, U.dmgMax))
+	local spCooldown = def.special.cooldown
+		* (1 - U.cdPer * math.clamp(inst.spCd or 0, 0, U.cdMax))
+		* math.max(0.4, 1 - ench(tr, "spCd"))
+	local spMult = def.special.mult * (1 + U.dmgPer * math.clamp(inst.spDmg or 0, 0, U.dmgMax)) * math.max(0.1, 1 + ench(tr, "spDmg"))
 	return {
 		dmg = dmg,
 		interval = interval,
@@ -147,6 +177,21 @@ function Stats.GoldMult(ctx: Ctx): number
 		m *= 2
 	end
 	return m
+end
+
+-- Multiplicateur des chances de butin (objets, Jetons de talent).
+function Stats.DropMult(ctx: Ctx): number
+	return 1 + ctx.teamDrops
+end
+
+-- Chance qu'un ennemi de monde lâche un Jeton de talent.
+function Stats.TalentDrop(ctx: Ctx): number
+	return math.min(1, (Talents.DropChance + up(ctx, "Flair")) * Stats.DropMult(ctx))
+end
+
+-- Part des dégâts par seconde de l'équipe infligée par un clic.
+function Stats.ClickShare(upgrades: { [string]: number }): number
+	return Upgrades.Click.base + (upgrades.Frappe or 0) * Upgrades.List.Frappe.per
 end
 
 function Stats.Luck(ctx: Ctx): number

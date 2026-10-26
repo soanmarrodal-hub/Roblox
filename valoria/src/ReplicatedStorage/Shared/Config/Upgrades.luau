@@ -1,5 +1,5 @@
 --!strict
--- Améliorations de la Forge (zone d'amélioration de Bourg-Lanterne), achetées avec de l'or.
+-- Améliorations de la Forge (onglet « Forge » de la boutique), achetées avec de l'or.
 -- coût(niveau) = base × croissance^niveau (ou table `costs` explicite).
 
 export type Upgrade = {
@@ -129,6 +129,28 @@ Upgrades.List = {
 		per = 4,
 		order = 11,
 	},
+	Frappe = {
+		key = "Frappe",
+		name = "Frappe du chevalier",
+		desc = "+1 % des dégâts de l'équipe par clic",
+		icon = "Fist",
+		max = 25,
+		base = 400,
+		growth = 1.42,
+		per = 0.01,
+		order = 12,
+	},
+	Flair = {
+		key = "Flair",
+		name = "Flair du chasseur",
+		desc = "+0,5 % de chance de Jeton de talent",
+		icon = "Clover",
+		max = 20,
+		base = 1500,
+		growth = 1.5,
+		per = 0.005,
+		order = 13,
+	},
 	Bottes = {
 		key = "Bottes",
 		name = "Bottes de sept lieues",
@@ -142,7 +164,7 @@ Upgrades.List = {
 	},
 } :: { [string]: Upgrade }
 
-Upgrades.Order = { "Force", "Butin", "Celerite", "Critique", "Fortune", "Savoir", "Pourfendeur", "Portee", "Escouade", "Ecurie", "Bottes" }
+Upgrades.Order = { "Force", "Butin", "Celerite", "Critique", "Fortune", "Savoir", "Pourfendeur", "Portee", "Frappe", "Flair", "Escouade", "Ecurie", "Bottes" }
 
 -- Coût pour passer du niveau `level` au niveau `level + 1` (nil si maximum atteint).
 function Upgrades.Cost(key: string, level: number): number?
@@ -166,5 +188,11 @@ Upgrades.BaseWalkSpeed = 20
 -- VALEUR PAR DÉFAUT (« petite au départ, améliorable » : valeurs non précisées) : modifiable ici et dans
 -- l'amélioration « Portee » ci-dessus.
 Upgrades.BaseActionRange = 20
+
+-- Clic : chaque clic (écran ou bouton « Frapper ») inflige à la cible une part des dégâts par seconde de
+-- toute l'équipe (`base`, + amélioration « Frappe »). Le clic automatique (passe ou gemmes) clique `auto`
+-- fois par seconde ; au-delà de `rate` clics par seconde, les clics sont ignorés.
+-- VALEURS PAR DÉFAUT (non précisées dans le cahier des corrections) : modifiables ici.
+Upgrades.Click = { base = 0.03, rate = 8, auto = 4 }
 
 return Upgrades

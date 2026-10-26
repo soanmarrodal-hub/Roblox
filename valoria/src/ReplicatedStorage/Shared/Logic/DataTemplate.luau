@@ -2,6 +2,8 @@
 -- Profil joueur sauvegardé. Toutes les tables sont soit des listes, soit des dictionnaires à clés texte
 -- (exigence des DataStores). Les nouvelles clés du modèle sont ajoutées aux anciens profils par Reconcile.
 
+local Traits = require(script.Parent.Parent.Config.Traits)
+
 local DataTemplate = {}
 
 DataTemplate.Version = 1
@@ -11,7 +13,9 @@ export type HeroInst = {
 	lvl: number,
 	xp: number,
 	stars: number,
-	trait: string?,
+	trait: string?, -- enchantement (emplacement 1)
+	trait2: string?, -- enchantement (emplacement 2, à 6 étoiles)
+	tal: { [string]: string }?, -- notes des talents (Config/Talents), C par défaut
 	acc: string?, -- uid de l'accessoire porté
 	locked: boolean?,
 	t: number?, -- date d'obtention
@@ -35,7 +39,7 @@ local function template(): { [string]: any }
 		gold = 0,
 		gems = 0,
 		tokens = { Tower = 0, Raid1 = 0, Raid2 = 0 },
-		items = { Rune = 0, PotionDamage = 0, PotionGold = 0, PotionLuck = 0, PotionXp = 0 },
+		items = { Rune = 0, Talent = 0, PotionDamage = 0, PotionGold = 0, PotionLuck = 0, PotionXp = 0 },
 		heroes = {} :: { [string]: HeroInst },
 		team = {} :: { string },
 		accessories = {} :: { [string]: AccInst },
@@ -51,6 +55,8 @@ local function template(): { [string]: any }
 			Ecurie = 0,
 			Bottes = 0,
 			Portee = 0,
+			Frappe = 0,
+			Flair = 0,
 		},
 		rank = 1,
 		rankXp = 0,
@@ -93,6 +99,8 @@ local function template(): { [string]: any }
 			upgrades = 0,
 			evolves = 0,
 			traitRolls = 0,
+			talentRolls = 0,
+			clicks = 0,
 			goldEarned = 0,
 			damage = 0,
 		},
@@ -105,7 +113,9 @@ local function template(): { [string]: any }
 			quality = 3,
 			multiTarget = false, -- chaque héros frappe un ennemi différent de la zone d'action
 			showRange = true, -- cercle de la zone d'action
+			autoClick = true, -- clic automatique actif (s'il est possédé)
 		},
+		perks = { AutoClick = false }, -- avantages achetés en gemmes (Config/Shop.GemPerks)
 		morph = "", -- apparence empruntée à un héros possédé (identifiant du héros, "" = la sienne)
 		tutorial = 1,
 		purchases = {} :: { string },
@@ -167,6 +177,16 @@ function DataTemplate.Reconcile(data: { [string]: any })
 	for _, h in heroes do
 		if h.acc and (not data.accessories[h.acc]) then
 			h.acc = nil
+		end
+		-- anciennes bénédictions → enchantements équivalents
+		if h.trait and Traits.Legacy[h.trait] then
+			h.trait = Traits.Legacy[h.trait]
+		end
+		if h.trait and not Traits.List[h.trait] then
+			h.trait = nil
+		end
+		if h.trait2 and not Traits.List[h.trait2] then
+			h.trait2 = nil
 		end
 	end
 	data.version = DataTemplate.Version
