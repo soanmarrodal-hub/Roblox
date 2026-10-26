@@ -132,6 +132,38 @@ Points à noter :
 - `ui_smoke` : menus Forge (boutique), Enchantements, Forge des talents et Évolution, verrouillés puis débloqués,
   chaque bouton cliqué.
 
-## 4. Invocation et boutique — à venir
+## 4. Invocation et boutique — fait
+
+| Point du document | Existant | Changement |
+| --- | --- | --- |
+| Petite interface au-dessus de l'autel à l'approche (œufs de Pet Simulator) au lieu d'un menu plein écran | Entrer dans le cercle de l'autel ouvrait le menu d'invocation plein écran | Panneau au-dessus de chaque autel, visible à l'approche : vitrine avec les taux, coût, boutons ×1 / ×10 / AUTO et raccourcis **E / R / T** ; le bouton ⚙ ouvre les options (garanties, vente automatique). L'invocation automatique s'arrête en s'éloignant. La révélation des parchemins reste en plein écran, comme l'éclosion des œufs |
+| Autel de saison au spawn | — | **Autel de saison** sur la place du village (à la place du coffre du jour) : jetons de fusion et potions le plus souvent ; accessoires Légendaire / Mythique, héros Mythiques (Chevalier Vert, Ignir) et Secrets (Sire Citrouille, Chevalier-Tempête) à faible taux ; **500 gemmes** ou **50 Robux** (produit « Tirage de saison ») le tirage |
+| Jetons de fusion | — | Nouvel objet : remplace une copie manquante lors d'une fusion d'étoiles (évolution) |
+| Amélioration du design des autels | 3 dalles carrées, socle, orbe, 4 piliers | Estrade ronde à trois gradins cerclés d'or, marches, cercle de runes, socle à huit pans et cristal qui tourne dans son anneau, quatre obélisques à runes flottantes et braseros, bannières, éclats de cristal (autels des mondes, d'évolution et de saison) |
+| Héros jamais obtenus grisés dans le menu de l'autel | Taux en gris seulement | Carte et portrait en gris pour tout héros jamais obtenu (panneau et options de l'autel, autel de saison) |
+| Coffre du jour = bouton de menu, plus sur la carte | Coffre posé sur la place, menu à l'approche | Bouton « COFFRE » dans la colonne de menus (pastille quand il est prêt) ; coffre et station retirés de la carte |
+
+### Valeurs par défaut à valider
+
+| Réglage | Valeur | Fichier |
+| --- | --- | --- |
+| Contenu et taux de l'autel de saison | jeton de fusion ×1 43,5 %, ×3 10 %, potions 44 %, accessoire Légendaire 1,5 %, Mythique 0,4 %, héros Mythique 0,25 % chacun, Secret 0,05 % chacun | `Config/Seasons.luau` |
+| Saison en cours | « Saison des Moissons » | `Seasons.Current` |
+| Accessoire de saison avec la réserve pleine | remplacé par 5 jetons de fusion | `SummonService.SeasonRoll` |
+| Distance d'apparition du panneau d'autel | cercle de l'autel + 18 studs | `Controllers/Altars.luau` (`RANGE`) |
+
+Le produit Robux « Tirage de saison » doit être créé dans le Creator Hub puis son identifiant renseigné dans
+`Config/Shop.luau` (comme les autres produits).
+
+### Vérifications
+
+- `config.spec` : contenu de la saison (objets et héros existants, héros très rares à faible taux, jetons de fusion,
+  poids = 100 %), 500 gemmes / 50 Robux, coffre du jour retiré de la carte, panneaux des autels.
+- `world_smoke` : tirage de saison refusé loin de l'autel, accepté près de l'autel (500 gemmes), tirages Robux
+  (révélation envoyée au client), fusion d'étoiles avec un jeton de fusion, refus sans copie ni jeton.
+- `ui_smoke` : panneau de l'autel du Val qui apparaît à l'approche (vitrine complète), invocation à la touche E,
+  panneau de l'autel de saison au village (et celui du Val masqué), bouton gemmes, révélation d'un tirage Robux
+  (accessoire + héros).
+- Vues : `docs/images/vues/28_autel_de_saison.jpg`, `29_autel_du_val.jpg`.
 
 ## 5. Interface et social — à venir

@@ -389,6 +389,22 @@ def v_parcours(s, m):
     return dict(target=c, eye=sr.look(c, 62, 38, 80), fov=52, light='tower', shadow_extent=140)
 
 
+def v_autel_de_saison(s, m):
+    t = (35, G + 5, -37)
+    s.terrains['Hub'].add_to(m, t, 200)
+    s.parts.add_to(m, t, 120)
+    s.squad(m, ['Paladin', 'Fox'], 22, -22, (35, -37), spread=4)
+    return dict(target=t, eye=sr.look(t, 316, 22, 46), fov=55, light='hub', shadow_extent=90)
+
+
+def v_autel_du_val(s, m):
+    t = (W1[0] - 40, 30, 358)
+    s.terrains['W1'].add_to(m, t, 220)
+    s.parts.add_to(m, t, 140)
+    s.squad(m, ['Squire', 'Archer'], W1[0] - 30, 366, (W1[0] - 40, 358), spread=4)
+    return dict(target=t, eye=sr.look(t, 51, 22, 48), fov=55, light='w1', shadow_extent=100)
+
+
 VIEWS = [
     ('01_village_panorama', v_village_panorama),
     ('02_village_place', v_village_place),
@@ -417,6 +433,8 @@ VIEWS = [
     ('25_donjon_crypte', v_donjon_crypte),
     ('26_donjon_temple', v_donjon_temple),
     ('27_salle_de_parcours', v_parcours),
+    ('28_autel_de_saison', v_autel_de_saison),
+    ('29_autel_du_val', v_autel_du_val),
 ]
 
 

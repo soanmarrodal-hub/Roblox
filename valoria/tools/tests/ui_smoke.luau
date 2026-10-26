@@ -182,6 +182,9 @@ local actionResults = {
 	Summon = function()
 		return true, { results = { { id = "Squire", rarity = "Commun", new = false, deleted = false } }, sold = 0, pity = { leg = 1, myth = 1 } }
 	end,
+	SeasonSummon = function()
+		return true, { results = { { kind = "item", key = "Fusion", amount = 3, rarity = "Rare", name = "Jeton de fusion" } } }
+	end,
 }
 local NetMock = {
 	Event = remote,
@@ -307,7 +310,7 @@ settle(20)
 -- chaque menu : ouverture, rafraîchissement complet, clic sur chaque bouton
 local menuNames = {
 	"Heroes", "Summon1", "Summon2", "Upgrades", "Traits", "Talents", "Evolve", "Jeweler", "Teleport", "Tower", "TowerShop",
-	"Raid1", "Raid2", "RaidShop", "Quests", "QuestNpc1", "QuestNpc2", "Daily", "Gifts", "Index", "GemShop", "Bag", "Settings",
+	"Raid1", "Raid2", "RaidShop", "Quests", "QuestNpc1", "QuestNpc2", "Daily", "Gifts", "Index", "GemShop", "Bag", "Settings", "Season",
 }
 local function buttonsIn(root)
 	local out = {}
@@ -411,7 +414,7 @@ step("contrôleurs : init", function()
 	localPlayer.Character = char
 	localPlayer:SetAttribute("Zone", "W1")
 	localPlayer:SetAttribute("Team", "Squire:0:4,Archer:1:5,RedDragon:0:6")
-	for _, name in { "Effects", "Enemies", "Heroes", "Stations", "Decor", "Environment", "Sound", "Npcs", "GroundDetail" } do
+	for _, name in { "Effects", "Enemies", "Heroes", "Stations", "Altars", "Decor", "Environment", "Sound", "Npcs", "GroundDetail" } do
 		req(Controllers[name]).Init()
 	end
 	Hud.findBoss = req(Controllers.Enemies).FindBoss
@@ -584,6 +587,73 @@ step("attaques spéciales de chaque héros", function()
 	print(string.format("Contrôleurs : %d attaques spéciales jouées (animation + effets)", n))
 end)
 settle(10)
+
+-- panneaux d'autel : apparition à l'approche, raccourcis clavier, révélation (héros, objets)
+step("panneaux des autels", function()
+	local Stations = req(rsNode.Shared.Config.Stations)
+	local pg = localPlayer:WaitForChild("PlayerGui")
+	local hrp = localPlayer.Character:FindFirstChild("HumanoidRootPart")
+	local function near(key, zone)
+		local st = Stations.Get(key)
+		localPlayer:SetAttribute("Zone", zone)
+		hrp.CFrame = roblox.CFrame.new(st.pos + roblox.Vector3.new(4, 3, 0))
+		lunetask.wait(0.5)
+		settle(2)
+		local gui = pg:FindFirstChild("Autel_" .. key)
+		if not gui or not gui.Enabled then
+			error("panneau de l'autel " .. key .. " absent à l'approche")
+		end
+		return gui
+	end
+	local g1 = near("Altar1", "W1")
+	local cards, greyed = 0, 0
+	for _, d in g1:GetDescendants() do
+		if d:IsA("TextButton") and d.Parent and d.Parent.Parent and d.Parent.Parent.Name == "Vitrine" then
+			cards += 1
+		end
+	end
+	if cards < 6 then
+		error("vitrine de l'autel incomplète : " .. cards)
+	end
+	local Reveal = req(Client.UI.Reveal)
+	Reveal.active = false -- les menus précédents ont fermé leurs révélations sans les terminer
+	local n0 = #actionLog
+	services.UserInputService.InputBegan:Fire({ KeyCode = roblox.Enum.KeyCode.E, UserInputType = roblox.Enum.UserInputType.Keyboard }, false)
+	settle(4)
+	if actionLog[#actionLog] ~= "Summon" or #actionLog == n0 then
+		error("la touche E n'invoque pas")
+	end
+	for _, c in App.overlay:GetChildren() do
+		c:Destroy()
+	end
+	Reveal.active = false
+	local gs = near("Season", "Hub")
+	if g1.Enabled then
+		error("le panneau du Val reste affiché au village")
+	end
+	for _, b in gs:GetDescendants() do
+		if b:IsA("TextButton") and b:FindFirstAncestor("Gemmes") then
+			b.Activated:Fire()
+		end
+	end
+	settle(6)
+	if actionLog[#actionLog] ~= "SeasonSummon" then
+		error("le bouton de l'autel de saison n'invoque pas")
+	end
+	for _, c in App.overlay:GetChildren() do
+		c:Destroy()
+	end
+	Reveal.active = false
+	-- tirages Robux : révélation envoyée par le serveur
+	remotes.Reveal.OnClientEvent:Fire({ { kind = "accessory", key = "CoralRing", rarity = "Mythique", name = "Anneau de corail" }, { kind = "hero", id = "RedDragon", rarity = "Mythique", new = true } })
+	settle(10)
+	for _, c in App.overlay:GetChildren() do
+		c:Destroy()
+	end
+	Reveal.active = false
+	print(string.format("Contrôleurs : panneaux d'autel (%d cartes dans la vitrine du Val), tirages par touche et bouton", cards))
+end)
+settle(5)
 
 -- boutons du HUD
 step("boutons du HUD", function()

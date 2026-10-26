@@ -250,7 +250,8 @@ function HeroService.Init(self: any)
 	Router.Register("Evolve", function(player: Player, uid: any, fodder: any)
 		local data = R.DataService:Get(player)
 		local inst = owned(data, uid)
-		local list = Router.StrList(fodder, 10)
+		local none: { string } = {}
+		local list: { string }? = if fodder == nil then none else Router.StrList(fodder, 10)
 		if not inst or not list then
 			return false, "Requête invalide."
 		end
@@ -265,19 +266,24 @@ function HeroService.Init(self: any)
 		local valid = {}
 		for _, f in list do
 			local fi = data.heroes[f]
-			if f ~= uid and fi and not seen[f] and fi.id == inst.id and not fi.locked and not table.find(data.team, f) then
+			if f ~= uid and fi and not seen[f] and fi.id == inst.id and not fi.locked and not table.find(data.team, f) and #valid < need then
 				seen[f] = true
 				table.insert(valid, f)
 			end
 		end
-		if #valid < need then
-			return false, string.format("Il faut %d copie(s) libre(s) de ce héros (ni verrouillée ni équipée).", need)
+		-- les jetons de fusion remplacent les copies manquantes
+		local tokens = need - #valid
+		if tokens > (data.items.Fusion or 0) then
+			return false, string.format("Il faut %d copie(s) libre(s) de ce héros (ni verrouillée ni équipée) ou des jetons de fusion.", need)
 		end
 		local cost = Progression.EvolveGold(inst.id, inst.stars)
 		if not R.PlayerService:Spend(player, "gold", cost) then
 			return false, "Pas assez d'or."
 		end
-		for i = 1, need do
+		if tokens > 0 then
+			R.PlayerService:Spend(player, "Fusion", tokens)
+		end
+		for i = 1, #valid do
 			local f = valid[i]
 			local fi = data.heroes[f]
 			-- l'expérience des copies est conservée en partie

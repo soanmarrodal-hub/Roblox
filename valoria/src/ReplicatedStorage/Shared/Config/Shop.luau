@@ -12,6 +12,7 @@ export type Product = {
 	gems: number?,
 	runes: number?,
 	items: { [string]: number }?,
+	season: number?, -- tirages à l'autel de saison (Config/Seasons)
 }
 export type GemOffer = { key: string, name: string, item: string, amount: number, cost: number }
 
@@ -34,6 +35,7 @@ local PRODUCTS: { Product } = {
 	{ key = "Gems5000", name = "Trésor de gemmes", desc = "5 000 gemmes", id = 0, price = 899, gems = 5000 },
 	{ key = "Runes5", name = "Sac de runes", desc = "5 runes du destin", id = 0, price = 99, runes = 5 },
 	{ key = "LuckPack", name = "Potions de fortune", desc = "3 potions de fortune", id = 0, price = 129, items = { PotionLuck = 3 } },
+	{ key = "SeasonSummon", name = "Tirage de saison", desc = "Un tirage à l'autel de saison", id = 0, price = 50, season = 1 },
 }
 Shop.Products = PRODUCTS
 

@@ -1,11 +1,19 @@
 --!strict
 -- Invocation de héros aux autels des mondes : coût en or, chance (améliorations, enchantements, passes,
 -- potions), pitié Légendaire / Mythique, suppression automatique par rareté, annonce des tirages rares.
+-- Autel de saison (Config/Seasons) : tirages en gemmes ou en Robux (jetons de fusion, potions, et rarement
+-- héros ou accessoires très rares).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
 local Banners = require(Shared.Config.Banners)
+local Seasons = require(Shared.Config.Seasons)
+local Accessories = require(Shared.Config.Accessories)
+local Items = require(Shared.Config.Items)
+local Loot = require(Shared.Logic.Loot)
+local Weighted = require(Shared.Util.Weighted)
+local Net = require(Shared.Net)
 local Heroes = require(Shared.Config.Heroes)
 local Rarities = require(Shared.Config.Rarities)
 local Gacha = require(Shared.Logic.Gacha)
@@ -37,6 +45,26 @@ function SummonService.Init(self: any)
 		end
 		return res.ok, res.ok and res or res.msg
 	end, 3)
+	Router.Register("SeasonSummon", function(player: Player)
+		local season = Seasons.Current
+		if busy[player] then
+			return false, "Invocation en cours…"
+		end
+		if not R.ShopService:Has(player, "FastSummon") and not R.WorldService:NearStation(player, "Season", 40) then
+			return false, "Approche-toi de l'autel de saison."
+		end
+		if not R.PlayerService:Spend(player, "gems", season.cost) then
+			return false, string.format("Il faut %d gemmes (ou un tirage en Robux).", season.cost)
+		end
+		busy[player] = true
+		local ok, res = pcall(self.SeasonRoll, self, player)
+		busy[player] = nil
+		if not ok then
+			warn(res)
+			return false, "Une erreur est survenue."
+		end
+		return true, { results = res }
+	end, 3)
 	Router.Register("SetAutoDelete", function(player: Player, rarity: any, on: any)
 		local data = R.DataService:Get(player)
 		local r = Router.Str(rarity)
@@ -50,6 +78,69 @@ function SummonService.Init(self: any)
 end
 
 function SummonService.Start(self: any) end
+
+-- Un tirage à l'autel de saison (déjà payé) : renvoie les résultats pour la révélation.
+function SummonService.SeasonRoll(self: any, player: Player): { any }
+	local season = Seasons.Current
+	local data = R.DataService:Get(player)
+	local entries = {}
+	for _, d in season.drops do
+		table.insert(entries, { value = d, weight = d.weight })
+	end
+	local drop = Weighted.Pick(entries, rng:NextNumber()) or season.drops[1]
+	local out: { [string]: any } = { kind = drop.kind, rarity = drop.rarity }
+	if drop.kind == "hero" then
+		local id = drop.key :: string
+		local uid = R.HeroService:Add(player, id, { force = true })
+		out.id = id
+		out.new = uid ~= nil
+		local def = Heroes.Get(id)
+		out.name = if def then def.name else id
+		R.AnnouncementService:Broadcast(string.format("%s a obtenu %s à l'autel de saison !", player.DisplayName, out.name), Rarities.Get(drop.rarity).color)
+	elseif drop.kind == "accessory" then
+		local typeKey = Accessories.TypeOrder[rng:NextInteger(1, #Accessories.TypeOrder)]
+		local acc = Loot.Accessory(typeKey, drop.rarity, function()
+			return rng:NextNumber()
+		end)
+		local uid = R.HeroService:AddAccessory(player, acc)
+		if not uid then
+			-- réserve pleine : remboursé en jetons de fusion
+			R.PlayerService:AddItem(player, "Fusion", 5)
+			out.kind, out.key, out.amount = "item", "Fusion", 5
+			out.name = "Jeton de fusion"
+		else
+			local t = Accessories.Types[typeKey]
+			out.key = typeKey
+			out.name = if t then t.name else typeKey
+			if Rarities.Rank(drop.rarity) >= Rarities.Rank("Mythique") then
+				R.AnnouncementService:Broadcast(string.format("%s a obtenu un accessoire %s à l'autel de saison !", player.DisplayName, Rarities.Get(drop.rarity).name), Rarities.Get(drop.rarity).color)
+			end
+		end
+	else
+		local key = drop.key :: string
+		local n = drop.amount or 1
+		R.PlayerService:AddItem(player, key, n)
+		local it = Items.Get(key)
+		out.key, out.amount = key, n
+		out.name = if it then it.name else key
+	end
+	if data then
+		data.stats.seasonPulls += 1
+		R.DataService:Sync(player, "stats")
+	end
+	return { out }
+end
+
+-- Tirage payé en Robux (produit) : résultat envoyé au client pour la révélation.
+function SummonService.GrantSeason(self: any, player: Player, count: number)
+	local all = {}
+	for _ = 1, count do
+		for _, r in self:SeasonRoll(player) do
+			table.insert(all, r)
+		end
+	end
+	Net.Event("Reveal"):FireClient(player, all)
+end
 
 function SummonService.Summon(self: any, player: Player, banner: Banners.Banner, n: number): any
 	local data = R.DataService:Get(player)

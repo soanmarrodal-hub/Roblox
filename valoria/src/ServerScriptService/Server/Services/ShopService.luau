@@ -123,6 +123,9 @@ function ShopService.Start(self: any)
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 		local gains = R.PlayerService:Grant(player, product)
+		if product.season then
+			R.SummonService:GrantSeason(player, product.season)
+		end
 		table.insert(data.purchases, rid)
 		while #data.purchases > 100 do
 			table.remove(data.purchases, 1)

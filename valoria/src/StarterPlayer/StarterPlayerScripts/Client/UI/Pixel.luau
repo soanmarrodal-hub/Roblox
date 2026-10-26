@@ -91,13 +91,14 @@ function Pixel.Icon(name: string): EditableImage?
 	end)
 end
 
--- Portrait 40×40 d'un héros ou d'un boss ; `silhouette` : forme noire (héros non découverts de l'index).
-function Pixel.Portrait(name: string, silhouette: boolean?): EditableImage?
+-- Portrait 40×40 d'un héros ou d'un boss ; `silhouette` : forme noire (héros non découverts de l'index) ;
+-- `grey` : portrait en gris (héros jamais obtenus, vitrines des autels).
+function Pixel.Portrait(name: string, silhouette: boolean?, grey: boolean?): EditableImage?
 	local p = Portraits[name]
 	if not p then
 		return nil
 	end
-	return cached((if silhouette then "s:" else "p:") .. name, function()
+	return cached((if silhouette then "s:" elseif grey then "g:" else "p:") .. name, function()
 		local pal = hexBytes(p.pal)
 		local raw = Builder.Base64(p.data)
 		return make(p.w, p.h, function(buf)
@@ -117,6 +118,11 @@ function Pixel.Portrait(name: string, silhouette: boolean?): EditableImage?
 							buffer.writeu8(buf, b, 30)
 							buffer.writeu8(buf, b + 1, 24)
 							buffer.writeu8(buf, b + 2, 40)
+						elseif grey then
+							local l = math.floor((c[1] * 0.3 + c[2] * 0.59 + c[3] * 0.11) * 0.55 + 45)
+							buffer.writeu8(buf, b, l)
+							buffer.writeu8(buf, b + 1, l)
+							buffer.writeu8(buf, b + 2, l)
 						else
 							buffer.writeu8(buf, b, c[1])
 							buffer.writeu8(buf, b + 1, c[2])

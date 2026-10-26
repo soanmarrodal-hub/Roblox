@@ -755,6 +755,43 @@ step("progression : enchantements, talents, jetons, clic", function()
 	data.settings.autoClick = false
 end)
 
+step("autel de saison, jetons de fusion", function()
+	local data = R.DataService:Get(player)
+	local ok, err = act("Teleport", "Hub")
+	assert(ok, "retour au village : " .. tostring(err))
+	settle(4)
+	data.gems = 2000
+	-- loin de l'autel : refusé
+	goTo(Stations.Get("Tower").pos)
+	ok = act("SeasonSummon")
+	assert(not ok and data.gems == 2000, "tirage de saison loin de l'autel")
+	goTo(Stations.Get("Season").pos)
+	local items0 = (data.items.Fusion or 0) + (data.items.PotionDamage or 0) + (data.items.PotionGold or 0) + (data.items.PotionXp or 0) + (data.items.PotionLuck or 0)
+	local res
+	ok, res = act("SeasonSummon")
+	assert(ok and type(res) == "table" and #res.results == 1, "tirage de saison : " .. tostring(res))
+	assert(data.gems == 1500, "500 gemmes le tirage")
+	local r = res.results[1]
+	assert(r.kind and r.rarity and r.name, "résultat de saison incomplet")
+	print(string.format("Session : autel de saison → %s (%s, %s)", r.name, r.kind, r.rarity))
+	-- tirage payé en Robux : le serveur envoie la révélation
+	local rev0 = sent.Reveal or 0
+	R.SummonService:GrantSeason(player, 2)
+	assert((sent.Reveal or 0) == rev0 + 1, "révélation des tirages Robux non envoyée")
+	assert(data.stats.seasonPulls >= 3, "tirages de saison non comptés")
+	local items1 = (data.items.Fusion or 0) + (data.items.PotionDamage or 0) + (data.items.PotionGold or 0) + (data.items.PotionXp or 0) + (data.items.PotionLuck or 0)
+	print(string.format("Session : objets de saison %d → %d", items0, items1))
+	-- jetons de fusion : remplacent les copies manquantes d'une fusion d'étoiles
+	local uid = R.HeroService:Add(player, "Archer", { force = true })
+	local hero = data.heroes[uid]
+	data.items.Fusion = 1
+	data.gold += 1e6
+	ok, err = act("Evolve", uid, {})
+	assert(ok and hero.stars == 1 and data.items.Fusion == 0, "fusion avec un jeton : " .. tostring(err))
+	ok = act("Evolve", uid, {})
+	assert(not ok and hero.stars == 1, "fusion sans copie ni jeton acceptée")
+end)
+
 step("Tour des Épreuves", function()
 	local ok, err = act("Teleport", "Hub")
 	assert(ok, "retour : " .. tostring(err))

@@ -33,6 +33,9 @@ local function tick()
 	local zone = zoneKey()
 	local pos = root.Position
 	for _, st in Stations.List do
+		if st.board then
+			continue -- autels : panneau au-dessus de l'autel (Controllers/Altars)
+		end
 		local d = Vector3.new(pos.X - st.pos.X, 0, pos.Z - st.pos.Z).Magnitude
 		local inZone = st.zone == zone and d <= st.radius and math.abs(pos.Y - st.pos.Y) < 14
 		if inZone and not inside[st.key] then

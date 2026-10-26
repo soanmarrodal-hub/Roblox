@@ -1,7 +1,8 @@
 --!strict
 -- Points interactifs du village et des camps de monde. En entrant dans le cercle (rayon `radius`), le menu
 -- correspondant s'ouvre côté client (comme les marchands de Pet Simulator 99) ; le serveur vérifie la
--- proximité pour les actions sensibles (invocation, raids, tour).
+-- proximité pour les actions sensibles (invocation, raids, tour). Les autels (`board`) n'ouvrent pas de menu :
+-- un petit panneau apparaît au-dessus de l'autel à l'approche (comme les œufs de Pet Simulator).
 -- Positions en coordonnées monde (le village est centré sur l'origine, sol à Y = 20).
 
 local Worlds = require(script.Parent.Worlds)
@@ -16,6 +17,7 @@ export type Station = {
 	radius: number,
 	icon: string,
 	color: Color3,
+	board: boolean?, -- panneau au-dessus de l'autel au lieu d'un menu (Controllers/Altars)
 }
 
 local Stations = {}
@@ -35,7 +37,7 @@ local LIST: { Station } = {
 	{ key = "Tower", name = "Tour des Épreuves", hint = "Grimper les étages", menu = "Tower", zone = "Hub", pos = Vector3.new(0, G, 146), radius = 10, icon = "Tower", color = Color3.fromRGB(255, 120, 90) },
 	{ key = "TowerShop", name = "Gardien des jetons", hint = "Boutique de la tour", menu = "TowerShop", zone = "Hub", pos = Vector3.new(-30, G, 136), radius = 8, icon = "Coin", color = Color3.fromRGB(255, 180, 60) },
 	{ key = "QuestBoard", name = "Tableau des quêtes", hint = "Quêtes du jour", menu = "Quests", zone = "Hub", pos = Vector3.new(-28, G, -30), radius = 8, icon = "Scroll", color = Color3.fromRGB(240, 210, 150) },
-	{ key = "DailyChest", name = "Coffre du jour", hint = "Récompense de connexion", menu = "Daily", zone = "Hub", pos = Vector3.new(28, G, -30), radius = 7, icon = "Chest", color = Color3.fromRGB(255, 210, 80) },
+	{ key = "Season", name = "Autel de saison", hint = "Tirages rares (gemmes ou Robux)", menu = "Season", zone = "Hub", pos = Vector3.new(28, G, -30), radius = 9, icon = "Summon", color = Color3.fromRGB(255, 150, 60), board = true },
 	{ key = "Market", name = "Étal du marché", hint = "Potions et runes", menu = "GemShop", zone = "Hub", pos = Vector3.new(36, G, 26), radius = 8, icon = "Gem", color = Color3.fromRGB(90, 220, 255) },
 	{ key = "Library", name = "Bibliothèque des héros", hint = "Index", menu = "Index", zone = "Hub", pos = Vector3.new(-36, G, 26), radius = 8, icon = "Book", color = Color3.fromRGB(150, 190, 255) },
 }
@@ -54,6 +56,7 @@ for _, w in Worlds.List do
 		radius = 11,
 		icon = "Summon",
 		color = Color3.fromRGB(255, 200, 90),
+		board = true,
 	})
 	table.insert(LIST, {
 		key = "Npc" .. w.id,

@@ -1,5 +1,5 @@
 --!strict
--- Objets consommables : runes (enchantements), jetons de talent, potions (bonus temporaires), coffres d'accessoires.
+-- Objets consommables : runes (enchantements), jetons de talent et de fusion, potions (bonus temporaires), coffres d'accessoires.
 
 export type Item = {
 	key: string,
@@ -16,6 +16,7 @@ local Items = {}
 
 Items.List = {
 	Rune = { key = "Rune", name = "Rune du destin", desc = "Tire un enchantement chez l'Enchanteresse.", icon = "Rune", rarity = "Epique", usable = false },
+	Fusion = { key = "Fusion", name = "Jeton de fusion", desc = "Remplace une copie du héros lors d'une fusion d'étoiles.", icon = "Star", rarity = "Epique", usable = false },
 	Talent = { key = "Talent", name = "Jeton de talent", desc = "Retire les talents d'un héros à la Forge des talents.", icon = "Star", rarity = "Rare", usable = false },
 	PotionDamage = {
 		key = "PotionDamage",
@@ -59,7 +60,7 @@ Items.List = {
 	},
 } :: { [string]: Item }
 
-Items.Order = { "Rune", "Talent", "PotionDamage", "PotionGold", "PotionLuck", "PotionXp" }
+Items.Order = { "Rune", "Talent", "Fusion", "PotionDamage", "PotionGold", "PotionLuck", "PotionXp" }
 
 -- Bonus temporaires (potions, boosts de serveur). Les durées s'additionnent, plafonnées à 3 h.
 Items.Boosts = {

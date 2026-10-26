@@ -246,12 +246,13 @@ local SIDE = {
 	{ key = "Quests", icon = "Scroll", label = "QUETES", color = C.gold },
 	{ key = "Index", icon = "Book", label = "INDEX", color = C.red },
 	{ key = "Gifts", icon = "Gift", label = "CADEAUX", color = C.green },
+	{ key = "Daily", icon = "Chest", label = "COFFRE", color = C.gold }, -- coffre du jour (n'est plus sur la carte)
 	{ key = "GemShop", icon = "Gem", label = "BOUTIQUE", color = C.teal },
 	{ key = "Settings", icon = "Gear", label = "REGLAGES", color = C.gray },
 }
 
 local function buildSide()
-	local col = Kit.new("Frame", { Name = "Side", BackgroundTransparency = 1, Size = UDim2.fromOffset(160, 400), Position = UDim2.new(0, 14, 0.5, 10), AnchorPoint = Vector2.new(0, 0.5), Parent = App.hud })
+	local col = Kit.new("Frame", { Name = "Side", BackgroundTransparency = 1, Size = UDim2.fromOffset(160, 470), Position = UDim2.new(0, 14, 0.5, 10), AnchorPoint = Vector2.new(0, 0.5), Parent = App.hud })
 	Kit.new("UIGridLayout", { CellSize = UDim2.fromOffset(72, 88), CellPadding = UDim2.fromOffset(6, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = col })
 	for i, s in SIDE do
 		local _, dot = Kit.SideButton(col, s.icon, s.label, s.color, function()
@@ -527,9 +528,10 @@ local function refreshBadges()
 		end
 	end
 	badges.Quests.Visible = claim
-	-- cadeaux de session prêts ou coffre du jour
+	-- cadeaux de session prêts ; coffre du jour
 	local minutes = (os.clock() - sessionStart) / 60
-	local gift = dailyReady()
+	local gift = false
+	badges.Daily.Visible = dailyReady()
 	for i, g in Rewards.Gifts do
 		if not giftsTaken[i] and minutes >= g.minutes then
 			gift = true

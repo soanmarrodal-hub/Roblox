@@ -360,15 +360,14 @@ function Hub.Build(root: Instance): Result
 	-- pont sur le ruisseau (rue sud)
 	Buildings.Bridge(folder, Vector3.new(0, G + 0.6, 76), Vector3.new(0, G + 0.6, 112), 12, "stone")
 
-	-- tableau des quêtes, coffre du jour, marché, bibliothèque
+	-- tableau des quêtes, autel de saison, marché, bibliothèque
 	local plazaStations = Kit.Folder(folder, "Stands")
 	local qb = (Stations.Get("QuestBoard") :: Stations.Station).pos
 	Buildings.Board(plazaStations, facing(qb + Vector3.new(-5, 0, -5), Vector3.zero), "Quêtes du jour")
-	local dc = (Stations.Get("DailyChest") :: Stations.Station).pos
-	local chest = Kit.Block(plazaStations, Vector3.new(5, 3.2, 3.4), facing(dc + Vector3.new(4, 1.6, -4), Vector3.zero), C.wood, Enum.Material.WoodPlanks)
-	Kit.Block(plazaStations, Vector3.new(5.2, 1.4, 3.6), chest.CFrame * CFrame.new(0, 2.2, 0), Color3.fromRGB(150, 60, 50), Enum.Material.WoodPlanks)
-	local lock = Kit.Block(plazaStations, Vector3.new(1, 1.2, 0.4), chest.CFrame * CFrame.new(0, 1, -1.85), C.gold, Enum.Material.Neon)
-	Kit.Light(lock, Color3.fromRGB(255, 210, 90), 12, 1.5)
+	-- autel de saison (le coffre du jour est désormais un bouton du menu)
+	local se = Stations.Get("Season") :: Stations.Station
+	local sp = se.pos + Vector3.new(7, 0, -7)
+	Buildings.Altar(plazaStations, facing(Vector3.new(sp.X, ground(sp.X, sp.Z), sp.Z), Vector3.zero), se.color, 0.72)
 	local mk = (Stations.Get("Market") :: Stations.Station).pos
 	Buildings.Stall(plazaStations, facing(mk + Vector3.new(6, 0, 6), Vector3.zero), Color3.fromRGB(60, 140, 220), 21)
 	local lb = (Stations.Get("Library") :: Stations.Station).pos

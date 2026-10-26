@@ -445,7 +445,7 @@ local function evolveMenu(ctx: MenuManager.Ctx): MenuManager.View
 		end
 		local inst = uid and d.heroes[uid]
 		if not inst then
-			Kit.Text(side, "Choisis un héros à faire évoluer. Chaque étoile demande des copies du même héros (ni équipées ni verrouillées) et de l'or ; elle augmente les dégâts de 50 % et le niveau maximum.", { light = false, size = 17, wrap = true, color = Theme.Muted })
+			Kit.Text(side, "Choisis un héros à faire évoluer. Chaque étoile demande des copies du même héros (ni équipées ni verrouillées), que les jetons de fusion peuvent remplacer, et de l'or ; elle augmente les dégâts de 50 % et le niveau maximum.", { light = false, size = 17, wrap = true, color = Theme.Muted })
 			return
 		end
 		local def = Heroes.Get(inst.id) :: Heroes.Hero
@@ -456,12 +456,15 @@ local function evolveMenu(ctx: MenuManager.Ctx): MenuManager.View
 		local cost = Progression.EvolveGold(inst.id, inst.stars)
 		local copies = freeCopies(uid :: string, inst.id)
 		Kit.Text(side, string.format("%d ★  →  %d ★", inst.stars, inst.stars + 1), { light = false, size = 24, sizeUD = UDim2.new(1, 0, 0, 30), pos = UDim2.fromOffset(0, 150) })
-		Kit.Text(side, string.format("Copies : %d / %d", math.min(#copies, need), need), { light = false, size = 18, color = if #copies >= need then C.green else C.red, sizeUD = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, 186) })
+		-- les jetons de fusion remplacent les copies manquantes
+		local tokens = math.min(math.max(0, need - #copies), d.items.Fusion or 0)
+		local ready = math.min(#copies, need) + tokens >= need
+		Kit.Text(side, string.format("Copies : %d / %d%s", math.min(#copies, need), need, if tokens > 0 then string.format(" (+%d jeton%s de fusion)", tokens, if tokens > 1 then "s" else "") else ""), { light = false, size = 17, color = if ready then C.green else C.red, sizeUD = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, 186) })
 		Kit.Text(side, string.format("Niveau max : %d → %d", Progression.MaxLevel(inst.stars), Progression.MaxLevel(inst.stars + 1)), { light = false, size = 16, color = Theme.Muted, sizeUD = UDim2.new(1, 0, 0, 22), pos = UDim2.fromOffset(0, 212) })
 		Kit.Text(side, string.format("Dégâts : x%.1f → x%.1f", Progression.StarMult(inst.stars), Progression.StarMult(inst.stars + 1)), { light = false, size = 16, color = Theme.Muted, sizeUD = UDim2.new(1, 0, 0, 22), pos = UDim2.fromOffset(0, 236) })
 		local btn = Kit.Button(side, { text = Format.Short(cost), icon = "Star", color = C.gold, size = UDim2.new(1, 0, 0, 58), pos = UDim2.new(0, 0, 1, -62), onClick = function()
 			local fodder = {}
-			for i = 1, need do
+			for i = 1, math.min(need, #copies) do
 				fodder[i] = copies[i]
 			end
 			local ok, stars = Remote.Call("Evolve", uid, fodder)
@@ -469,11 +472,11 @@ local function evolveMenu(ctx: MenuManager.Ctx): MenuManager.View
 				Remote.notify(string.format("%s atteint %d étoile(s) !", def.name, stars), "success")
 			end
 		end })
-		btn:SetEnabled(#copies >= need and d.gold >= cost)
+		btn:SetEnabled(ready and d.gold >= cost)
 	end
 	showSide()
 	return {
-		watch = { "heroes", "gold", "team" },
+		watch = { "heroes", "gold", "team", "items" },
 		refresh = function()
 			picker:Refresh()
 			showSide()

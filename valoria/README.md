@@ -112,6 +112,10 @@ propres à chaque héros** ; sa recharge et ses dégâts s'améliorent sur la fi
 - **Zone d'action** : cercle autour du joueur, petite au départ et améliorable (« Zone d'action ») ; les héros
   n'engagent que les ennemis qui s'y trouvent. Réglage **multi-cible** : chaque héros frappe un ennemi différent.
 - Sur la fiche d'un héros possédé : **prendre son apparence** (le personnage du joueur devient ce héros).
+- **Autels** : en s'approchant, un panneau apparaît au-dessus de l'autel (comme les œufs de Pet Simulator) avec
+  la vitrine et les taux (héros jamais obtenus en gris) ; ×1 [E], ×10 [R], automatique [T], options (⚙).
+- **Autel de saison** sur la place du village : 500 gemmes ou 50 Robux le tirage ; jetons de fusion (remplacent une
+  copie lors d'une fusion d'étoiles) et potions le plus souvent, héros et accessoires très rares à faible taux.
 - Invocation ×1 / ×10 (au moins un Rare), **garanties** Légendaire (120) et Mythique (700), chance améliorable.
 - **Vente automatique** (recyclage à l'autel) des raretés choisies, Légendaires compris, **index** de collection
   avec récompense par monde.
@@ -177,7 +181,7 @@ réglages : `Raids.Layout` et `Raids.Plan` (`Config/Raids.luau`). Boutique des r
 
 ### Récompenses et boutique
 
-Quêtes en chaîne par monde, 3 quêtes du jour, coffre de connexion (7 jours), cadeaux de temps de jeu, codes
+Quêtes en chaîne par monde, 3 quêtes du jour, coffre de connexion (7 jours, bouton « COFFRE » du menu), cadeaux de temps de jeu, codes
 (`VALORIA`, `CHEVALIER`, `DRAGON`, `LANTERNE`), potions (force, or, chance, savoir), marché en gemmes, produits et
 passes Robux (Or ×2, Chance royale, Escouade royale, Invocation éclair, Grandes écuries, VIP).
 
@@ -219,6 +223,7 @@ pas dessinée.
 | | |
 | --- | --- |
 | ![Une salle de la Tour des Épreuves](docs/images/vues/22_salle_des_epreuves.jpg)<br>Une salle de la Tour des Épreuves | ![Raid : la Crypte du Roi Déchu](docs/images/vues/23_crypte_du_roi_dechu.jpg)<br>Raid : la Crypte du Roi Déchu |
+| ![L'autel de saison](docs/images/vues/28_autel_de_saison.jpg)<br>L'autel de saison (place du village) | ![L'autel du Val](docs/images/vues/29_autel_du_val.jpg)<br>Un autel d'invocation |
 | ![Raid : le Temple Englouti](docs/images/vues/24_temple_englouti.jpg)<br>Raid : le Temple Englouti | ![Donjon de la Crypte (vue en coupe)](docs/images/vues/25_donjon_crypte.jpg)<br>Donjon de la Crypte : 4 salles de vague, 4 parcours, la salle du boss (vue en coupe) |
 | ![Donjon du Temple](docs/images/vues/26_donjon_temple.jpg)<br>Donjon du Temple Englouti | ![Une salle de parcours](docs/images/vues/27_salle_de_parcours.jpg)<br>Une salle de parcours (coupe à hauteur d'homme) |
 

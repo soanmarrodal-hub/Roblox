@@ -623,6 +623,7 @@ export type CardOpts = {
 	locked: boolean?,
 	new: boolean?,
 	silhouette: boolean?,
+	greyed: boolean?, -- héros jamais obtenu : portrait et carte en gris
 	caption: string?,
 	order: number?,
 	onClick: (() -> ())?,
@@ -677,7 +678,7 @@ function Kit.Portrait(parent: Instance, heroId: string, size: number, opts: { [s
 		ZIndex = o.z or 1,
 		Parent = parent,
 	})
-	if not Pixel.Apply(img, Pixel.Portrait(heroId, o.silhouette)) then
+	if not Pixel.Apply(img, Pixel.Portrait(heroId, o.silhouette, o.grey)) then
 		local def = Heroes.Get(heroId)
 		Kit.Text(img, if o.silhouette then "?" else (def and Format.Clip(def.name, 1) or "?"), { scaled = true, size = size * 0.6, z = (o.z or 1) + 1 })
 	end
@@ -718,7 +719,7 @@ function Kit.HeroCard(parent: Instance, heroId: string, opts: CardOpts?): TextBu
 	})
 	Kit.Corner(card, 12)
 	Kit.Stroke(card, 3)
-	if def and not o.silhouette then
+	if def and not o.silhouette and not o.greyed then
 		Kit.RarityFill(card, def.rarity)
 	else
 		card.BackgroundColor3 = Theme.C.gray
@@ -735,7 +736,7 @@ function Kit.HeroCard(parent: Instance, heroId: string, opts: CardOpts?): TextBu
 		Parent = card,
 	})
 	Kit.Corner(halo, math.floor(s * 0.35))
-	Kit.Portrait(card, heroId, math.floor(s * 0.84), { pos = UDim2.new(0.5, 0, 0, s * 0.02), anchor = Vector2.new(0.5, 0), silhouette = o.silhouette, z = z + 1 })
+	Kit.Portrait(card, heroId, math.floor(s * 0.84), { pos = UDim2.new(0.5, 0, 0, s * 0.02), anchor = Vector2.new(0.5, 0), silhouette = o.silhouette, grey = o.greyed, z = z + 1 })
 	if o.level then
 		Kit.Text(card, "Nv" .. o.level, { pixel = true, size = math.max(12, s * 0.15), sizeUD = UDim2.fromOffset(s * 0.5, s * 0.2), pos = UDim2.fromOffset(5, 3), alignX = Enum.TextXAlignment.Left, z = z + 2 })
 	end

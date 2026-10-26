@@ -241,6 +241,38 @@ test("quêtes et récompenses", function()
 	end
 end)
 
+test("autel de saison et stations", function()
+	local Seasons = require(Shared.Config.Seasons)
+	local Stations = require(Shared.Config.Stations)
+	local s = Seasons.Current
+	local sum = 0
+	local heroes, accessories, fusion = 0, 0, false
+	for _, d in s.drops do
+		sum += d.weight
+		check(Rarities.List[d.rarity] ~= nil, "saison : rareté " .. d.rarity)
+		if d.kind == "hero" then
+			heroes += 1
+			check(Heroes.Get(d.key) ~= nil, "saison : héros " .. tostring(d.key))
+			check(Rarities.Rank(Heroes.Get(d.key).rarity) >= Rarities.Rank("Mythique"), "saison : héros très rare")
+			check(d.weight <= 0.5, "saison : héros à faible taux")
+		elseif d.kind == "accessory" then
+			accessories += 1
+			check(d.weight <= 2, "saison : accessoire à faible taux")
+		else
+			check(d.kind == "item" and Items.Get(d.key) ~= nil, "saison : objet " .. tostring(d.key))
+			fusion = fusion or d.key == "Fusion"
+		end
+	end
+	near(sum, 100, 1e-6, "saison : poids")
+	check(heroes > 0 and accessories > 0 and fusion, "saison : héros, accessoires et jetons de fusion")
+	eq(s.cost, 500, "saison : 500 gemmes")
+	eq(Shop.Product(s.product).price, 50, "saison : 50 Robux")
+	-- le coffre du jour n'est plus sur la carte ; les autels ont un panneau au-dessus
+	check(Stations.Get("DailyChest") == nil, "coffre du jour retiré de la carte")
+	check(Stations.Get("Season") and Stations.Get("Season").zone == "Hub" and Stations.Get("Season").board, "autel de saison au village")
+	check(Stations.Get("Altar1").board and Stations.Get("Altar2").board, "panneaux des autels")
+end)
+
 test("enchantements, talents et déblocages", function()
 	local Talents = require(Shared.Config.Talents)
 	local Unlocks = require(Shared.Config.Unlocks)

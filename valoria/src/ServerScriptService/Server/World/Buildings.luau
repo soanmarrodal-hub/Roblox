@@ -765,26 +765,81 @@ function Buildings.Portal(parent: Instance, cf: CFrame, color: Color3, style: st
 	return m
 end
 
-function Buildings.Altar(parent: Instance, cf: CFrame, color: Color3): Model
+-- Autel (invocation, évolution, saison) : estrade ronde à trois gradins cerclés d'or et marches en façade,
+-- cercle de runes, socle à huit pans portant un cristal qui tourne dans son anneau, quatre obélisques à
+-- pierres de rune flottantes et braseros, deux bannières au fond, éclats de cristal au pied.
+-- `scale` : taille (1 = autel des mondes).
+function Buildings.Altar(parent: Instance, cf: CFrame, color: Color3, scale: number?): Model
+	local k = scale or 1
 	local m = Kit.Model(parent, "Autel")
-	for i = 0, 2 do
-		local s = 16 - i * 4
-		Block(m, Vector3.new(s, 1.2, s), cf * CFrame.new(0, 0.6 + i * 1.2, 0), C.stone:Lerp(Color3.new(1, 1, 1), i * 0.05), M.Cobblestone)
+	local dark = color:Lerp(Color3.new(0, 0, 0), 0.4)
+	local function at(x: number, y: number, z: number): CFrame
+		return cf * CFrame.new(x * k, y * k, z * k)
 	end
-	Block(m, Vector3.new(5, 3, 5), cf * CFrame.new(0, 5.1, 0), C.stoneWarm, M.Slate)
-	local orb = Kit.Ball(m, 3.4, (cf * CFrame.new(0, 9.5, 0)).Position, color, M.Neon)
-	tag(orb, "Bob", 0.6)
-	Kit.Light(orb, color, 30, 2.2)
+	-- gradins ronds et liserés dorés
+	local tiers = { { d = 20, c = C.stoneDark }, { d = 15, c = C.stoneWarm }, { d = 10.5, c = C.stone } }
+	for i, t in tiers do
+		local y = (i - 1) * 1.2
+		Cyl(m, 1.2 * k, t.d * k, at(0, y + 0.6, 0), t.c, M.Slate)
+		-- bandeau doré sur la tranche (disque juste sous le dessus du gradin, un peu plus large)
+		Cyl(m, 0.3 * k, (t.d + 0.35) * k, at(0, y + 1.0, 0), C.gold, M.Metal, { CanCollide = false })
+	end
+	-- marches en façade (vers -Z)
+	for i = 0, 2 do
+		Block(m, Vector3.new(5 * k, (0.6 + i * 1.2) * k, 1.6 * k), at(0, (0.3 + i * 0.6), -10.4 + i * 2.3), C.stoneWarm, M.Slate)
+	end
+	-- cercle de runes sur le gradin du haut
+	local top = 3.62
+	for i = 0, 11 do
+		local a = i / 12 * math.pi * 2
+		local r = Block(m, Vector3.new(0.7 * k, 0.1 * k, 1.1 * k), cf * CFrame.Angles(0, a, 0) * CFrame.new(0, top * k, -4.2 * k), color, M.Neon, { CanCollide = false })
+		r.Transparency = 0.15
+	end
+	local ring = Cyl(m, 0.08 * k, 6.6 * k, at(0, top + 0.02, 0), color, M.Neon, { CanCollide = false })
+	ring.Transparency = 0.55
+	tag(ring, "Pulse")
+	-- socle à huit pans, chapiteau doré
+	for _, a in { 0, math.pi / 4 } do
+		Block(m, Vector3.new(3.4 * k, 3.4 * k, 3.4 * k), at(0, top + 1.7, 0) * CFrame.Angles(0, a, 0), C.stoneDark, M.Slate)
+		Block(m, Vector3.new(4 * k, 0.5 * k, 4 * k), at(0, top + 3.6, 0) * CFrame.Angles(0, a, 0), C.gold, M.Metal)
+	end
+	-- cristal d'invocation (losange) dans son anneau
+	local crystal = Block(m, Vector3.new(2.2 * k, 2.2 * k, 2.2 * k), at(0, top + 7.4, 0) * CFrame.Angles(math.rad(45), 0, math.rad(45)), color, M.Neon, { CanCollide = false })
+	tag(crystal, "Spin", 0.25)
+	tag(crystal, "Bob", 0.5)
+	Kit.Light(crystal, color, 34 * k, 2.4)
+	local halo = Cyl(m, 0.18 * k, 6 * k, at(0, top + 7.4, 0) * CFrame.Angles(math.rad(70), 0, 0), C.gold, M.Neon, { CanCollide = false })
+	halo.Transparency = 0.25
+	tag(halo, "Spin", 0.12)
+	-- obélisques, pierres de rune flottantes, braseros
 	for i = 0, 3 do
 		local a = i / 4 * math.pi * 2 + math.pi / 4
-		local p = cf * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -7)
-		Block(m, Vector3.new(1.6, 8, 1.6), p * CFrame.new(0, 4, 0), C.stoneDark, M.Slate)
-		local flame = Block(m, Vector3.new(1, 1, 1), p * CFrame.new(0, 8.6, 0), color, M.Neon)
-		fire(flame, 0.5)
+		local base = cf * CFrame.Angles(0, a, 0) * CFrame.new(0, 0, -8.6 * k)
+		Block(m, Vector3.new(2.4 * k, 1 * k, 2.4 * k), base * CFrame.new(0, 0.5 * k, 0), C.stoneDark, M.Slate)
+		Block(m, Vector3.new(1.7 * k, 7 * k, 1.7 * k), base * CFrame.new(0, 4.5 * k, 0), C.stone, M.Slate)
+		Block(m, Vector3.new(1.2 * k, 1.6 * k, 1.2 * k), base * CFrame.new(0, 8.8 * k, 0), C.stone, M.Slate)
+		Block(m, Vector3.new(1.9 * k, 0.3 * k, 1.9 * k), base * CFrame.new(0, 7.9 * k, 0), C.gold, M.Metal)
+		local rune = Block(m, Vector3.new(0.9 * k, 1.4 * k, 0.35 * k), base * CFrame.new(0, 11 * k, 0), color, M.Neon, { CanCollide = false })
+		tag(rune, "Bob", 0.7)
+		local bowl = Block(m, Vector3.new(1.6 * k, 0.6 * k, 1.6 * k), base * CFrame.new(0, 3 * k, -1.3 * k), C.iron, M.Metal)
+		local flame = Block(m, Vector3.new(0.9 * k, 0.9 * k, 0.9 * k), bowl.CFrame * CFrame.new(0, 0.7 * k, 0), color, M.Neon, { CanCollide = false })
+		fire(flame, 0.5 * k, color)
 	end
-	-- bannière
-	local b = Block(m, Vector3.new(6, 9, 0.3), cf * CFrame.new(0, 10, 5.6), color:Lerp(Color3.new(0, 0, 0), 0.35), M.Fabric)
-	b.Name = "Cloth"
+	-- bannières au fond (vers +Z)
+	for _, x in { -5.5, 5.5 } do
+		Block(m, Vector3.new(0.5 * k, 13 * k, 0.5 * k), at(x, 6.5, 9.4), C.timber, M.Wood)
+		Block(m, Vector3.new(4.4 * k, 0.4 * k, 0.4 * k), at(x, 12.6, 9.2), C.gold, M.Metal)
+		local cloth = Block(m, Vector3.new(4 * k, 7.5 * k, 0.25 * k), at(x, 8.6, 9.1), dark, M.Fabric, { CanCollide = false })
+		cloth.Name = "Cloth"
+		Block(m, Vector3.new(1.6 * k, 1.6 * k, 0.3 * k), cloth.CFrame * CFrame.new(0, 1.2 * k, -0.05 * k) * CFrame.Angles(0, 0, math.rad(45)), C.gold, M.Metal, { CanCollide = false })
+	end
+	-- éclats de cristal au pied de l'estrade
+	for i = 0, 7 do
+		local a = i / 8 * math.pi * 2 + 0.3
+		local h = (1.4 + (i % 3) * 0.6) * k
+		local sh = Block(m, Vector3.new(0.7 * k, h, 0.7 * k), cf * CFrame.Angles(0, a, 0) * CFrame.new(0, h / 2 - 0.2 * k, -10.6 * k) * CFrame.Angles(0.25, 0, 0.2), color:Lerp(Color3.new(1, 1, 1), 0.25), M.Glass, { CanCollide = false })
+		sh.Transparency = 0.2
+	end
 	return m
 end
 
