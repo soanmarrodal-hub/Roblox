@@ -209,6 +209,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 				Kit.Confirm(ctx.win.root.Parent :: Instance, "Relâcher ?", string.format("Relâcher %s contre %s or ?", def.name, Format.Short(sellValue(inst))), "Relâcher", function()
 					local ok = Remote.Call("Release", { uid })
 					if ok then
+						Kit.Sound("Trash")
 						selected = nil
 						refresh()
 					end
@@ -279,7 +280,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 		showDetail()
 	end
 
-	bestBtn = Kit.Button(bar, { text = "Meilleurs", icon = "Star", color = C.gold, size = UDim2.fromOffset(150, 46), pos = UDim2.fromOffset(160, 0), textSize = 18, onClick = function()
+	bestBtn = Kit.Button(bar, { text = "Meilleurs", icon = "Star", color = C.gold, size = UDim2.fromOffset(150, 46), pos = UDim2.fromOffset(160, 0), textSize = 18, sound = "Equip", onClick = function()
 		Remote.Call("EquipBest")
 	end })
 	relBtn = Kit.Button(bar, { text = "Relâcher", icon = "Trash", color = C.red, size = UDim2.fromOffset(150, 46), pos = UDim2.fromOffset(406, 0), textSize = 18, onClick = function()
@@ -298,6 +299,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 		Kit.Confirm(ctx.win.root.Parent :: Instance, "Relâcher ?", string.format("Relâcher %d héros ? Cette action est définitive.", #list), "Relâcher", function()
 			local ok, res = Remote.Call("Release", list)
 			if ok then
+				Kit.Sound("Trash")
 				Remote.notify(string.format("%d héros relâché(s) · +%s or", res.count, Format.Short(res.gold)), "success")
 				table.clear(picked)
 				releaseMode = false

@@ -1,6 +1,7 @@
 --!strict
 -- Révélation animée des tirages (autels d'invocation, autel de saison) : parchemins qui tremblent selon la
--- rareté, retournement, rayons pour les raretés élevées, « NOUVEAU », « VENDU ». Les résultats sont des
+-- rareté, retournement, rayons et confettis pour les raretés élevées, étincelles pour les nouveaux héros,
+-- « NOUVEAU », « VENDU ». Sons : parchemin, retournement, rareté (UI/Sfx). Les résultats sont des
 -- héros (`id`) ou, à l'autel de saison, des objets et accessoires (`kind`, `key`, `name`, `amount`).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +15,7 @@ local Format = require(Shared.Util.Format)
 local Theme = require(script.Parent.Theme)
 local Kit = require(script.Parent.Kit)
 local App = require(script.Parent.App)
+local Fx = require(script.Parent.Fx)
 
 local C = Theme.C
 
@@ -154,11 +156,15 @@ function Reveal.Show(results: { any }, sold: number, fast: boolean, done: () -> 
 					end
 				end)
 				Kit.Sound("Fanfare")
+				Fx.Burst(slot, UDim2.fromScale(0.5, 0.5), if fast then 10 else 24, { rar.color, rar.light, Color3.new(1, 1, 1) }, cell * 1.1)
 				if not skip and not fast then
 					task.wait(0.5)
 				end
 			else
-				Kit.Sound("Reveal")
+				Kit.Sound(if rar.rank >= 2 then "RevealRare" else "Reveal")
+			end
+			if r.new and not fast then
+				Fx.Sparkle(card, rar.light, 0.3)
 			end
 			if not skip and not fast then
 				task.wait(if n == 1 then 0.25 else 0.08)

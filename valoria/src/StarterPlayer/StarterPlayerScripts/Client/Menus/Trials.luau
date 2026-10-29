@@ -131,6 +131,7 @@ local function towerShop(ctx: MenuManager.Ctx): MenuManager.View
 				buy = function()
 					local ok = Remote.Call("TowerShop", o.key, 1)
 					if ok then
+						Kit.Sound("Purchase")
 						Remote.notify("Achat effectué !", "success")
 					end
 				end,
@@ -259,6 +260,7 @@ local function raidShop(ctx: MenuManager.Ctx): MenuManager.View
 					end
 					local ok, res = Remote.Call("RaidShop", current, o.key, if o.key == "ChestPick" then pick else nil)
 					if ok and res then
+						Kit.Sound("Purchase")
 						if res.kind == "accessory" then
 							local t = Accessories.Type(res.type)
 							Remote.notify(string.format("Accessoire obtenu : %s (%s)", if t then t.name else res.type, Rarities.Get(res.rarity).name), "success")

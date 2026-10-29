@@ -259,6 +259,10 @@ ProxyMT.__index = function(p, k)
 		if stub then
 			return stub
 		end
+		-- pas de moteur de mise en page dans Lune : positions et tailles absolues nulles
+		if (k == "AbsolutePosition" or k == "AbsoluteSize") and realOf[p]:IsA("GuiBase2d") then
+			return roblox.Vector2.zero
+		end
 		error(v, 2)
 	end
 	if type(v) == "function" then

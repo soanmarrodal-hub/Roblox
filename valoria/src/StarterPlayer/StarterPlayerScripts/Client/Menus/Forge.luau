@@ -235,6 +235,7 @@ local function traitsMenu(ctx: MenuManager.Ctx): MenuManager.View
 				if not ok then
 					return
 				end
+				Kit.Sound("Rune")
 				local nt = Traits.Get(key)
 				if not nt then
 					return
@@ -469,6 +470,7 @@ local function evolveMenu(ctx: MenuManager.Ctx): MenuManager.View
 			end
 			local ok, stars = Remote.Call("Evolve", uid, fodder)
 			if ok then
+				Kit.Sound("LevelUp")
 				Remote.notify(string.format("%s atteint %d étoile(s) !", def.name, stars), "success")
 			end
 		end })

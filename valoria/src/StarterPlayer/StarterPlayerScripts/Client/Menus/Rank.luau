@@ -36,7 +36,7 @@ local function rewards(holder: Frame)
 		Kit.Text(cell, "RANG " .. e.rank, { light = ready, pixel = true, size = 16, color = if ready then nil else Theme.Muted, sizeUD = UDim2.new(1, 0, 0, 24), pos = UDim2.fromOffset(0, 6), z = 13 })
 		Kit.Icon(cell, if claimed then "Check" elseif reached then "Chest" else "Lock", 52, { pos = UDim2.new(0.5, 0, 0, 32), anchor = Vector2.new(0.5, 0), z = 13 })
 		RewardView.Row(cell, RewardView.Entries(e.reward), { light = false, size = 18, sizeUD = UDim2.new(1, -8, 0, 22), pos = UDim2.fromOffset(4, 92), align = Enum.HorizontalAlignment.Center, z = 13 })
-		local b = Kit.Button(cell, { text = if claimed then "Réclamée" elseif reached then "Réclamer" else "Rang " .. e.rank, color = C.green, size = UDim2.new(1, -20, 0, 46), pos = UDim2.new(0.5, 0, 1, -8), anchor = Vector2.new(0.5, 1), textSize = 17, z = 13, onClick = function()
+		local b = Kit.Button(cell, { text = if claimed then "Réclamée" elseif reached then "Réclamer" else "Rang " .. e.rank, color = C.green, size = UDim2.new(1, -20, 0, 46), pos = UDim2.new(0.5, 0, 1, -8), anchor = Vector2.new(0.5, 1), textSize = 17, z = 13, shine = ready, onClick = function()
 			local ok, res = Remote.Call("ClaimRankReward", e.rank)
 			if ok then
 				Hud.Popup(string.format("Récompense du rang %d", e.rank), nil, RewardView.FromGains(res.gains), C.gold, "Crown", 3)
@@ -71,7 +71,9 @@ local function titles(holder: Frame)
 		Kit.Text(cell, t.desc, { light = false, size = 14, color = Theme.Muted, sizeUD = UDim2.new(1, -16, 0, 18), pos = UDim2.fromOffset(8, 36), alignX = Enum.TextXAlignment.Left, z = 13 })
 		if unlocked then
 			local b = Kit.Button(cell, { text = if equipped then "Équipé" else "Équiper", icon = if equipped then "Check" else nil, color = if equipped then C.gray else C.green, size = UDim2.new(1, -16, 0, 44), pos = UDim2.new(0.5, 0, 1, -8), anchor = Vector2.new(0.5, 1), textSize = 17, z = 13, onClick = function()
-				Remote.Call("SetTitle", t.key)
+				if Remote.Call("SetTitle", t.key) then
+					Kit.Sound("Equip")
+				end
 			end })
 			b:SetEnabled(not equipped)
 		else

@@ -79,6 +79,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 					end
 					local ok = Remote.Call("BuyPerk", pk.key)
 					if ok then
+						Kit.Sound("Purchase")
 						Remote.notify(pk.name .. " débloqué !", "success")
 						State.RefreshPasses()
 					end
@@ -92,6 +93,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 				local b = Kit.Button(c, { text = tostring(o.cost), icon = "Gem", color = C.blue, size = UDim2.new(1, -20, 0, 46), pos = UDim2.new(0.5, 0, 1, -8), anchor = Vector2.new(0.5, 1), textSize = 18, z = 13, onClick = function()
 					local ok, res = Remote.Call("GemShop", o.key, 1)
 					if ok then
+						Kit.Sound("Purchase")
 						Remote.notify(tostring(res), "success")
 					end
 				end })

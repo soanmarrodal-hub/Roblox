@@ -119,6 +119,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 			HeroPicker.new(holder, { size = UDim2.fromScale(1, 1), cell = 70, onPick = function(heroUid: string)
 				local ok = Remote.Call("EquipAcc", heroUid, uid)
 				if ok then
+					Kit.Sound("Equip")
 					choosing = false
 				end
 			end })

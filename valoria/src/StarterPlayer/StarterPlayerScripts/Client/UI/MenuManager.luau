@@ -1,6 +1,6 @@
 --!strict
 -- Gestion des fenêtres : une seule ouverte à la fois, ouverture par nom (boutons du HUD ou stations),
--- rafraîchissement automatique quand une section du profil change, fermeture animée.
+-- rafraîchissement automatique quand une section du profil change, ouverture et fermeture animées et sonores.
 
 local Signal = require(game:GetService("ReplicatedStorage").Shared.Util.Signal)
 local Kit = require(script.Parent.Kit)
@@ -49,7 +49,8 @@ function MenuManager.Source(): string?
 	return if current then current.source else nil
 end
 
-function MenuManager.Close()
+-- Ferme la fenêtre ouverte ; `silent` : sans son (remplacement immédiat par une autre fenêtre).
+function MenuManager.Close(silent: boolean?)
 	local c = current
 	if not c then
 		return
@@ -62,6 +63,9 @@ function MenuManager.Close()
 		pcall(c.view.destroy)
 	end
 	local win = c.win
+	if not silent then
+		Kit.Sound("Close")
+	end
 	Kit.Tween(win.scale, 0.14, { Scale = 0.75 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In).Completed:Once(function()
 		win.root:Destroy()
 	end)
@@ -79,7 +83,7 @@ function MenuManager.Open(name: string, arg: any?, source: string?)
 		current.source = source or current.source
 		return
 	end
-	MenuManager.Close()
+	MenuManager.Close(true)
 	local title = if type(def.title) == "function" then def.title(arg) else def.title
 	local win = Kit.Window(App.menus, { title = title :: string, icon = def.icon, color = def.color, size = def.size })
 	local entry = { name = name, arg = arg, win = win, view = nil :: View?, conn = nil :: any, source = source }
@@ -101,7 +105,7 @@ function MenuManager.Open(name: string, arg: any?, source: string?)
 		Reopen = function()
 			if current == entry then
 				local src = entry.source
-				MenuManager.Close()
+				MenuManager.Close(true)
 				MenuManager.Open(name, arg, src)
 			end
 		end,
@@ -128,6 +132,7 @@ function MenuManager.Open(name: string, arg: any?, source: string?)
 		end
 	end
 	Kit.OpenAnim(win)
+	Kit.Sound("Open")
 	MenuManager.Opened:Fire(name)
 end
 

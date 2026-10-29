@@ -109,7 +109,12 @@ services.CollectionService = {
 }
 services.Lighting = wrap(RealInstance.new("Lighting"))
 local soundService = wrap(RealInstance.new("Folder"))
-overridesOf[soundService] = { PlayLocalSound = function() end }
+local played = {} -- effets sonores joués (nom → nombre)
+overridesOf[soundService] = {
+	PlayLocalSound = function(_, snd)
+		played[snd.Name] = (played[snd.Name] or 0) + 1
+	end,
+}
 services.SoundService = soundService
 services.MarketplaceService = {
 	PromptGamePassPurchaseFinished = newSignal(),
@@ -276,6 +281,7 @@ step("chargement", function()
 	State = req(Client.State)
 	App = req(Client.UI.App)
 	Kit = req(Client.UI.Kit)
+	Kit.Sound = req(Client.UI.Sfx).Play -- comme Main (Controllers/Sound)
 	Hud = req(Client.UI.Hud)
 	MenuManager = req(Client.UI.MenuManager)
 	for _, m in Client.Menus:GetChildren() do
@@ -758,6 +764,78 @@ step("rang, titres, plaque, carte de voyage", function()
 end)
 
 -- boutons du HUD
+-- animations et sons : survol, frétillement, secousse d'un bouton désactivé, pastilles qui battent, reflet,
+-- ouverture / fermeture des fenêtres, icônes qui volent vers les compteurs, confettis des récompenses
+step("animations et sons", function()
+	local Fx = req(Client.UI.Fx)
+	local holder = InstanceMock.new("Frame")
+	holder.Parent = App.hud
+	local b = Kit.Button(holder, { text = "Essai", icon = "Coin", shine = true })
+	b.face.MouseEnter:Fire()
+	settle(3)
+	if not b.face:FindFirstChild("FxShine") then
+		error("reflet absent du bouton")
+	end
+	b:SetEnabled(false)
+	b.face.Activated:Fire()
+	settle(6)
+	-- pastille « ! » : bat tant qu'elle est visible
+	local dot = App.hud:FindFirstChild("Dot", true)
+	if not dot or not dot:FindFirstChild("FxPulse") then
+		error("pastille sans pulsation")
+	end
+	-- gains : icônes qui volent vers les compteurs
+	local gems0, coins0 = played.Gem or 0, played.Coin or 0
+	remotes.Sync.OnClientEvent:Fire({ gems = State.data.gems + 120, gold = State.data.gold + 50000 }, false)
+	settle(40)
+	-- chaque icône arrivée sur son compteur joue son petit son
+	local flying = (played.Gem or 0) - gems0 + (played.Coin or 0) - coins0
+	-- récompense : confettis (comptés à leur lancement : la simulation des tweens est instantanée)
+	local confetti = 0
+	local burst = Fx.Burst
+	Fx.Burst = function(parent, at, count, ...)
+		confetti += count or 18
+		return burst(parent, at, count, ...)
+	end
+	Hud.Popup("Essai", nil, nil, req(Client.UI.Theme).C.gold, "Gift", 1)
+	settle(20)
+	Fx.Burst = burst
+	for _, c in App.overlay:GetChildren() do
+		c:Destroy()
+	end
+	MenuManager.Open("Bag")
+	settle(4)
+	MenuManager.Close()
+	settle(4)
+	Fx.Burst(holder, roblox.UDim2.fromScale(0.5, 0.5), 6)
+	Fx.Sparkle(holder)
+	settle(10)
+	holder:Destroy()
+	settle(4)
+	local need = { "Click", "Hover", "Error", "Open", "Close", "Tab", "Notify", "Reward", "Gem", "Coin", "Summon", "LevelUp" }
+	local missing = {}
+	for _, n in need do
+		if not played[n] then
+			table.insert(missing, n)
+		end
+	end
+	if #missing > 0 then
+		error("sons jamais joués : " .. table.concat(missing, ", "))
+	end
+	if flying == 0 then
+		error("aucune icône ne vole vers les compteurs")
+	end
+	if confetti == 0 then
+		error("pas de confettis dans la fenêtre de récompense")
+	end
+	local kinds = {}
+	for n in played do
+		table.insert(kinds, n)
+	end
+	table.sort(kinds)
+	print(string.format("Interface : %d icônes arrivées sur les compteurs, %d confettis, sons joués : %s", flying, confetti, table.concat(kinds, ", ")))
+end)
+
 step("boutons du HUD", function()
 	for _, b in buttonsIn(App.hud) do
 		b.Activated:Fire()

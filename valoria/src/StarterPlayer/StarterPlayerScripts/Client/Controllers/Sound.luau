@@ -1,26 +1,14 @@
 --!strict
--- Sons de l'interface et du combat, musique d'ambiance par zone. Les identifiants sont regroupés ici :
--- remplacez-les par des sons de la bibliothèque Roblox (Creator Store) pour personnaliser le jeu.
--- Par défaut, des sons intégrés au client Roblox (rbxasset://) ; musiques désactivées (0).
+-- Sons : effets de l'interface et du combat (UI/Sfx, identifiants dans UI/SoundAssets) et musique d'ambiance
+-- par zone. Les réglages « Effets sonores » et « Musique » du joueur sont appliqués ici. Musiques désactivées
+-- par défaut (identifiants « rbxassetid:// » de la bibliothèque audio à renseigner dans MUSIC).
 
 local SoundService = game:GetService("SoundService")
 
 local State = require(script.Parent.Parent.State)
+local Sfx = require(script.Parent.Parent.UI.Sfx)
 
 local SoundController = {}
-
-local SFX: { [string]: { id: string, volume: number, pitch: number? } } = {
-	Click = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.25, pitch = 1.6 },
-	Close = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.2, pitch = 1.1 },
-	Error = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.3, pitch = 0.6 },
-	Notify = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.25, pitch = 1.25 },
-	Reward = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.4, pitch = 1.9 },
-	Fanfare = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.4, pitch = 0.9 },
-	Summon = { id = "rbxasset://sounds/unsheath.wav", volume = 0.5 },
-	Reveal = { id = "rbxasset://sounds/swordlunge.wav", volume = 0.45 },
-	Slash = { id = "rbxasset://sounds/swordslash.wav", volume = 0.25 },
-	Coin = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.15, pitch = 2.2 },
-}
 
 -- Musiques par zone (identifiants « rbxassetid:// » de la bibliothèque audio ; vide = pas de musique).
 local MUSIC: { [string]: string } = {
@@ -32,31 +20,11 @@ local MUSIC: { [string]: string } = {
 	Raid2 = "",
 }
 
-local pool: { [string]: Sound } = {}
 local music: Sound
 
-function SoundController.Play(name: string)
-	if State.Setting("sfx") == false then
-		return
-	end
-	local def = SFX[name]
-	if not def then
-		return
-	end
-	local s = pool[name]
-	if not s then
-		local snd = Instance.new("Sound")
-		snd.Name = name
-		snd.SoundId = def.id
-		snd.Volume = def.volume
-		snd.PlaybackSpeed = def.pitch or 1
-		snd.Parent = SoundService
-		pool[name] = snd
-		s = snd
-	end
-	local snd = s :: Sound
-	snd.PlaybackSpeed = (def.pitch or 1) * (0.96 + math.random() * 0.08)
-	SoundService:PlayLocalSound(snd)
+-- Effet sonore (branché sur Kit.Sound par Main).
+function SoundController.Play(name: string, pitch: number?)
+	Sfx.Play(name, pitch)
 end
 
 local function zoneKind(): string
@@ -91,6 +59,7 @@ function SoundController.Init()
 	State.ZoneChanged:Connect(updateMusic)
 	State.Changed:Connect(function(section: string)
 		if section == "settings" or section == "*" then
+			Sfx.enabled = State.Setting("sfx") ~= false
 			updateMusic()
 		end
 	end)

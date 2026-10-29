@@ -1,6 +1,7 @@
 --!strict
 -- Composants d'interface : création d'instances, boutons dodus à rebord, fenêtres à bannière, pastilles de
--- monnaie, barres de progression, cartes de héros, grilles, onglets, boîtes de confirmation, animations.
+-- monnaie, barres de progression, cartes de héros, grilles, onglets, boîtes de confirmation, animations
+-- (UI/Fx) et sons (Kit.Sound, branché sur UI/Sfx).
 
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,10 +13,11 @@ local Format = require(Shared.Util.Format)
 local Theme = require(script.Parent.Theme)
 local Pixel = require(script.Parent.Pixel)
 local IconAssets = require(script.Parent.IconAssets)
+local Fx = require(script.Parent.Fx)
 
 local Kit = {}
 
-Kit.Sound = function(_name: string) end -- branché par le contrôleur des sons
+Kit.Sound = function(_name: string, _pitch: number?) end -- branché par le contrôleur des sons (UI/Sfx)
 
 ------------------------------------------------------------------ bases
 
@@ -185,7 +187,8 @@ export type ButtonOpts = {
 	pixel: boolean?,
 	z: number?,
 	iconSize: number?,
-	sound: string?,
+	sound: string?, -- son du clic (UI/Sfx ; « Click » par défaut)
+	shine: boolean?, -- reflet qui balaie le bouton (action à ne pas manquer)
 }
 
 local function paint(b: Button, color: Color3)
@@ -250,9 +253,13 @@ function Kit.Button(parent: Instance, opts: ButtonOpts): Button
 	local content = Kit.new("Frame", { Name = "Content", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = z + 2, Parent = face })
 	Kit.ListLayout(content, 6, true, Enum.HorizontalAlignment.Center)
 	local h = (opts.size and opts.size.Y.Offset) or 48
+	local iconImg: ImageLabel? = nil
 	if opts.icon then
 		local isz = opts.iconSize or math.clamp(h - 18, 16, 40)
-		Kit.Icon(content, opts.icon, isz, { z = z + 2, order = 1 })
+		iconImg = Kit.Icon(content, opts.icon, isz, { z = z + 2, order = 1 })
+	end
+	if opts.shine then
+		Fx.Shine(face, 2.2, 12)
 	end
 	local label: TextLabel? = nil
 	if opts.text then
@@ -288,6 +295,12 @@ function Kit.Button(parent: Instance, opts: ButtonOpts): Button
 	paint(b, color)
 	face.MouseEnter:Connect(function()
 		Kit.Tween(scale, 0.12, { Scale = 1.05 })
+		if b.enabled then
+			Kit.Sound("Hover")
+			if iconImg then
+				Fx.Wiggle(iconImg, 9)
+			end
+		end
 	end)
 	face.MouseLeave:Connect(function()
 		Kit.Tween(scale, 0.12, { Scale = 1 })
@@ -303,6 +316,7 @@ function Kit.Button(parent: Instance, opts: ButtonOpts): Button
 		face.Position = UDim2.new()
 		if not b.enabled then
 			Kit.Sound("Error")
+			Fx.Shake(root)
 			return
 		end
 		Kit.Sound(opts.sound or "Click")
@@ -334,6 +348,7 @@ function Kit.SideButton(parent: Instance, icon: string, label: string, color: Co
 	Kit.Corner(dot, 10)
 	Kit.Stroke(dot, 2.5)
 	Kit.Text(dot, "!", { size = 14, z = 6 })
+	Fx.Pulse(dot, 0.2, 1.1) -- bat tant qu'elle est visible
 	return holder, dot
 end
 
@@ -434,7 +449,7 @@ function Kit.Window(parent: Instance, opts: { title: string, icon: string?, colo
 		anchor = Vector2.new(1, 0),
 		iconSize = 30,
 		z = 20,
-		sound = "Close",
+		sound = "Aucun", -- le son de fermeture est joué par MenuManager.Close / Kit.Confirm
 		onClick = function()
 			if win.onClose then
 				win.onClose()
@@ -459,6 +474,14 @@ function Kit.OpenAnim(win: Window)
 	win.root.Position = UDim2.fromScale(0.5, 0.56)
 	Kit.Tween(win.scale, 0.32, { Scale = 1 }, Enum.EasingStyle.Back)
 	Kit.Tween(win.root, 0.25, { Position = UDim2.fromScale(0.5, 0.52) })
+	-- l'icône de la bannière frétille, le contenu apparaît en cascade
+	local icon = win.header:FindFirstChild("Icon") :: GuiObject?
+	if icon then
+		task.delay(0.15, function()
+			Fx.Wiggle(icon, 14)
+		end)
+	end
+	Fx.Stagger(win.body)
 end
 
 -- Panneau intérieur (encadré parchemin plus foncé).
@@ -767,6 +790,7 @@ function Kit.HeroCard(parent: Instance, heroId: string, opts: CardOpts?): TextBu
 	local scale = Kit.new("UIScale", { Parent = card })
 	card.MouseEnter:Connect(function()
 		Kit.Tween(scale, 0.1, { Scale = 1.06 })
+		Kit.Sound("Hover")
 	end)
 	card.MouseLeave:Connect(function()
 		Kit.Tween(scale, 0.1, { Scale = 1 })
@@ -823,6 +847,7 @@ function Kit.Tabs(parent: Instance, items: { { key: string, text: string, icon: 
 			size = UDim2.fromOffset(math.max(110, #it.text * 11 + (if it.icon then 50 else 24)), 40),
 			order = i,
 			textSize = 18,
+			sound = "Tab",
 			onClick = function()
 				tabs:Select(it.key)
 			end,
@@ -832,9 +857,15 @@ function Kit.Tabs(parent: Instance, items: { { key: string, text: string, icon: 
 		root = root,
 		current = "",
 		Select = function(self: Tabs, key: string)
+			local changed = self.current ~= "" and self.current ~= key
 			self.current = key
 			for k, b in buttons do
 				b:SetColor(if k == key then color else Theme.C.gray)
+			end
+			local sel = buttons[key]
+			local icon = sel and sel.face:FindFirstChild("Icon", true) :: GuiObject?
+			if changed and icon then
+				Fx.Wiggle(icon, 14)
 			end
 			onSelect(key)
 		end,
@@ -864,7 +895,9 @@ function Kit.Confirm(gui: Instance, title: string, text: string, yes: string, on
 	end
 	win.root.ZIndex += 40
 	Kit.OpenAnim(win)
+	Kit.Sound("Open")
 	local function close()
+		Kit.Sound("Close")
 		shade:Destroy()
 	end
 	win.onClose = close

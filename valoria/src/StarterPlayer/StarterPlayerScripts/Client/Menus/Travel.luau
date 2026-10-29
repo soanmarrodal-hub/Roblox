@@ -294,6 +294,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 				button(Format.Short(cost), "Gem", C.purple, 1, d.gems >= cost, function()
 					local ok = Remote.Call("BuyPerk", "QuickTravel")
 					if ok then
+						Kit.Sound("Purchase")
 						Remote.notify("Voyage express débloqué !", "success")
 						State.RefreshPasses()
 					end
@@ -319,6 +320,7 @@ local function build(ctx: MenuManager.Ctx): MenuManager.View
 				button("Débloquer", "Lock", C.gold, 1, ok, function()
 					local done = Remote.Call("UnlockWorld", w.id)
 					if done then
+						Kit.Sound("Unlock")
 						Remote.notify(w.name .. " est désormais accessible !", "success")
 					end
 				end)

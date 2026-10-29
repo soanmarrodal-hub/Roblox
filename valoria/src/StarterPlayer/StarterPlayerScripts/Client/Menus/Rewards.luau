@@ -179,7 +179,7 @@ local function index(ctx: MenuManager.Ctx): MenuManager.View
 		if reward then
 			RewardView.Row(head, RewardView.Entries(reward), { light = false, size = 26, sizeUD = UDim2.new(0.3, 0, 0, 30), pos = UDim2.new(0.42, 0, 0, 14), z = 12 })
 			local claimedW = d.indexClaimed[tostring(world)] == true
-			local b = Kit.Button(head, { text = if claimedW then "Réclamée" else "Réclamer", color = C.green, size = UDim2.fromOffset(170, 50), pos = UDim2.new(1, 0, 0, 4), anchor = Vector2.new(1, 0), textSize = 18, onClick = function()
+			local b = Kit.Button(head, { text = if claimedW then "Réclamée" else "Réclamer", color = C.green, size = UDim2.fromOffset(170, 50), pos = UDim2.new(1, 0, 0, 4), anchor = Vector2.new(1, 0), textSize = 18, shine = found >= total and not claimedW, onClick = function()
 				local ok, res = Remote.Call("IndexClaim", world)
 				if ok then
 					Hud.Popup("Collection complète !", nil, RewardView.FromGains(res.gains), C.red, "Book", 3)

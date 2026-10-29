@@ -92,7 +92,7 @@ local function settings(ctx: MenuManager.Ctx): MenuManager.View
 			local row = Kit.Panel(list, { LayoutOrder = i })
 			Kit.Icon(row, s.icon, 40, { pos = UDim2.fromOffset(10, 11), z = 12 })
 			Kit.Text(row, s.name, { light = false, size = 18, sizeUD = UDim2.new(1, -170, 1, 0), pos = UDim2.fromOffset(58, 0), alignX = Enum.TextXAlignment.Left, z = 12 })
-			Kit.Button(row, { text = if on then "OUI" else "NON", pixel = true, color = if on then C.green else C.red, size = UDim2.fromOffset(96, 46), pos = UDim2.new(1, -10, 0.5, 0), anchor = Vector2.new(1, 0.5), z = 12, onClick = function()
+			Kit.Button(row, { text = if on then "OUI" else "NON", pixel = true, color = if on then C.green else C.red, size = UDim2.fromOffset(96, 46), pos = UDim2.new(1, -10, 0.5, 0), anchor = Vector2.new(1, 0.5), z = 12, sound = "Toggle", onClick = function()
 				Remote.Call("Settings", s.key, not on)
 			end })
 		end

@@ -194,6 +194,19 @@ Quêtes en chaîne par monde, 3 quêtes du jour, coffre de connexion (7 jours, b
 (`VALORIA`, `CHEVALIER`, `DRAGON`, `LANTERNE`), potions (force, or, chance, savoir), marché en gemmes, produits et
 passes Robux (Or ×2, Chance royale, Escouade royale, Invocation éclair, Grandes écuries, VIP).
 
+### Animations et sons de l'interface
+
+L'interface est animée et sonorisée dans l'esprit de Pet Simulator 99 (`UI/Fx.luau`, `UI/Sfx.luau`) : boutons
+qui gonflent au survol (petit son, icône qui frétille), s'enfoncent au clic et secouent la tête quand l'action est
+impossible ; reflet qui balaie les boutons « Réclamer » prêts ; pastilles « ! » qui battent ; fenêtres qui
+s'ouvrent en rebondissant (contenu en cascade, icône de la bannière qui frétille) ; onglets ; pièces, gemmes et
+runes gagnées qui volent jusqu'à leur compteur ; fenêtres de récompense avec rayons, confettis pixel et icône
+flottante ; invocations avec confettis aux couleurs de la rareté et étincelles autour des nouveaux héros.
+Sons 8 bits générés (`tools/audio/sfx.py`, 24 effets : clic, survol, ouverture, fermeture, onglet, erreur,
+notification, succès, pièce, gemme, rune, récompense, fanfare, rang supérieur, achat, déblocage, invocation,
+révélation, équipement, relâche…), à téléverser puis renseigner dans `UI/SoundAssets.luau` ; en attendant, des
+sons intégrés au client Roblox les remplacent.
+
 ## Galerie
 
 Vues en perspective rendues hors de Roblox à partir des pièces et du terrain réellement construits par le serveur
@@ -242,8 +255,12 @@ pas dessinée.
 - **Passes et produits** : renseigner les identifiants Roblox dans `src/ReplicatedStorage/Shared/Config/Shop.luau`
   (champ `id`, 0 = non configuré : le bouton affiche un message).
 - **Musiques** : identifiants par zone dans `src/StarterPlayer/StarterPlayerScripts/Client/Controllers/Sound.luau`
-  (vides par défaut) ; les effets sonores utilisent des sons intégrés au client et peuvent être remplacés au même
-  endroit.
+  (vides par défaut).
+- **Effets sonores** : téléverser `assets/sfx/*.ogg` (Creator Hub > Audio, ou import groupé du Gestionnaire de
+  ressources de Studio) et renseigner les identifiants dans `src/StarterPlayer/StarterPlayerScripts/Client/UI/SoundAssets.luau` ;
+  sans cela, des sons intégrés au client Roblox les remplacent. Écouter : `assets/sfx/apercu.mp3`.
+- **Icônes** (facultatif) : téléverser `tools/ui/png/*.png` et renseigner `UI/IconAssets.luau` pour ne pas dépendre
+  des EditableImage.
 - **Équilibrage** : tout est dans `src/ReplicatedStorage/Shared/Config/` (héros, ennemis, mondes, bannières,
   améliorations, bénédictions, accessoires, tour, raids, quêtes, récompenses, boutique, stations).
 
@@ -264,7 +281,7 @@ src/
     World/         relief, terrain, kit de sol, bâtiments, décors, village, mondes, arènes
   StarterPlayer/StarterPlayerScripts/Client/
     Main.client    démarrage du client
-    UI/            thème, composants, pixel art, HUD, gestionnaire de menus
+    UI/            thème, composants, animations (Fx), effets sonores (Sfx), pixel art, HUD, gestionnaire de menus
     Menus/         héros, invocation, forge, bijoutier, voyage, tour et raids, quêtes, récompenses, boutique…
     Controllers/   héros, ennemis, effets, stations, autels, ambiance, décor animé, PNJ, sons, détails au sol,
                    plaques des joueurs (titre, rang)
@@ -272,10 +289,12 @@ src/
 tools/
   voxel/           modélisation voxel (Python) : héros, ennemis, décors, portraits, aperçus, plans, vues 3D
   ui/icons.py      icônes pixel art 16×16 de l'interface
+  audio/sfx.py     effets sonores 8 bits de l'interface (synthèse, export .ogg)
   preview/         aperçus Lune (animations, reliefs, export du terrain, des détails au sol, vitrine des bâtiments)
   tests/           tests unitaires et bancs d'essai
   kit/             kit de sol : export .rbxmx et OBJ, aperçus, assembleur pour Studio
 kit/               livrables du kit de sol (.rbxmx, OBJ, aperçus, documentation)
+assets/sfx/        effets sonores 8 bits générés (.ogg à téléverser, apercu.mp3)
 ```
 
 Le serveur fait autorité : les ennemis n'existent que sous forme de données côté serveur et sont dessinés par les
@@ -311,6 +330,7 @@ matériaux, `tools/voxel/scene_render.py` ; terrain exporté par `tools/preview/
 ```bash
 python3 tools/voxel/build.py         # modèles voxel, portraits, planches docs/images/*.png
 python3 tools/ui/icons.py            # icônes de l'interface (IconData, tools/ui/png/*.png, docs/images/icons.png)
+python3 tools/audio/sfx.py           # effets sonores 8 bits (assets/sfx/*.ogg, assets/sfx/apercu.mp3 ; ffmpeg)
 lune run tools/kit/export_kit.luau kit && python3 tools/kit/export_obj.py kit && python3 tools/kit/kit_views.py kit
                                      # kit de sol : .rbxmx, OBJ, aperçus (voir kit/README.md)
 ```

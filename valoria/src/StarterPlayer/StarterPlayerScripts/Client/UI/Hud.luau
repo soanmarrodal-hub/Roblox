@@ -24,6 +24,7 @@ local Theme = require(script.Parent.Theme)
 local Kit = require(script.Parent.Kit)
 local App = require(script.Parent.App)
 local RewardView = require(script.Parent.RewardView)
+local Fx = require(script.Parent.Fx)
 local MenuManager = require(script.Parent.MenuManager)
 local State = require(script.Parent.Parent.State)
 local Remote = require(script.Parent.Parent.Remote)
@@ -96,7 +97,7 @@ function Hud.Toast(text: string, kind: string?)
 	Kit.Padding(t, 12, 6)
 	Kit.Text(t, text, { size = 20, wrap = true, sizeUD = UDim2.new(1, 0, 0, 32), auto = Enum.AutomaticSize.Y })
 	Kit.Pop(t, 0.12)
-	Kit.Sound(if kind == "error" then "Error" else "Notify")
+	Kit.Sound(if kind == "error" then "Error" elseif kind == "success" then "Success" else "Notify")
 	local list = {}
 	for _, c in toastList:GetChildren() do
 		if c:IsA("Frame") then
@@ -152,7 +153,8 @@ function Hud.Announce(text: string, color: Color3?)
 end
 
 -- Fenêtre centrale de récompense (montée de rang, étage franchi, raid…).
-function Hud.Popup(title: string, subtitle: string?, entries: { RewardView.Entry }?, color: Color3?, icon: string?, duration: number?)
+-- Fenêtre de récompense (rayons, confettis, icône qui flotte) ; `sound` : son joué (« Reward » par défaut).
+function Hud.Popup(title: string, subtitle: string?, entries: { RewardView.Entry }?, color: Color3?, icon: string?, duration: number?, sound: string?)
 	local c = color or C.gold
 	local shade = Kit.new("TextButton", {
 		Name = "Popup",
@@ -193,7 +195,13 @@ function Hud.Popup(title: string, subtitle: string?, entries: { RewardView.Entry
 	local head = Kit.new("Frame", { BackgroundColor3 = c, Size = UDim2.new(1, 0, 0, 70), Parent = card })
 	Kit.Corner(head, 18)
 	Kit.Gradient(head, Theme.Light(c, 0.3), Theme.Dark(c, 0.1))
-	Kit.Icon(card, icon or "Star", 72, { pos = UDim2.new(0.5, 0, 0, -40), anchor = Vector2.new(0.5, 0), z = 3 })
+	local big = Kit.Icon(card, icon or "Star", 72, { pos = UDim2.new(0.5, 0, 0, -40), anchor = Vector2.new(0.5, 0), z = 3 })
+	Fx.Float(big, 5, 1.4)
+	task.delay(0.15, function()
+		if card.Parent then
+			Fx.Burst(card, UDim2.new(0.5, 0, 0, 10), 26, { c, Theme.Light(c, 0.5), C.gold, Theme.White }, 170)
+		end
+	end)
 	Kit.Text(head, title, { size = 34, strokeTh = 3, sizeUD = UDim2.new(1, 0, 1, 0), pos = UDim2.fromOffset(0, 12) })
 	if subtitle then
 		Kit.Text(card, subtitle, { light = false, size = 21, wrap = true, sizeUD = UDim2.new(1, -30, 0, 60), pos = UDim2.fromOffset(15, 82) })
@@ -201,7 +209,7 @@ function Hud.Popup(title: string, subtitle: string?, entries: { RewardView.Entry
 	if entries and #entries > 0 then
 		RewardView.Row(card, entries, { size = 34, sizeUD = UDim2.new(1, 0, 0, 40), pos = UDim2.new(0, 0, 1, -56), align = Enum.HorizontalAlignment.Center, z = 2 })
 	end
-	Kit.Sound("Reward")
+	Kit.Sound(sound or "Reward")
 	local closed = false
 	local function close()
 		if closed then
@@ -239,6 +247,7 @@ local function buildTop()
 	Kit.Corner(dot, 10)
 	Kit.Stroke(dot, 2.5)
 	Kit.Text(dot, "!", { size = 14, z = 7 })
+	Fx.Pulse(dot, 0.2, 1.1)
 	badges.Rank = dot
 	-- monnaies (en haut à droite)
 	local col = Kit.new("Frame", { Name = "Currencies", BackgroundTransparency = 1, Size = UDim2.fromOffset(200, 160), Position = UDim2.new(1, -16, 0, 12), AnchorPoint = Vector2.new(1, 0), Parent = App.hud })
@@ -290,6 +299,7 @@ local function buildBottom()
 		text = "AUTO",
 		icon = "Sword",
 		pixel = true,
+		sound = "Toggle",
 		color = C.green,
 		size = UDim2.fromOffset(112, 60),
 		pos = UDim2.new(1, 0, 0.5, 0),
@@ -404,11 +414,39 @@ end
 
 ------------------------------------------------------------------ rafraîchissements
 
+-- Gains : quelques icônes s'envolent du centre de l'écran vers le compteur, chacune avec son petit son
+-- (les pièces d'or, très fréquentes en combat, au plus une volée toutes les 0,7 s).
+local lastGoldFly = 0
+local function flyGain(icon: string, pill: Kit.Pill, n: number, sound: string)
+	local layer = App.overlay
+	local from = layer.AbsolutePosition + layer.AbsoluteSize / 2
+	Fx.FlyIcons(layer, App.scale, from, pill.root, n, function(parent: Instance): GuiObject
+		return Kit.Icon(parent, icon, 34)
+	end, function(i: number)
+		Kit.Sound(sound, 1 + (i - 1) * 0.07)
+		Kit.Pop(pill.root, 0.05)
+	end)
+end
+
 local function refreshCurrencies(animate: boolean)
 	local d = State.data
+	local runes = d.items.Rune or 0
+	if animate then
+		if d.gems > pills.gems.current then
+			flyGain("Gem", pills.gems, math.clamp(math.ceil((d.gems - pills.gems.current) / 20), 2, 6), "Gem")
+		end
+		if runes > pills.runes.current then
+			flyGain("Rune", pills.runes, math.clamp(runes - pills.runes.current, 1, 4), "Rune")
+		end
+		local gain = d.gold - pills.gold.current
+		if gain > 0 and os.clock() - lastGoldFly > 0.7 then
+			lastGoldFly = os.clock()
+			flyGain("Coin", pills.gold, if gain >= math.max(1000, pills.gold.current * 0.1) then 6 else 3, "Coin")
+		end
+	end
 	pills.gold:Set(d.gold, animate)
 	pills.gems:Set(d.gems, animate)
-	pills.runes:Set(d.items.Rune or 0, animate)
+	pills.runes:Set(runes, animate)
 end
 
 local function refreshRank()
@@ -705,9 +743,9 @@ local function onRunState(msg: any)
 			if msg.accessory then
 				sub = string.format("Accessoire obtenu : %s (%s)", msg.accessory.name or msg.accessory.type, msg.accessory.rarity)
 			end
-			Hud.Popup("Victoire !", sub, entries, C.green, "Trophy", 6)
+			Hud.Popup("Victoire !", sub, entries, C.green, "Trophy", 6, "Fanfare")
 		elseif msg.phase == "defeat" then
-			Hud.Popup("Défaite…", "Le temps est écoulé. Renforce ton équipe et réessaie !", nil, C.red, "Skull", 4)
+			Hud.Popup("Défaite…", "Le temps est écoulé. Renforce ton équipe et réessaie !", nil, C.red, "Skull", 4, "Error")
 		end
 		if msg.phase == "victory" or msg.phase == "defeat" then
 			task.delay(4, function()
@@ -841,7 +879,7 @@ function Hud.Init()
 	end)
 	Remote.On("LevelUp", function(kind: string, info: any)
 		if kind == "rank" then
-			Hud.Popup(string.format("Rang %d !", info.rank), "Te voilà " .. info.title .. " !", { { icon = "Gem", text = "+" .. (info.gems or 0) } }, C.gold, "Crown", 3.5)
+			Hud.Popup(string.format("Rang %d !", info.rank), "Te voilà " .. info.title .. " !", { { icon = "Gem", text = "+" .. (info.gems or 0) } }, C.gold, "Crown", 3.5, "LevelUp")
 		elseif kind == "hero" then
 			for _, h in info do
 				local def = Heroes.Get(h.id)

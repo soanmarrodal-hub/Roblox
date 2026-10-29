@@ -29,7 +29,7 @@ local function questRow(parent: Instance, q: Quests.Quest, progress: number, cla
 	local bar = Kit.Bar(row, { size = UDim2.new(1, -260, 0, 20), pos = UDim2.fromOffset(66, 62), color = if done then C.green else C.gold, textSize = 12, z = 12 })
 	bar:Set(cur / math.max(1, max), string.format("%s / %s", Format.Short(cur), Format.Short(max)))
 	RewardView.Row(row, RewardView.Entries(q.reward), { light = false, size = 24, sizeUD = UDim2.fromOffset(170, 28), pos = UDim2.new(1, -184, 0, 8), z = 12 })
-	local b = Kit.Button(row, { text = if claimed then "Réclamée" else "Réclamer", color = if done and not claimed then C.green else C.gray, size = UDim2.fromOffset(170, 46), pos = UDim2.new(1, -12, 1, -8), anchor = Vector2.new(1, 1), textSize = 18, z = 12, onClick = onClaim })
+	local b = Kit.Button(row, { text = if claimed then "Réclamée" else "Réclamer", color = if done and not claimed then C.green else C.gray, size = UDim2.fromOffset(170, 46), pos = UDim2.new(1, -12, 1, -8), anchor = Vector2.new(1, 1), textSize = 18, z = 12, shine = done and not claimed, onClick = onClaim })
 	b:SetEnabled(done and not claimed)
 	return row
 end
