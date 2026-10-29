@@ -288,6 +288,50 @@ end)
 step("App.Init", function()
 	App.Init()
 end)
+-- icônes en relief : chaque icône se décode en IconSize² pixels RVBA, avec du transparent et de l'opaque
+step("icônes en relief", function()
+	local Pixel = req(Client.UI.Pixel)
+	local IconData = req(Client.UI.IconData)
+	local n = 0
+	for name in IconData.icons do
+		local px = Pixel.IconPixels(name)
+		local size = Pixel.IconSize
+		if not px or buffer.len(px) ~= size * size * 4 then
+			error("icône mal décodée : " .. name)
+		end
+		local opaque, clear = 0, 0
+		for i = 3, buffer.len(px) - 1, 4 do
+			local a = buffer.readu8(px, i)
+			if a > 200 then
+				opaque += 1
+			elseif a == 0 then
+				clear += 1
+			end
+		end
+		if opaque < size * size * 0.08 or clear < size * size * 0.1 then
+			error(string.format("icône %s : %d pixels opaques, %d transparents", name, opaque, clear))
+		end
+		n += 1
+	end
+	if n < 50 or Pixel.IconPixels("Inconnue") ~= nil then
+		error("icônes : " .. n)
+	end
+	-- image téléversée prioritaire, sinon repli (pas d'EditableImage ici) : texte court
+	local IconAssets = req(Client.UI.IconAssets)
+	IconAssets.Coin = "rbxassetid://1"
+	local holder = InstanceMock.new("Frame")
+	local img = Kit.Icon(holder, "Coin", 32)
+	IconAssets.Coin = nil
+	if img.Image ~= "rbxassetid://1" then
+		error("identifiant d'image ignoré")
+	end
+	local fallback = Kit.Icon(holder, "Gem", 32)
+	if not fallback:FindFirstChildWhichIsA("TextLabel") then
+		error("pas de repli texte sans EditableImage")
+	end
+	print(string.format("Interface : %d icônes en relief décodées (%d×%d)", n, Pixel.IconSize, Pixel.IconSize))
+end)
+
 step("Hud.Init", function()
 	Hud.Init()
 end)

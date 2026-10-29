@@ -18,7 +18,7 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local INK = Color3.fromRGB(42, 28, 38)
 local fredoka = Font.new("rbxasset://fonts/families/FredokaOne.json")
-local arcade = Font.fromEnum(Enum.Font.Arcade)
+local labelFont = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.ExtraBold)
 
 local bg = Instance.new("Frame")
 bg.Size = UDim2.fromScale(1, 1)
@@ -80,7 +80,7 @@ local tg = Instance.new("UIGradient")
 tg.Color = ColorSequence.new(Color3.fromRGB(255, 240, 160), Color3.fromRGB(240, 150, 40))
 tg.Rotation = 90
 tg.Parent = title
-label("CHAMPIONS", arcade, 40, 0.42, Color3.fromRGB(150, 220, 255))
+label("CHAMPIONS", labelFont, 40, 0.42, Color3.fromRGB(150, 220, 255))
 local status = label("Le village s'éveille…", fredoka, 22, 0.62, Color3.new(1, 1, 1))
 
 -- barre en blocs

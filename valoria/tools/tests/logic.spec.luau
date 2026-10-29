@@ -360,3 +360,11 @@ test("Titres : avancement, déblocage, titre affiché ; puissance d'équipe", fu
 	eq(Stats.TeamPower(d, ctx), Stats.Power(d.heroes.a, ctx) + Stats.Power(d.heroes.b, ctx))
 	check(Stats.TeamPower(d, ctx) > 0, "puissance positive")
 end)
+
+test("Base64 : décodage (modèles, portraits, icônes)", function()
+	local Base64 = require(Shared.Util.Base64)
+	eq(buffer.tostring(Base64.Decode("TWFu")), "Man")
+	eq(buffer.tostring(Base64.Decode("TWE=")), "Ma")
+	eq(buffer.tostring(Base64.Decode("TQ==")), "M")
+	eq(buffer.len(Base64.Decode("")), 0)
+end)

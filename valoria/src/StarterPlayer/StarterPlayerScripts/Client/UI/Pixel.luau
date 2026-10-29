@@ -1,14 +1,15 @@
 --!strict
--- Images pixel art générées à l'exécution (EditableImage) : icônes 16×16, portraits 40×40 des héros et
--- motifs de fond. Toujours affichées en rééchantillonnage « Pixelated » pour garder des pixels nets.
--- Si les EditableImage sont indisponibles, les fonctions renvoient nil et l'interface se replie sur du texte.
+-- Images générées à l'exécution (EditableImage) : icônes en relief 64×64 (tools/ui/icons3d.py, affichées
+-- lissées), portraits pixel 40×40 des héros et motifs de fond (affichés en « Pixelated », pixels nets).
+-- Si les EditableImage sont indisponibles, les fonctions renvoient nil : l'interface utilise alors les images
+-- téléversées (UI/IconAssets) ou se replie sur du texte.
 
 local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Builder = require(ReplicatedStorage.Shared.Voxel.Builder)
+local Base64 = require(ReplicatedStorage.Shared.Util.Base64)
 local Portraits = require(ReplicatedStorage.Shared.Voxel.Portraits) :: { [string]: { w: number, h: number, pal: string, data: string } }
-local IconData = require(script.Parent.IconData) :: { [string]: { pal: string, px: string } }
+local IconData = require(script.Parent.IconData) :: { size: number, icons: { [string]: { pal: string, data: string } } }
 
 local Pixel = {}
 
@@ -63,30 +64,53 @@ local function cached(key: string, build: () -> EditableImage?): EditableImage?
 	return img
 end
 
+Pixel.IconSize = IconData.size
+
 function Pixel.HasIcon(name: string): boolean
-	return IconData[name] ~= nil
+	return IconData.icons[name] ~= nil
 end
 
--- Icône 16×16 ; `tint` remplace toutes les couleurs sauf le contour (icônes monochromes).
-function Pixel.Icon(name: string): EditableImage?
-	local d = IconData[name]
+-- Pixels RVBA (IconSize × IconSize) d'une icône en relief : palette RVBA et paires (nombre, index) ; nil si
+-- l'icône n'existe pas. Indépendant des EditableImage (testable hors de Roblox).
+function Pixel.IconPixels(name: string): buffer?
+	local d = IconData.icons[name]
 	if not d then
 		return nil
 	end
-	return cached("i:" .. name, function()
-		local pal = hexBytes(d.pal)
-		return make(16, 16, function(buf)
-			for i = 1, 256 do
-				local v = tonumber(string.sub(d.px, i, i), 36) or 0
-				local o = (i - 1) * 4
-				if v > 0 then
-					local c = pal[v]
-					buffer.writeu8(buf, o, c[1])
-					buffer.writeu8(buf, o + 1, c[2])
-					buffer.writeu8(buf, o + 2, c[3])
-					buffer.writeu8(buf, o + 3, 255)
+	local size = IconData.size
+	local pal = Base64.Decode(d.pal)
+	local raw = Base64.Decode(d.data)
+	local total = size * size * 4
+	local out = buffer.create(total)
+	local o = 0
+	for i = 0, buffer.len(raw) - 2, 2 do
+		local n = buffer.readu8(raw, i)
+		local v = buffer.readu8(raw, i + 1)
+		if v > 0 then
+			local rgba = buffer.readu32(pal, (v - 1) * 4)
+			for _ = 1, n do
+				if o >= total then
+					break
 				end
+				buffer.writeu32(out, o, rgba)
+				o += 4
 			end
+		else
+			o += n * 4
+		end
+	end
+	return out
+end
+
+-- Icône en relief (EditableImage) ; nil si inconnue ou si les EditableImage sont indisponibles.
+function Pixel.Icon(name: string): EditableImage?
+	if not IconData.icons[name] then
+		return nil
+	end
+	return cached("i:" .. name, function()
+		local px = Pixel.IconPixels(name) :: buffer
+		return make(IconData.size, IconData.size, function(buf)
+			buffer.copy(buf, 0, px, 0)
 		end)
 	end)
 end
@@ -100,7 +124,7 @@ function Pixel.Portrait(name: string, silhouette: boolean?, grey: boolean?): Edi
 	end
 	return cached((if silhouette then "s:" elseif grey then "g:" else "p:") .. name, function()
 		local pal = hexBytes(p.pal)
-		local raw = Builder.Base64(p.data)
+		local raw = Base64.Decode(p.data)
 		return make(p.w, p.h, function(buf)
 			local o = 0
 			local total = p.w * p.h
@@ -182,8 +206,9 @@ function Pixel.Parchment(): EditableImage?
 	end)
 end
 
--- Affiche une image générée dans un ImageLabel / ImageButton ; renvoie false si indisponible.
-function Pixel.Apply(label: ImageLabel | ImageButton, img: EditableImage?): boolean
+-- Affiche une image générée dans un ImageLabel / ImageButton ; renvoie false si indisponible. `smooth` :
+-- rééchantillonnage lissé (icônes en relief) au lieu de pixels nets (portraits, motifs).
+function Pixel.Apply(label: ImageLabel | ImageButton, img: EditableImage?, smooth: boolean?): boolean
 	if not img then
 		return false
 	end
@@ -191,7 +216,7 @@ function Pixel.Apply(label: ImageLabel | ImageButton, img: EditableImage?): bool
 		(label :: any).ImageContent = Content.fromObject(img)
 	end)
 	local l: any = label
-	l.ResampleMode = Enum.ResamplerMode.Pixelated
+	l.ResampleMode = if smooth then Enum.ResamplerMode.Default else Enum.ResamplerMode.Pixelated
 	return ok
 end
 

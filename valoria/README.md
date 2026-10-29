@@ -4,7 +4,8 @@ Jeu Roblox d'aventure chevaleresque et fantastique dans l'esprit d'**Anime Champ
 héros (chevaliers, bêtes, mages, démons, dragons…), ils te suivent et combattent pour toi, tu les fais progresser et
 tu pars à l'assaut de mondes de plus en plus difficiles, de la **Tour des Épreuves** et de **raids** à accessoires.
 L'interface reprend l'esprit de **Pet Simulator 99** (gros boutons dodus, cercles lumineux devant les marchands,
-cartes colorées par rareté) avec une touche pixel : icônes et portraits en pixel art, police « arcade », damiers.
+cartes colorées par rareté) : **icônes en relief** (pixel art mis en volume, brillant), portraits pixel, textes en
+Fredoka One et Builder Sans (lisibles même en petit), damiers.
 Les héros et les monstres sont en **voxels « petit pixel »**, animés de façon procédurale.
 
 Tout le jeu est en français.
@@ -24,7 +25,8 @@ Tout le jeu est en français.
    - **Activer l'accès de Studio aux services d'API** (sauvegardes DataStore ; sans cela, la progression reste en
      mémoire pendant la session de test) ;
    - autoriser les **API d'images modifiables (EditableImage)** si l'option est proposée : les icônes et portraits
-     pixel art sont dessinés à l'exécution. Sans elles, le jeu fonctionne avec des étiquettes de repli.
+     sont dessinés à l'exécution. Sans elles, le jeu affiche les icônes téléversées (`UI/IconAssets.luau`, à
+     partir de `tools/ui/png/*.png`) ou, à défaut, des étiquettes de repli.
 4. **Jouer**. Le serveur génère le village, les deux mondes et les arènes au démarrage (quelques secondes ; un écran
    de chargement patiente), puis « cuit » les modèles voxel en unions en tâche de fond.
 
@@ -270,7 +272,8 @@ src/
   ReplicatedFirst/ écran de chargement
 tools/
   voxel/           modélisation voxel (Python) : héros, ennemis, décors, portraits, aperçus, plans, vues 3D
-  ui/icons.py      icônes pixel art 16×16 de l'interface
+  ui/icons.py      dessins pixel art 16×16 des icônes de l'interface
+  ui/icons3d.py    icônes en relief (128 px en PNG à téléverser, 64 px embarquées)
   preview/         aperçus Lune (animations, reliefs, export du terrain, des détails au sol, vitrine des bâtiments)
   tests/           tests unitaires et bancs d'essai
   kit/             kit de sol : export .rbxmx et OBJ, aperçus, assembleur pour Studio
@@ -309,7 +312,7 @@ matériaux, `tools/voxel/scene_render.py` ; terrain exporté par `tools/preview/
 
 ```bash
 python3 tools/voxel/build.py         # modèles voxel, portraits, planches docs/images/*.png
-python3 tools/ui/icons.py            # icônes de l'interface + docs/images/icons.png
+python3 tools/ui/icons.py            # icônes en relief (IconData, tools/ui/png/*.png, docs/images/icons*.png)
 lune run tools/kit/export_kit.luau kit && python3 tools/kit/export_obj.py kit && python3 tools/kit/kit_views.py kit
                                      # kit de sol : .rbxmx, OBJ, aperçus (voir kit/README.md)
 ```

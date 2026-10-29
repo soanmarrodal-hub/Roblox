@@ -103,7 +103,7 @@ function Kit.Sign(parent: BasePart, title: string, subtitle: string?, color: Col
 		s.BackgroundTransparency = 1
 		s.Position = UDim2.new(0, 0, 0.6, 0)
 		s.Size = UDim2.new(1, 0, 0.4, 0)
-		s.Font = Enum.Font.Arcade
+		s.FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)
 		s.TextScaled = true
 		s.Text = subtitle
 		s.TextColor3 = color or Color3.fromRGB(255, 220, 140)

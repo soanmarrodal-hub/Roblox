@@ -1152,8 +1152,8 @@ local function boardGui(panel: BasePart, title: string): SurfaceGui
 	list.BackgroundTransparency = 1
 	list.Position = UDim2.new(0.06, 0, 0.18, 0)
 	list.Size = UDim2.new(0.88, 0, 0.8, 0)
-	list.Font = Enum.Font.Arcade
-	list.TextSize = 26
+	list.FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold) -- lisible de loin
+	list.TextSize = 28
 	list.TextXAlignment = Enum.TextXAlignment.Left
 	list.TextYAlignment = Enum.TextYAlignment.Top
 	list.TextColor3 = Color3.fromRGB(240, 232, 214)
@@ -1399,7 +1399,7 @@ function Buildings.Signpost(parent: Instance, cf: CFrame, arrows: { { text: stri
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency = 1
 		t.Size = UDim2.fromScale(1, 1)
-		t.Font = Enum.Font.Arcade
+		t.FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)
 		t.TextScaled = true
 		t.TextColor3 = Color3.fromRGB(60, 36, 20)
 		t.Text = a.text

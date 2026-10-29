@@ -1,12 +1,15 @@
 --!strict
 -- Charte de l'interface : l'esprit Pet Simulator 99 (boutons dodus, contours épais, dégradés vifs,
--- animations rebondies) dans un habillage chevaleresque (parchemin, or, bannières) avec une touche pixel
--- (icônes pixel art, police « Arcade » pour les chiffres et étiquettes, damiers en fond).
+-- animations rebondies) dans un habillage chevaleresque (parchemin, or, bannières) : icônes en relief,
+-- damiers en fond. Polices : Fredoka One (titres, boutons) et Builder Sans très gras pour les chiffres et les
+-- étiquettes (lisible même en petit, contrairement à l'ancienne police pixel « Arcade »).
 
 local Theme = {}
 
 Theme.Font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Regular)
-Theme.Pixel = Font.fromEnum(Enum.Font.Arcade)
+Theme.Label = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.ExtraBold) -- chiffres, étiquettes, petits textes
+Theme.Pixel = Theme.Label -- ancien nom (option `pixel` de Kit.Text)
+Theme.LabelScale = 1.12 -- Builder Sans paraît plus petite qu'Arcade à taille égale
 Theme.Script = Font.fromEnum(Enum.Font.Fondamento) -- calligraphie (carte, titres)
 Theme.Hand = Font.fromEnum(Enum.Font.Kalam) -- écriture à la plume (annotations de la carte)
 
@@ -21,7 +24,7 @@ Theme.Panel = Color3.fromRGB(255, 247, 228)
 Theme.PanelDeep = Color3.fromRGB(242, 228, 198)
 Theme.PanelLine = Color3.fromRGB(214, 190, 146)
 Theme.Text = Color3.fromRGB(70, 46, 40)
-Theme.Muted = Color3.fromRGB(150, 122, 98)
+Theme.Muted = Color3.fromRGB(118, 90, 70) -- assez contrasté sur le parchemin pour les petits textes
 Theme.White = Color3.new(1, 1, 1)
 
 Theme.C = {
