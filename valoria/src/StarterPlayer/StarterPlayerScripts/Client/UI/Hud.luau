@@ -194,7 +194,7 @@ function Hud.Popup(title: string, subtitle: string?, entries: { RewardView.Entry
 	Kit.Corner(head, 18)
 	Kit.Gradient(head, Theme.Light(c, 0.3), Theme.Dark(c, 0.1))
 	Kit.Icon(card, icon or "Star", 72, { pos = UDim2.new(0.5, 0, 0, -40), anchor = Vector2.new(0.5, 0), z = 3 })
-	Kit.Text(head, title, { size = 34, strokeTh = 3, shadow = true, sizeUD = UDim2.new(1, 0, 1, 0), pos = UDim2.fromOffset(0, 12) })
+	Kit.Text(head, title, { size = 34, strokeTh = 3, sizeUD = UDim2.new(1, 0, 1, 0), pos = UDim2.fromOffset(0, 12) })
 	if subtitle then
 		Kit.Text(card, subtitle, { light = false, size = 21, wrap = true, sizeUD = UDim2.new(1, -30, 0, 60), pos = UDim2.fromOffset(15, 82) })
 	end

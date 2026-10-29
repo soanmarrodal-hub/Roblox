@@ -1,5 +1,5 @@
 --!strict
--- Décodage base64 → buffer (données compactes générées : modèles voxel, portraits, icônes en relief).
+-- Décodage base64 → buffer (données compactes générées : modèles voxel, portraits pixel art).
 
 local Base64 = {}
 

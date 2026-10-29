@@ -1,10 +1,11 @@
-"""Dessins pixel art 16×16 des icônes de l'interface : la source des icônes en relief (icons3d.py).
+"""Icônes pixel art 16×16 de l'interface (style « petit pixel »).
 
-    python3 tools/ui/icons.py            → vérifie les dessins, planche docs/images/icons_pixel.png, puis
-                                           génère les icônes en relief (voir icons3d.py)
+    python3 tools/ui/icons.py            → écrit src/StarterPlayer/StarterPlayerScripts/Client/UI/IconData.luau,
+                                           tools/ui/png/<Nom>.png (128×128, pixels nets, à téléverser si l'on
+                                           veut se passer des EditableImage : voir UI/IconAssets.luau)
+                                           et docs/images/icons.png (planche d'aperçu)
 Chaque icône est une grille de caractères ; '.' = transparent, les autres lettres renvoient à PALETTE.
-Les potions et éléments sont des variantes obtenues par substitution de couleurs. Contour : 'k' (encre) ;
-'w' : touches de lumière dessinées (peintes, sans relief propre dans le rendu 3D).
+Les potions et éléments sont des variantes obtenues par substitution de couleurs.
 """
 from __future__ import annotations
 
@@ -13,7 +14,10 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
-DOC = os.path.join(ROOT, 'docs', 'images', 'icons_pixel.png')
+OUT = os.path.join(ROOT, 'src', 'StarterPlayer', 'StarterPlayerScripts', 'Client', 'UI', 'IconData.luau')
+DOC = os.path.join(ROOT, 'docs', 'images', 'icons.png')
+PNG = os.path.join(HERE, 'png')
+PNG_SCALE = 8  # 16 → 128 px, agrandissement sans flou
 
 PALETTE = {
     'k': '2a1c26',  # contour
@@ -844,20 +848,20 @@ ICONS['Leaf'] = [
     '................',
 ]
 ICONS['Sun'] = [
-    '.......YY.......',
-    '..Y....YY....Y..',
-    '...Y........Y...',
+    '.......kk.......',
+    '..k....kk....k..',
+    '...k........k...',
     '.....kkkkkk.....',
     '....kyyyyyYk....',
     '...kyywyyyYok...',
-    'YY.kyyyyyyYok.YY',
-    'YY.kyyyyyYYok.YY',
+    'kk.kyyyyyyYok.kk',
+    'kk.kyyyyyYYok.kk',
     '...kyyyyYYYok...',
     '....kYYYYYok....',
     '.....kkkkkk.....',
-    '...Y........Y...',
-    '..Y....YY....Y..',
-    '.......YY.......',
+    '...k........k...',
+    '..k....kk....k..',
+    '.......kk.......',
     '................',
     '................',
 ]
@@ -986,6 +990,39 @@ def check():
     return not bad
 
 
+def export():
+    lines = ['--!nolint', '-- Généré par tools/ui/icons.py — icônes pixel art 16×16 de l\'interface.',
+             '-- Chaque icône : palette (hex, 6 caractères par couleur) et 256 index (base 36, 0 = transparent).',
+             'return {']
+    for name in all_names():
+        rows, pal = resolve(name)
+        used = []
+        for r in rows:
+            for ch in r:
+                if ch != '.' and ch not in used:
+                    used.append(ch)
+        idx = ''.join('0' if ch == '.' else '0123456789abcdefghijklmnopqrstuvwxyz'[used.index(ch) + 1] for r in rows for ch in r)
+        lines.append('\t%s = { pal = "%s", px = "%s" },' % (name, ''.join(pal[c] for c in used), idx))
+    lines.append('}')
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+    with open(OUT, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+
+
+def pngs():
+    from PIL import Image
+    os.makedirs(PNG, exist_ok=True)
+    for name in all_names():
+        rows, pal = resolve(name)
+        img = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
+        for y, r in enumerate(rows):
+            for x, ch in enumerate(r):
+                if ch != '.':
+                    c = pal[ch]
+                    img.putpixel((x, y), tuple(int(c[j:j + 2], 16) for j in (0, 2, 4)) + (255,))
+        img.resize((16 * PNG_SCALE, 16 * PNG_SCALE), Image.NEAREST).save(os.path.join(PNG, name + '.png'))
+
+
 def sheet():
     from PIL import Image, ImageDraw
     names = all_names()
@@ -1005,13 +1042,13 @@ def sheet():
                     c = pal[ch]
                     d.rectangle([x0 + x * 6, y0 + y * 6, x0 + x * 6 + 5, y0 + y * 6 + 5], fill=tuple(int(c[j:j + 2], 16) for j in (0, 2, 4)))
         d.text((x0, y0 + cell + 4), name, fill=(230, 230, 230))
-    img.save(DOC)
+    img.save(sys.argv[1] if len(sys.argv) > 1 else DOC)
 
 
 if __name__ == '__main__':
     if not check():
         sys.exit(1)
+    export()
+    pngs()
     sheet()
-    print('%d dessins 16×16' % len(all_names()))
-    import icons3d
-    icons3d.main()
+    print('%d icônes' % len(all_names()))

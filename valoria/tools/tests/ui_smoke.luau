@@ -288,28 +288,24 @@ end)
 step("App.Init", function()
 	App.Init()
 end)
--- icônes en relief : chaque icône se décode en IconSize² pixels RVBA, avec du transparent et de l'opaque
-step("icônes en relief", function()
+-- icônes pixel art : chaque icône se décode en 16×16 pixels RVBA, avec du transparent et de l'opaque
+step("icônes pixel art", function()
 	local Pixel = req(Client.UI.Pixel)
 	local IconData = req(Client.UI.IconData)
 	local n = 0
-	for name in IconData.icons do
+	for name in IconData do
 		local px = Pixel.IconPixels(name)
-		local size = Pixel.IconSize
-		if not px or buffer.len(px) ~= size * size * 4 then
+		if not px or buffer.len(px) ~= 16 * 16 * 4 then
 			error("icône mal décodée : " .. name)
 		end
-		local opaque, clear = 0, 0
+		local opaque = 0
 		for i = 3, buffer.len(px) - 1, 4 do
-			local a = buffer.readu8(px, i)
-			if a > 200 then
+			if buffer.readu8(px, i) == 255 then
 				opaque += 1
-			elseif a == 0 then
-				clear += 1
 			end
 		end
-		if opaque < size * size * 0.08 or clear < size * size * 0.1 then
-			error(string.format("icône %s : %d pixels opaques, %d transparents", name, opaque, clear))
+		if opaque < 16 or opaque > 250 then
+			error(string.format("icône %s : %d pixels opaques", name, opaque))
 		end
 		n += 1
 	end
@@ -329,7 +325,7 @@ step("icônes en relief", function()
 	if not fallback:FindFirstChildWhichIsA("TextLabel") then
 		error("pas de repli texte sans EditableImage")
 	end
-	print(string.format("Interface : %d icônes en relief décodées (%d×%d)", n, Pixel.IconSize, Pixel.IconSize))
+	print(string.format("Interface : %d icônes pixel art décodées", n))
 end)
 
 step("Hud.Init", function()

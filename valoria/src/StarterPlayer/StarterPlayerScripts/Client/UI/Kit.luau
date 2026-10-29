@@ -87,16 +87,12 @@ end
 function Kit.Text(parent: Instance, text: string, opts: { [string]: any }?): TextLabel
 	local o: any = opts or {}
 	local light = o.light ~= false
-	local size = o.size or 20
-	if o.pixel and not o.scaled and not o.font then
-		size = math.floor(size * Theme.LabelScale + 0.5)
-	end
 	local t = Kit.new("TextLabel", {
 		BackgroundTransparency = 1,
 		Text = text,
-		FontFace = o.font or (if o.pixel then Theme.Label else Theme.Font),
+		FontFace = o.font or (if o.pixel then Theme.Pixel else Theme.Font),
 		TextColor3 = o.color or (if light then Theme.White else Theme.Text),
-		TextSize = size,
+		TextSize = o.size or 20,
 		TextScaled = o.scaled == true,
 		TextWrapped = o.wrap == true,
 		RichText = o.rich == true,
@@ -112,30 +108,7 @@ function Kit.Text(parent: Instance, text: string, opts: { [string]: any }?): Tex
 		Parent = parent,
 	})
 	if light and o.stroke ~= false then
-		-- contour plus fin sur les petits textes (lettres plus ouvertes, plus lisibles)
-		local th = o.strokeTh or (if size <= 15 and not o.scaled then 1.5 else 2)
-		Kit.new("UIStroke", { Thickness = th, Color = o.strokeColor or Theme.Ink, LineJoinMode = Enum.LineJoinMode.Round, Parent = t })
-	end
-	if o.shadow then
-		-- lettrage en relief : copie sombre décalée vers le bas, derrière le texte
-		local sh = t:Clone()
-		sh.Name = "Ombre"
-		sh.TextColor3 = Theme.Ink
-		sh.TextTransparency = 0.25
-		sh.Position = t.Position + UDim2.fromOffset(0, math.max(2, math.floor(size / 9)))
-		sh.ZIndex = t.ZIndex - 1
-		for _, c in sh:GetChildren() do
-			if c:IsA("UIStroke") then
-				c.Transparency = 0.25
-			end
-		end
-		sh.Parent = parent
-		t:GetPropertyChangedSignal("Text"):Connect(function()
-			sh.Text = t.Text
-		end)
-		t:GetPropertyChangedSignal("Visible"):Connect(function()
-			sh.Visible = t.Visible
-		end)
+		Kit.new("UIStroke", { Thickness = o.strokeTh or 2, Color = o.strokeColor or Theme.Ink, Parent = t })
 	end
 	if o.scaled then
 		Kit.new("UITextSizeConstraint", { MaxTextSize = o.size or 28, Parent = t })
@@ -143,8 +116,8 @@ function Kit.Text(parent: Instance, text: string, opts: { [string]: any }?): Tex
 	return t
 end
 
--- Icône en relief : image téléversée (UI/IconAssets) si renseignée, sinon données embarquées (EditableImage),
--- sinon texte court.
+-- Icône pixel art : image téléversée (UI/IconAssets) si renseignée, sinon dessinée à l'exécution
+-- (EditableImage), sinon texte court.
 function Kit.Icon(parent: Instance, name: string, size: number?, opts: { [string]: any }?): ImageLabel
 	local o: any = opts or {}
 	local s = size or 32
@@ -162,7 +135,8 @@ function Kit.Icon(parent: Instance, name: string, size: number?, opts: { [string
 	local asset = IconAssets[name]
 	if asset then
 		img.Image = asset
-	elseif not Pixel.Apply(img, Pixel.Icon(name), true) then
+		img.ResampleMode = Enum.ResamplerMode.Pixelated
+	elseif not Pixel.Apply(img, Pixel.Icon(name)) then
 		Kit.Text(img, Format.Clip(name, 2), { scaled = true, size = s, pixel = true, z = o.z })
 	end
 	return img
@@ -342,12 +316,11 @@ function Kit.Button(parent: Instance, opts: ButtonOpts): Button
 	return b
 end
 
--- Bouton carré à icône (barre latérale du HUD), libellé dessous.
+-- Bouton carré à icône (barre latérale du HUD), libellé pixel dessous.
 function Kit.SideButton(parent: Instance, icon: string, label: string, color: Color3, onClick: () -> (), order: number?): (Frame, Frame)
 	local holder = Kit.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(72, 88), LayoutOrder = order or 0, Parent = parent })
 	Kit.Button(holder, { icon = icon, color = color, size = UDim2.fromOffset(66, 66), pos = UDim2.fromOffset(3, 0), iconSize = 44, onClick = onClick })
-	-- libellé ajusté à la largeur de la case (les mots longs rétrécissent au lieu de déborder)
-	Kit.Text(holder, label, { pixel = true, scaled = true, size = 16, sizeUD = UDim2.new(1, 4, 0, 18), pos = UDim2.fromOffset(-2, 69) })
+	Kit.Text(holder, label, { pixel = true, size = 14, sizeUD = UDim2.new(1, 0, 0, 16), pos = UDim2.fromOffset(0, 70) })
 	-- pastille de notification
 	local dot = Kit.new("Frame", {
 		Name = "Dot",
@@ -450,7 +423,6 @@ function Kit.Window(parent: Instance, opts: { title: string, icon: string?, colo
 		pos = UDim2.fromOffset(titleX, 0),
 		alignX = Enum.TextXAlignment.Left,
 		strokeTh = 3,
-		shadow = true,
 		z = 13,
 	})
 	local win: Window = { root = root, body = (nil :: any), header = header, title = title, scale = scale, onClose = opts.onClose }

@@ -1,15 +1,12 @@
 --!strict
 -- Charte de l'interface : l'esprit Pet Simulator 99 (boutons dodus, contours épais, dégradés vifs,
--- animations rebondies) dans un habillage chevaleresque (parchemin, or, bannières) : icônes en relief,
--- damiers en fond. Polices : Fredoka One (titres, boutons) et Builder Sans très gras pour les chiffres et les
--- étiquettes (lisible même en petit, contrairement à l'ancienne police pixel « Arcade »).
+-- animations rebondies) dans un habillage chevaleresque (parchemin, or, bannières) avec une touche pixel
+-- (icônes pixel art, police « Arcade » pour les chiffres et étiquettes, damiers en fond).
 
 local Theme = {}
 
 Theme.Font = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Regular)
-Theme.Label = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.ExtraBold) -- chiffres, étiquettes, petits textes
-Theme.Pixel = Theme.Label -- ancien nom (option `pixel` de Kit.Text)
-Theme.LabelScale = 1.12 -- Builder Sans paraît plus petite qu'Arcade à taille égale
+Theme.Pixel = Font.fromEnum(Enum.Font.Arcade)
 Theme.Script = Font.fromEnum(Enum.Font.Fondamento) -- calligraphie (carte, titres)
 Theme.Hand = Font.fromEnum(Enum.Font.Kalam) -- écriture à la plume (annotations de la carte)
 
