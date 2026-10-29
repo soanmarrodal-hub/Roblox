@@ -342,11 +342,12 @@ function Kit.Button(parent: Instance, opts: ButtonOpts): Button
 	return b
 end
 
--- Bouton carré à icône (barre latérale du HUD), libellé pixel dessous.
+-- Bouton carré à icône (barre latérale du HUD), libellé dessous.
 function Kit.SideButton(parent: Instance, icon: string, label: string, color: Color3, onClick: () -> (), order: number?): (Frame, Frame)
 	local holder = Kit.new("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(72, 88), LayoutOrder = order or 0, Parent = parent })
 	Kit.Button(holder, { icon = icon, color = color, size = UDim2.fromOffset(66, 66), pos = UDim2.fromOffset(3, 0), iconSize = 44, onClick = onClick })
-	Kit.Text(holder, label, { pixel = true, size = 14, sizeUD = UDim2.new(1, 0, 0, 16), pos = UDim2.fromOffset(0, 70) })
+	-- libellé ajusté à la largeur de la case (les mots longs rétrécissent au lieu de déborder)
+	Kit.Text(holder, label, { pixel = true, scaled = true, size = 16, sizeUD = UDim2.new(1, 4, 0, 18), pos = UDim2.fromOffset(-2, 69) })
 	-- pastille de notification
 	local dot = Kit.new("Frame", {
 		Name = "Dot",
